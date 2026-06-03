@@ -1,0 +1,10 @@
+import sql from 'mssql';
+import 'dotenv/config';
+const cfg = {user:process.env.SQL_USER,password:process.env.SQL_PASS,server:process.env.SQL_HOST,database:process.env.SQL_DB,options:{encrypt:false,trustServerCertificate:true},connectionTimeout:15000,requestTimeout:60000};
+const pool = await sql.connect(cfg);
+const r1 = await pool.query('SELECT TOP 2 * FROM db_Cegid.dbo.Vta_detalle');
+console.log('VTA_DETALLE cols:', Object.keys(r1.recordset[0]||{}).join(', '));
+console.log('VTA_DETALLE sample:', JSON.stringify(r1.recordset[0]));
+const r2 = await pool.request().execute('sp_GrillaPromosMP');
+console.log('SP cols:', Object.keys(r2.recordset[0]||{}).join(', '));
+await pool.close();

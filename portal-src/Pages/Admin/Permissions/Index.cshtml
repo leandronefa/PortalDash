@@ -1,0 +1,74 @@
+@page
+@model DashboardPortal.Pages.Admin.Permissions.IndexModel
+@{
+    ViewData["Title"] = "Permisos";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Permisos</h1>
+        <p class="page-subtitle">Resumen de qué usuario puede ver cada dashboard. Edite haciendo clic en un usuario.</p>
+    </div>
+</div>
+
+@if (Model.Users.Count == 0 || Model.Dashboards.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-icon">@Html.Raw(IconLibrary.Render("briefcase", 36))</div>
+        <h2>Nada que mostrar</h2>
+        <p>Necesita al menos un usuario y un dashboard para configurar permisos.</p>
+        <div class="quick-actions" style="justify-content:center;">
+            <a href="/Admin/Users" class="btn btn-outline">Ir a Usuarios</a>
+            <a href="/Admin/Dashboards" class="btn btn-outline">Ir a Dashboards</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="panel">
+        <div class="table-wrap">
+            <table class="table matrix">
+                <thead>
+                    <tr>
+                        <th class="matrix-corner">Usuario \ Dashboard</th>
+                        @foreach (var d in Model.Dashboards)
+                        {
+                            <th class="matrix-col" title="@d.Name">
+                                <span class="matrix-col-icon">@Html.Raw(IconLibrary.Render(d.Icon, 16))</span>
+                                <span class="matrix-col-name">@d.Name</span>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model.Users)
+                    {
+                        <tr>
+                            <td class="matrix-row-head">
+                                <a href="/Admin/Users/Permissions?id=@u.Id" class="link">@u.Username</a>
+                                @if (!u.IsActive)
+                                {
+                                    <span class="badge badge-muted">Inactivo</span>
+                                }
+                            </td>
+                            @foreach (var d in Model.Dashboards)
+                            {
+                                <td class="matrix-cell">
+                                    @if (Model.HasGrant(u.Id, d.Id))
+                                    {
+                                        <span class="check-yes" title="Permitido">@Html.Raw(IconLibrary.Render("trend", 16))</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="check-no" title="Sin acceso">·</span>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p class="muted small" style="margin-top:12px;">Sugerencia: haga clic en un nombre de usuario para editar sus dashboards permitidos.</p>
+}

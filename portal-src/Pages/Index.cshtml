@@ -1,0 +1,71 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Catálogo";
+}
+
+<div class="container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Catálogo de dashboards</h1>
+            <p class="page-subtitle">
+                @if (Model.IsMaster)
+                {
+                    <text>Vista de administrador · se muestran todos los dashboards activos.</text>
+                }
+                else
+                {
+                    <text>Acceda a los tableros habilitados para su usuario.</text>
+                }
+            </p>
+        </div>
+        <div class="search-bar">
+            @Html.Raw(IconLibrary.Render("globe", 18))
+            <input type="search" id="dashSearch" class="search-input" placeholder="Buscar dashboard..." aria-label="Buscar dashboard" autocomplete="off" />
+        </div>
+    </div>
+
+    @if (Model.Cards.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">@Html.Raw(IconLibrary.Render("layers", 40))</div>
+            <h2>No hay dashboards disponibles</h2>
+            <p>
+                @if (Model.IsMaster)
+                {
+                    <text>Aún no se registraron dashboards. Cree el primero desde <a href="/Admin/Dashboards">Administración</a>.</text>
+                }
+                else
+                {
+                    <text>Su usuario todavía no tiene dashboards habilitados. Solicite acceso al administrador.</text>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="card-grid" id="cardGrid">
+            @foreach (var card in Model.Cards)
+            {
+                var d = card.Dashboard;
+                <a class="dash-card"
+                   href="/View?id=@d.Id"
+                   data-search="@(((d.Name ?? "") + " " + (d.Description ?? "")).ToLowerInvariant())">
+                    <div class="dash-card-icon">@Html.Raw(IconLibrary.Render(d.Icon, 26))</div>
+                    <div class="dash-card-body">
+                        <h3 class="dash-card-title">@d.Name</h3>
+                        <p class="dash-card-desc">@(string.IsNullOrWhiteSpace(d.Description) ? "Sin descripción" : d.Description)</p>
+                    </div>
+                    <div class="dash-card-footer">
+                        <span class="dash-card-open">Abrir @Html.Raw(IconLibrary.Render("trend", 14))</span>
+                    </div>
+                </a>
+            }
+        </div>
+        <div class="empty-state hidden" id="noResults">
+            <div class="empty-icon">@Html.Raw(IconLibrary.Render("globe", 36))</div>
+            <h2>Sin resultados</h2>
+            <p>No se encontraron dashboards para su búsqueda.</p>
+        </div>
+    }
+</div>

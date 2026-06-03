@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comisiones - Panel de Administracion</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --success: #0d904f;
+            --danger: #d93025;
+            --warning: #f9ab00;
+            --bg: #f1f3f4;
+            --card: #ffffff;
+            --text: #202124;
+            --text-muted: #5f6368;
+            --border: #dadce0;
+            --sidebar-bg: #202124;
+            --sidebar-text: #e8eaed;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #3c4043;
+        }
+        .sidebar-header h1 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .sidebar-header small {
+            color: #9aa0a6;
+            font-size: 12px;
+        }
+        .sidebar nav {
+            flex: 1;
+            padding: 12px 0;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-size: 14px;
+            gap: 12px;
+            border: none;
+            background: none;
+            color: var(--sidebar-text);
+            width: 100%;
+            text-align: left;
+        }
+        .nav-item:hover { background: #3c4043; }
+        .nav-item.active { background: var(--primary); border-radius: 0 24px 24px 0; margin-right: 12px; }
+        .nav-icon { font-size: 20px; width: 24px; text-align: center; }
+
+        /* Main content */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .topbar h2 { font-size: 20px; font-weight: 500; }
+        .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card h3 {
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border-bottom: 2px solid var(--border);
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        tr:hover { background: #f8f9fa; }
+
+        /* Forms */
+        .form-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .form-group label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        input, select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.15s;
+        }
+        input:focus, select:focus { border-color: var(--primary); }
+        input[type="number"] { width: 130px; }
+        input[type="date"] { width: 150px; }
+        select { min-width: 130px; }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #0b7a43; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: #b3261e; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background: #f8f9fa; }
+        .btn-sm { padding: 4px 12px; font-size: 12px; }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-success { background: #e6f4ea; color: var(--success); }
+        .badge-danger { background: #fce8e6; color: var(--danger); }
+        .badge-warning { background: #fef7e0; color: #e37400; }
+        .badge-info { background: #e8f0fe; color: var(--primary); }
+
+        /* Result table */
+        .result-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #323232;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .toast.show { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Loading */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #dadce0;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        /* Scrollable table wrapper */
+        .table-scroll { overflow-x: auto; }
+
+        /* Section hidden by default */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* Monetary values alignment */
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .money { font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>Comisiones</h1>
+            <small>Panel de Administracion</small>
+        </div>
+        <nav>
+            <button class="nav-item active" data-page="dashboard">
+                <span class="nav-icon">📊</span> Dashboard
+            </button>
+            <button class="nav-item" data-page="reglas">
+                <span class="nav-icon">⚙️</span> Configuracion General
+            </button>
+            <button class="nav-item" data-page="escalones">
+                <span class="nav-icon">📈</span> Escalones Comision
+            </button>
+            <button class="nav-item" data-page="indices">
+                <span class="nav-icon">🏷️</span> Indices Categoria
+            </button>
+            <button class="nav-item" data-page="calcular">
+                <span class="nav-icon">🧮</span> Calcular Comisiones
+            </button>
+            <button class="nav-item" data-page="auditoria">
+                <span class="nav-icon">📋</span> Auditoria
+            </button>
+        </nav>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <h2 id="pageTitle">Dashboard</h2>
+            <span style="color: var(--text-muted); font-size: 13px;" id="serverInfo">Servidor: 10.0.0.115</span>
+        </div>
+
+        <div class="content">
+            <!-- DASHBOARD -->
+            <div id="page-dashboard" class="page active">
+                <div class="result-summary" id="dashboardStats">
+                    <div class="stat-card"><div class="value" id="statReglas">-</div><div class="label">Reglas Activas</div></div>
+                    <div class="stat-card"><div class="value" id="statEscalones">-</div><div class="label">Escalones Vigentes</div></div>
+                    <div class="stat-card"><div class="value" id="statIndices">-</div><div class="label">Indices Categoria</div></div>
+                    <div class="stat-card"><div class="value" id="statCambios">-</div><div class="label">Cambios Recientes</div></div>
+                </div>
+                <div class="card">
+                    <h3>Resumen de Configuracion</h3>
+                    <div id="dashboardReglas"></div>
+                </div>
+            </div>
+
+            <!-- REGLAS -->
+            <div id="page-reglas" class="page">
+                <div class="card">
+                    <h3>Parametros de Configuracion</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 13px;">
+                        Estos valores se leen al ejecutar el calculo de comisiones. Modificarlos afecta la proxima ejecucion.
+                    </p>
+                    <div id="reglasTable"></div>
+                </div>
+            </div>
+
+            <!-- ESCALONES -->
+            <div id="page-escalones" class="page">
+                <div class="card">
+                    <h3>Filtrar Escalones</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Empresa</label>
+                            <select id="escEmpresa">
+                                <option value="Tesi">Tesi</option>
+                                <option value="Pueblo">Pueblo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Mes</label>
+                            <select id="escMes">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Anio</label>
+                            <select id="escAnio">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="loadEscalones()">Buscar</button>
+                        <button class="btn btn-outline" onclick="showCopiarEscalones()">Copiar Periodo</button>
+                    </div>
+                </div>
+                <div class="card" id="copiarEscalonesCard" style="display:none;">
+                    <h3>Copiar Escalones de un Periodo a Otro</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>Mes Origen</label><input type="number" id="cpMesOrig" min="1" max="12"></div>
+                        <div class="form-group"><label>Anio Origen</label><input type="number" id="cpAnioOrig" min="2020" max="2030"></div>
+                        <span style="padding:8px;align-self:flex-end">→</span>
+                        <div class="form-group"><label>Mes Destino</label><input type="number" id="cpMesDest" min="1" max="12"></div>
+                        <div class="form-group"><label>Anio Destino</label><input type="number" id="cpAnioDest" min="2020" max="2030"></div>
+                        <button class="btn btn-success" onclick="copiarEscalones()">Copiar</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Escalones de Comision Base</h3>
+                    <div class="table-scroll" id="escalonesTable"></div>
+                </div>
+                <div class="card">
+                    <h3>Agregar Escalon</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>Desde ($)</label><input type="number" id="newEscDesde" step="1"></div>
+                        <div class="form-group"><label>Hasta ($)</label><input type="number" id="newEscHasta" step="1"></div>
+                        <div class="form-group"><label>Comision</label><input type="number" id="newEscComision" step="0.01" min="0" max="1" placeholder="ej: 0.25"></div>
+                        <div class="form-group"><label>Tipo</label>
+                            <select id="newEscTipo"><option>Vendedor</option><option>Cajero</option></select>
+                        </div>
+                        <div class="form-group"><label>Mes</label><input type="number" id="newEscMes" min="1" max="12"></div>
+                        <div class="form-group"><label>Anio</label><input type="number" id="newEscAnio" min="2020" max="2030"></div>
+                        <div class="form-group"><label>Empresa</label>
+                            <select id="newEscEmpresa"><option>Tesi</option><option>Pueblo</option></select>
+                        </div>
+                        <button class="btn btn-success" onclick="crearEscalon()">Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INDICES CATEGORIA -->
+            <div id="page-indices" class="page">
+                <div class="card">
+                    <h3>Filtros</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>Seccion</label><select id="idxSeccion"><option value="">Todas</option></select></div>
+                        <div class="form-group"><label>Marca</label><select id="idxMarca"><option value="">Todas</option></select></div>
+                        <div class="form-group">
+                            <label>Solo Vigentes</label>
+                            <select id="idxVigentes"><option value="1">Si</option><option value="">Todos</option></select>
+                        </div>
+                        <button class="btn btn-primary" onclick="loadIndices()">Buscar</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Indices por Categoria / Marca</h3>
+                    <div class="table-scroll" id="indicesTable"></div>
+                </div>
+                <div class="card">
+                    <h3>Agregar Indice</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>Seccion</label><input type="text" id="newIdxSeccion" placeholder="ej: Indumentaria"></div>
+                        <div class="form-group"><label>Genero</label><input type="text" id="newIdxGenero" placeholder="(vacio = todos)"></div>
+                        <div class="form-group"><label>Familia</label><input type="text" id="newIdxFamilia" placeholder="(vacio = todas)"></div>
+                        <div class="form-group"><label>Linea</label><input type="text" id="newIdxLinea" placeholder="(vacio = todas)"></div>
+                        <div class="form-group"><label>Marca</label><input type="text" id="newIdxMarca" placeholder="ej: Adidas"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Proveedor</label><input type="text" id="newIdxProv" placeholder="(vacio = todos)"></div>
+                        <div class="form-group"><label>Articulo</label><input type="text" id="newIdxArt" placeholder="(vacio = todos)"></div>
+                        <div class="form-group"><label>Porcentaje</label><input type="number" id="newIdxPorc" step="0.01" min="0" max="1" placeholder="ej: 0.15"></div>
+                        <div class="form-group"><label>Nivel</label><input type="number" id="newIdxNivel" min="1" max="10" placeholder="1-10"></div>
+                        <div class="form-group"><label>Desde</label><input type="date" id="newIdxDesde"></div>
+                        <div class="form-group"><label>Hasta</label><input type="date" id="newIdxHasta"></div>
+                        <div class="form-group"><label>Empresa</label>
+                            <select id="newIdxEmpresa"><option>Tesi</option><option>Pueblo</option></select>
+                        </div>
+                        <button class="btn btn-success" onclick="crearIndice()">Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CALCULAR COMISIONES -->
+            <div id="page-calcular" class="page">
+                <div class="card">
+                    <h3>Ejecutar Calculo de Comisiones</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fecha Ejecucion</label>
+                            <input type="date" id="calcFecha">
+                        </div>
+                        <div class="form-group">
+                            <label>Empresa</label>
+                            <select id="calcEmpresa">
+                                <option value="Tesi">Tesi</option>
+                                <option value="Pueblo">Pueblo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Detalle por linea</label>
+                            <select id="calcDetalle">
+                                <option value="0">No</option>
+                                <option value="1">Si</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="ejecutarCalculo()" id="btnCalcular">
+                            🧮 Calcular
+                        </button>
+                    </div>
+                </div>
+                <div id="calculoResultado"></div>
+            </div>
+
+            <!-- AUDITORIA -->
+            <div id="page-auditoria" class="page">
+                <div class="card">
+                    <h3>Ultimos Cambios en Configuracion</h3>
+                    <button class="btn btn-outline btn-sm" onclick="loadAuditoria()" style="margin-bottom:12px">Actualizar</button>
+                    <div class="table-scroll" id="auditoriaTable"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    const API = '';
+
+    // =====================
+    // NAVIGATION
+    // =====================
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const page = btn.dataset.page;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.getElementById('pageTitle').textContent = btn.textContent.trim();
+            // Load data for page
+            if (page === 'dashboard') loadDashboard();
+            if (page === 'reglas') loadReglas();
+            if (page === 'escalones') { loadEscalonesPeriodos(); loadEscalones(); }
+            if (page === 'indices') { loadIndicesFiltros(); loadIndices(); }
+            if (page === 'auditoria') loadAuditoria();
+        });
+    });
+
+    // =====================
+    // UTILS
+    // =====================
+    function toast(msg, duration = 3000) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), duration);
+    }
+
+    function formatMoney(n) {
+        if (n == null) return '-';
+        return '$' + Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatPct(n) {
+        if (n == null) return '-';
+        return (Number(n) * 100).toFixed(1) + '%';
+    }
+
+    function formatDate(d) {
+        if (!d) return '-';
+        return new Date(d).toLocaleDateString('es-AR');
+    }
+
+    function formatDateTime(d) {
+        if (!d) return '-';
+        return new Date(d).toLocaleString('es-AR');
+    }
+
+    async function apiFetch(url, opts = {}) {
+        const res = await fetch(API + url, {
+            headers: { 'Content-Type': 'application/json' },
+            ...opts
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: res.statusText }));
+            throw new Error(err.error || 'Error');
+        }
+        return res.json();
+    }
+
+    // =====================
+    // DASHBOARD
+    // =====================
+    async function loadDashboard() {
+        try {
+            const [reglas, indices, auditoria] = await Promise.all([
+                apiFetch('/api/reglas'),
+                apiFetch('/api/indices?vigentes=1'),
+                apiFetch('/api/comisiones/auditoria')
+            ]);
+
+            document.getElementById('statReglas').textContent = reglas.filter(r => r.activo).length;
+            document.getElementById('statIndices').textContent = indices.length;
+            document.getElementById('statCambios').textContent = auditoria.length;
+
+            // Escalones - count latest
+            const escResult = await apiFetch('/api/escalones/periodos');
+            document.getElementById('statEscalones').textContent = escResult.length;
+
+            // Show reglas summary
+            let html = '<table><tr><th>Parametro</th><th>Valor</th><th>Estado</th></tr>';
+            reglas.forEach(r => {
+                let displayVal = r.valor;
+                if (r.clave.includes('PISO') || r.clave.includes('MINIMO')) displayVal = formatMoney(r.valor);
+                if (r.clave.includes('BONUS') && !r.clave.includes('ACTIVO')) displayVal = formatPct(r.valor);
+                html += `<tr>
+                    <td><strong>${r.clave}</strong><br><small style="color:var(--text-muted)">${r.descripcion || ''}</small></td>
+                    <td>${displayVal}</td>
+                    <td>${r.activo ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>'}</td>
+                </tr>`;
+            });
+            html += '</table>';
+            document.getElementById('dashboardReglas').innerHTML = html;
+        } catch (e) {
+            toast('Error cargando dashboard: ' + e.message);
+        }
+    }
+
+    // =====================
+    // REGLAS
+    // =====================
+    async function loadReglas() {
+        try {
+            const reglas = await apiFetch('/api/reglas');
+            let html = '<table><tr><th>Clave</th><th>Valor</th><th>Descripcion</th><th>Activo</th><th>Ultima Modif.</th><th>Accion</th></tr>';
+            reglas.forEach(r => {
+                html += `<tr id="regla-${r.idRegla}">
+                    <td><strong>${r.clave}</strong></td>
+                    <td><input type="text" value="${r.valor}" id="regla-val-${r.idRegla}" style="width:180px"></td>
+                    <td style="font-size:12px;color:var(--text-muted);max-width:250px">${r.descripcion || ''}</td>
+                    <td><select id="regla-act-${r.idRegla}">
+                        <option value="1" ${r.activo ? 'selected' : ''}>Si</option>
+                        <option value="0" ${!r.activo ? 'selected' : ''}>No</option>
+                    </select></td>
+                    <td style="font-size:12px">${formatDateTime(r.fechaModificacion)}</td>
+                    <td><button class="btn btn-primary btn-sm" onclick="guardarRegla(${r.idRegla})">Guardar</button></td>
+                </tr>`;
+            });
+            html += '</table>';
+            document.getElementById('reglasTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('reglasTable').innerHTML = '<p style="color:var(--danger)">Error: ' + e.message + '</p>';
+        }
+    }
+
+    async function guardarRegla(id) {
+        try {
+            const valor = document.getElementById('regla-val-' + id).value;
+            const activo = parseInt(document.getElementById('regla-act-' + id).value);
+            await apiFetch('/api/reglas/' + id, {
+                method: 'PUT',
+                body: JSON.stringify({ valor, activo })
+            });
+            toast('Regla actualizada correctamente');
+            loadReglas();
+        } catch (e) {
+            toast('Error: ' + e.message);
+        }
+    }
+
+    // =====================
+    // ESCALONES
+    // =====================
+    async function loadEscalonesPeriodos() {
+        try {
+            const periodos = await apiFetch('/api/escalones/periodos');
+            const meses = [...new Set(periodos.map(p => p.mes))].sort((a, b) => a - b);
+            const anios = [...new Set(periodos.map(p => p.anio))].sort((a, b) => b - a);
+
+            const selMes = document.getElementById('escMes');
+            selMes.innerHTML = '<option value="">Todos</option>' +
+                meses.map(m => `<option value="${m}">${m}</option>`).join('');
+
+            const selAnio = document.getElementById('escAnio');
+            selAnio.innerHTML = '<option value="">Todos</option>' +
+                anios.map(a => `<option value="${a}">${a}</option>`).join('');
+        } catch (e) { /* ignore */ }
+    }
+
+    async function loadEscalones() {
+        try {
+            const empresa = document.getElementById('escEmpresa').value;
+            const mes = document.getElementById('escMes').value;
+            const anio = document.getElementById('escAnio').value;
+            let url = `/api/escalones?empresa=${encodeURIComponent(empresa)}`;
+            if (mes) url += `&mes=${mes}`;
+            if (anio) url += `&anio=${anio}`;
+
+            const data = await apiFetch(url);
+            let html = '<table><tr><th>ID</th><th>Tipo</th><th>Desde ($)</th><th>Hasta ($)</th><th>Comision</th><th>Mes/Anio</th><th>Empresa</th><th>Acciones</th></tr>';
+            data.forEach(r => {
+                html += `<tr>
+                    <td>${r.idComision}</td>
+                    <td><span class="badge ${r.tipo === 'Vendedor' ? 'badge-info' : 'badge-warning'}">${r.tipo}</span></td>
+                    <td class="text-right money">${formatMoney(r.valorInferior)}</td>
+                    <td class="text-right money">${formatMoney(r.valorSuperior)}</td>
+                    <td class="text-center"><strong>${formatPct(r.comision)}</strong></td>
+                    <td class="text-center">${r.mes}/${r.anio}</td>
+                    <td>${r.empresa}</td>
+                    <td>
+                        <button class="btn btn-outline btn-sm" onclick="editEscalon(${r.idComision}, ${r.valorInferior}, ${r.valorSuperior}, ${r.comision})">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteEscalon(${r.idComision})">X</button>
+                    </td>
+                </tr>`;
+            });
+            html += '</table>';
+            if (data.length === 0) html = '<p style="color:var(--text-muted)">No se encontraron escalones para este filtro.</p>';
+            document.getElementById('escalonesTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('escalonesTable').innerHTML = '<p style="color:var(--danger)">Error: ' + e.message + '</p>';
+        }
+    }
+
+    function editEscalon(id, desde, hasta, comision) {
+        const newDesde = prompt('Desde ($):', desde);
+        if (newDesde === null) return;
+        const newHasta = prompt('Hasta ($):', hasta);
+        if (newHasta === null) return;
+        const newCom = prompt('Comision (decimal, ej 0.25):', comision);
+        if (newCom === null) return;
+
+        apiFetch('/api/escalones/' + id, {
+            method: 'PUT',
+            body: JSON.stringify({
+                valorInferior: parseFloat(newDesde),
+                valorSuperior: parseFloat(newHasta),
+                comision: parseFloat(newCom)
+            })
+        }).then(() => { toast('Escalon actualizado'); loadEscalones(); })
+          .catch(e => toast('Error: ' + e.message));
+    }
+
+    async function deleteEscalon(id) {
+        if (!confirm('Eliminar este escalon?')) return;
+        try {
+            await apiFetch('/api/escalones/' + id, { method: 'DELETE' });
+            toast('Escalon eliminado');
+            loadEscalones();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    async function crearEscalon() {
+        try {
+            await apiFetch('/api/escalones', {
+                method: 'POST',
+                body: JSON.stringify({
+                    valorInferior: parseFloat(document.getElementById('newEscDesde').value),
+                    valorSuperior: parseFloat(document.getElementById('newEscHasta').value),
+                    comision: parseFloat(document.getElementById('newEscComision').value),
+                    tipo: document.getElementById('newEscTipo').value,
+                    mes: parseInt(document.getElementById('newEscMes').value),
+                    anio: parseInt(document.getElementById('newEscAnio').value),
+                    empresa: document.getElementById('newEscEmpresa').value
+                })
+            });
+            toast('Escalon creado');
+            loadEscalones();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    function showCopiarEscalones() {
+        const card = document.getElementById('copiarEscalonesCard');
+        card.style.display = card.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function copiarEscalones() {
+        try {
+            await apiFetch('/api/escalones/copiar', {
+                method: 'POST',
+                body: JSON.stringify({
+                    empresaOrigen: document.getElementById('escEmpresa').value,
+                    mesOrigen: parseInt(document.getElementById('cpMesOrig').value),
+                    anioOrigen: parseInt(document.getElementById('cpAnioOrig').value),
+                    mesDestino: parseInt(document.getElementById('cpMesDest').value),
+                    anioDestino: parseInt(document.getElementById('cpAnioDest').value)
+                })
+            });
+            toast('Escalones copiados');
+            loadEscalones();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    // =====================
+    // INDICES CATEGORIA
+    // =====================
+    async function loadIndicesFiltros() {
+        try {
+            const filtros = await apiFetch('/api/indices/filtros');
+            const selSec = document.getElementById('idxSeccion');
+            selSec.innerHTML = '<option value="">Todas</option>' +
+                filtros.secciones.map(s => `<option>${s}</option>`).join('');
+            const selMarca = document.getElementById('idxMarca');
+            selMarca.innerHTML = '<option value="">Todas</option>' +
+                filtros.marcas.map(m => `<option>${m}</option>`).join('');
+        } catch (e) { /* ignore */ }
+    }
+
+    async function loadIndices() {
+        try {
+            const seccion = document.getElementById('idxSeccion').value;
+            const marca = document.getElementById('idxMarca').value;
+            const vigentes = document.getElementById('idxVigentes').value;
+            let url = '/api/indices?';
+            if (seccion) url += `seccion=${encodeURIComponent(seccion)}&`;
+            if (marca) url += `marca=${encodeURIComponent(marca)}&`;
+            if (vigentes) url += `vigentes=${vigentes}&`;
+
+            const data = await apiFetch(url);
+            let html = '<table><tr><th>ID</th><th>Nivel</th><th>Seccion</th><th>Marca</th><th>Genero</th><th>Familia</th><th>Linea</th><th>%</th><th>Vigencia</th><th>Acciones</th></tr>';
+            data.forEach(r => {
+                const vigente = new Date(r.fechaFin) >= new Date();
+                html += `<tr>
+                    <td>${r.idComision}</td>
+                    <td class="text-center"><span class="badge badge-info">${r.Nivel}</span></td>
+                    <td>${r.seccion || '-'}</td>
+                    <td><strong>${r.marca || '-'}</strong></td>
+                    <td>${r.genero || '-'}</td>
+                    <td>${r.familia || '-'}</td>
+                    <td>${r.linea || '-'}</td>
+                    <td class="text-center"><strong>${formatPct(r.porcentaje)}</strong></td>
+                    <td style="font-size:12px">${formatDate(r.fechaInicio)} - ${formatDate(r.fechaFin)}
+                        ${vigente ? '<span class="badge badge-success">Vigente</span>' : '<span class="badge badge-danger">Vencido</span>'}
+                    </td>
+                    <td>
+                        <button class="btn btn-outline btn-sm" onclick="editIndice(${r.idComision})">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteIndice(${r.idComision})">X</button>
+                    </td>
+                </tr>`;
+            });
+            html += '</table>';
+            if (data.length === 0) html = '<p style="color:var(--text-muted)">No se encontraron indices.</p>';
+            document.getElementById('indicesTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('indicesTable').innerHTML = '<p style="color:var(--danger)">Error: ' + e.message + '</p>';
+        }
+    }
+
+    function editIndice(id) {
+        const newPorc = prompt('Nuevo porcentaje (decimal, ej 0.15):');
+        if (newPorc === null) return;
+        const newDesde = prompt('Nueva fecha inicio (YYYY-MM-DD):');
+        if (newDesde === null) return;
+        const newHasta = prompt('Nueva fecha fin (YYYY-MM-DD):');
+        if (newHasta === null) return;
+
+        apiFetch('/api/indices/' + id, {
+            method: 'PUT',
+            body: JSON.stringify({
+                porcentaje: parseFloat(newPorc),
+                fechaInicio: newDesde,
+                fechaFin: newHasta
+            })
+        }).then(() => { toast('Indice actualizado'); loadIndices(); })
+          .catch(e => toast('Error: ' + e.message));
+    }
+
+    async function deleteIndice(id) {
+        if (!confirm('Eliminar este indice?')) return;
+        try {
+            await apiFetch('/api/indices/' + id, { method: 'DELETE' });
+            toast('Indice eliminado');
+            loadIndices();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    async function crearIndice() {
+        try {
+            await apiFetch('/api/indices', {
+                method: 'POST',
+                body: JSON.stringify({
+                    seccion: document.getElementById('newIdxSeccion').value || null,
+                    genero: document.getElementById('newIdxGenero').value || null,
+                    familia: document.getElementById('newIdxFamilia').value || null,
+                    linea: document.getElementById('newIdxLinea').value || null,
+                    marca: document.getElementById('newIdxMarca').value || null,
+                    proveedor: document.getElementById('newIdxProv').value || null,
+                    articulo: document.getElementById('newIdxArt').value || null,
+                    porcentaje: parseFloat(document.getElementById('newIdxPorc').value),
+                    Nivel: parseInt(document.getElementById('newIdxNivel').value),
+                    fechaInicio: document.getElementById('newIdxDesde').value,
+                    fechaFin: document.getElementById('newIdxHasta').value,
+                    empresa: document.getElementById('newIdxEmpresa').value
+                })
+            });
+            toast('Indice creado');
+            loadIndices();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    // =====================
+    // CALCULAR COMISIONES
+    // =====================
+    async function ejecutarCalculo() {
+        const btn = document.getElementById('btnCalcular');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Calculando...';
+        document.getElementById('calculoResultado').innerHTML = '<div class="loading-overlay"><div class="spinner"></div><p>Ejecutando SP_CalcularComisionesVendedores...</p></div>';
+
+        try {
+            const data = await apiFetch('/api/comisiones/calcular', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fechaEjecucion: document.getElementById('calcFecha').value || null,
+                    empresa: document.getElementById('calcEmpresa').value,
+                    mostrarDetalle: document.getElementById('calcDetalle').value === '1'
+                })
+            });
+
+            const resumen = data.resumen || [];
+
+            // Stats
+            const totalVendedores = resumen.length;
+            const alcanzanPiso = resumen.filter(r => r.AlcanzaPiso === 'SI').length;
+            const totalComision = resumen.reduce((s, r) => s + (r.TotalComision || 0), 0);
+            const totalVentas = resumen.reduce((s, r) => s + (r.TotalVentas || 0), 0);
+
+            let html = `
+            <div class="result-summary">
+                <div class="stat-card"><div class="value">${totalVendedores}</div><div class="label">Vendedores</div></div>
+                <div class="stat-card"><div class="value">${alcanzanPiso}</div><div class="label">Alcanzan Piso</div></div>
+                <div class="stat-card"><div class="value">${formatMoney(totalVentas)}</div><div class="label">Total Ventas</div></div>
+                <div class="stat-card"><div class="value" style="color:var(--success)">${formatMoney(totalComision)}</div><div class="label">Total Comisiones</div></div>
+            </div>
+            <div class="card">
+                <h3>Resumen por Vendedor</h3>
+                <div class="table-scroll">
+                <table>
+                    <tr><th>Vendedor</th><th>Nombre</th><th>Tipo</th><th class="text-right">Total Ventas</th><th>Piso</th><th>Tasa</th><th class="text-right">Comision</th><th>Ventas</th><th>Lineas</th></tr>`;
+
+            resumen.forEach(r => {
+                html += `<tr>
+                    <td>${r.NroVendedor}</td>
+                    <td><strong>${r.NombreVendedor}</strong></td>
+                    <td>${r.TipoVendedor}</td>
+                    <td class="text-right money">${formatMoney(r.TotalVentas)}</td>
+                    <td class="text-center">${r.AlcanzaPiso === 'SI' 
+                        ? '<span class="badge badge-success">SI</span>' 
+                        : '<span class="badge badge-danger">NO</span>'}</td>
+                    <td class="text-center">${formatPct(r.TasaEscalonBase)}</td>
+                    <td class="text-right money"><strong>${formatMoney(r.TotalComision)}</strong></td>
+                    <td class="text-center">${r.CantidadVentas}</td>
+                    <td class="text-center">${r.CantidadLineas}</td>
+                </tr>`;
+            });
+            html += '</table></div></div>';
+
+            // Detalle
+            if (data.detalle && data.detalle.length > 0) {
+                html += `<div class="card"><h3>Detalle por Linea (${data.detalle.length} registros)</h3>
+                <div class="table-scroll"><table>
+                <tr><th>Vendedor</th><th>Venta</th><th>Fecha</th><th>Articulo</th><th>Seccion</th><th>Marca</th><th class="text-right">Monto</th><th>Indice</th><th>Nivel</th><th>Bonus</th><th class="text-right">Comision</th></tr>`;
+                data.detalle.forEach(d => {
+                    html += `<tr>
+                        <td>${d.NroVendedor}</td>
+                        <td>${d.NroVenta}</td>
+                        <td>${formatDate(d.FechaVenta)}</td>
+                        <td style="font-size:11px">${d.CodigoArticulo}</td>
+                        <td>${d.Seccion}</td>
+                        <td>${d.Marca}</td>
+                        <td class="text-right money">${formatMoney(d.MontoVenta)}</td>
+                        <td class="text-center">${formatPct(d.IndiceCategoria)}</td>
+                        <td class="text-center">${d.NivelRegla}</td>
+                        <td class="text-center">${d.BonusAccesorios === 'SI' ? '<span class="badge badge-success">SI</span>' : '-'}</td>
+                        <td class="text-right money">${formatMoney(d.ComisionFinal)}</td>
+                    </tr>`;
+                });
+                html += '</table></div></div>';
+            }
+
+            document.getElementById('calculoResultado').innerHTML = html;
+        } catch (e) {
+            document.getElementById('calculoResultado').innerHTML = `<div class="card"><p style="color:var(--danger)"><strong>Error:</strong> ${e.message}</p></div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '🧮 Calcular';
+        }
+    }
+
+    // =====================
+    // AUDITORIA
+    // =====================
+    async function loadAuditoria() {
+        try {
+            const data = await apiFetch('/api/comisiones/auditoria');
+            let html = '<table><tr><th>Fecha</th><th>Clave</th><th>Valor Anterior</th><th>Valor Nuevo</th><th>Usuario</th></tr>';
+            data.forEach(r => {
+                html += `<tr>
+                    <td style="font-size:12px">${formatDateTime(r.fechaCambio)}</td>
+                    <td><strong>${r.clave}</strong></td>
+                    <td>${r.valorAnterior || '-'}</td>
+                    <td>${r.valorNuevo}</td>
+                    <td style="font-size:12px">${r.usuario || '-'}</td>
+                </tr>`;
+            });
+            html += '</table>';
+            if (data.length === 0) html = '<p style="color:var(--text-muted)">No hay cambios registrados.</p>';
+            document.getElementById('auditoriaTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('auditoriaTable').innerHTML = '<p style="color:var(--danger)">Error: ' + e.message + '</p>';
+        }
+    }
+
+    // =====================
+    // INIT
+    // =====================
+    // Set default date to today
+    document.getElementById('calcFecha').valueAsDate = new Date();
+    loadDashboard();
+    </script>
+</body>
+</html>

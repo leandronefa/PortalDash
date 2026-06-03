@@ -1,0 +1,57 @@
+@page
+@model DashboardPortal.Pages.Admin.Users.PermissionsModel
+@{
+    ViewData["Title"] = "Permisos de usuario";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Permisos de @Model.AppUser?.Username</h1>
+        <p class="page-subtitle">Seleccione los dashboards que este usuario podrá ver en el catálogo.</p>
+    </div>
+    <a href="/Admin/Users" class="btn btn-outline">Volver</a>
+</div>
+
+<div class="panel form-panel">
+    @if (Model.AllDashboards.Count == 0)
+    {
+        <p class="muted">No hay dashboards registrados. Cree dashboards antes de asignar permisos.</p>
+    }
+    else
+    {
+        <form method="post">
+            <input type="hidden" asp-for="Id" />
+
+            <div class="perm-toolbar">
+                <button type="button" class="btn btn-sm btn-ghost" data-check-all="#permList">Seleccionar todos</button>
+                <button type="button" class="btn btn-sm btn-ghost" data-uncheck-all="#permList">Quitar todos</button>
+            </div>
+
+            <div class="perm-list" id="permList">
+                @foreach (var d in Model.AllDashboards)
+                {
+                    var isChecked = Model.Granted.Contains(d.Id);
+                    <label class="perm-item">
+                        <input type="checkbox" name="Selected" value="@d.Id" @(isChecked ? "checked" : "") />
+                        <span class="perm-icon">@Html.Raw(IconLibrary.Render(d.Icon, 20))</span>
+                        <span class="perm-info">
+                            <span class="perm-name">
+                                @d.Name
+                                @if (!d.IsActive)
+                                {
+                                    <span class="badge badge-muted">Inactivo</span>
+                                }
+                            </span>
+                            <span class="perm-desc">@(string.IsNullOrWhiteSpace(d.Description) ? $"Puerto {d.Port}" : d.Description)</span>
+                        </span>
+                    </label>
+                }
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Guardar permisos</button>
+                <a href="/Admin/Users" class="btn btn-ghost">Cancelar</a>
+            </div>
+        </form>
+    }
+</div>

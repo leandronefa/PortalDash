@@ -1,0 +1,9 @@
+{
+  "name": "dashboard-services",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Instala dashboards Node.js (Express) como servicios de Windows con arranque automatico.",
+  "dependencies": {
+    "node-windows": "1.0.0-beta.8"
+  }
+}

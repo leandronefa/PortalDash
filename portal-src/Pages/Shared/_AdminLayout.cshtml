@@ -1,0 +1,46 @@
+@{
+    Layout = "_Layout";
+    var path = Context.Request.Path.Value ?? "";
+    string ActiveIf(string prefix, bool exact = false) =>
+        (exact ? string.Equals(path, prefix, StringComparison.OrdinalIgnoreCase) : path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            ? "admin-nav-link active" : "admin-nav-link";
+}
+
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-title">Menú administrador</div>
+        <nav class="admin-nav">
+            <a class="@ActiveIf("/Admin", exact: true)" href="/Admin">
+                @Html.Raw(IconLibrary.Render("dashboard", 18)) <span>Inicio</span>
+            </a>
+            <a class="@ActiveIf("/Admin/Dashboards")" href="/Admin/Dashboards">
+                @Html.Raw(IconLibrary.Render("layers", 18)) <span>Dashboards</span>
+            </a>
+            <a class="@ActiveIf("/Admin/Users")" href="/Admin/Users">
+                @Html.Raw(IconLibrary.Render("people", 18)) <span>Usuarios</span>
+            </a>
+            <a class="@ActiveIf("/Admin/Permissions")" href="/Admin/Permissions">
+                @Html.Raw(IconLibrary.Render("briefcase", 18)) <span>Permisos</span>
+            </a>
+            <a class="@ActiveIf("/Admin/Settings")" href="/Admin/Settings">
+                @Html.Raw(IconLibrary.Render("settings", 18)) <span>Configuración</span>
+            </a>
+        </nav>
+        <div class="admin-sidebar-foot">
+            <a class="admin-nav-link" href="/">
+                @Html.Raw(IconLibrary.Render("globe", 18)) <span>Volver al catálogo</span>
+            </a>
+            <form method="post" action="/Logout">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="admin-nav-link admin-nav-danger" style="width:100%;border:0;background:none;cursor:pointer;">
+                    @Html.Raw(IconLibrary.Render("settings", 18)) <span>Cerrar sesión</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <section class="admin-content">
+        <partial name="_Flash" />
+        @RenderBody()
+    </section>
+</div>

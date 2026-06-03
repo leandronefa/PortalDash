@@ -1,0 +1,99 @@
+@page
+@model DashboardPortal.Pages.Admin.Users.IndexModel
+@{
+    ViewData["Title"] = "Usuarios";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Usuarios</h1>
+        <p class="page-subtitle">Usuarios corporativos habilitados en el portal. Las contraseñas se validan siempre contra SQL Server.</p>
+    </div>
+</div>
+
+<div class="panel" style="padding:20px 24px; margin-bottom:22px;">
+    <h2 class="panel-title" style="margin-bottom:6px;">Agregar usuario corporativo</h2>
+    <p class="muted small" style="margin:0 0 16px;">Ingrese el nombre de inicio de sesión tal como existe en el dominio/SQL Server. Luego asígnele dashboards.</p>
+    <form method="post" asp-page-handler="Add" novalidate>
+        <div class="form-inline-row">
+            <div class="form-group">
+                <label class="label" asp-for="Input.Username"></label>
+                <input class="input" asp-for="Input.Username" required placeholder="ej.: jperez" />
+                <span class="field-error" asp-validation-for="Input.Username"></span>
+            </div>
+            <div class="form-group">
+                <label class="label" asp-for="Input.DisplayName"></label>
+                <input class="input" asp-for="Input.DisplayName" placeholder="ej.: Juan Pérez" />
+            </div>
+            <button type="submit" class="btn btn-primary" style="align-self:flex-end; flex-shrink:0;">Agregar usuario</button>
+        </div>
+    </form>
+</div>
+
+<div class="panel">
+    <div class="panel-head">
+        <h2 class="panel-title">Usuarios registrados</h2>
+        <form method="get" class="search-inline">
+            <input type="search" name="Q" value="@Model.Q" class="input" placeholder="Buscar usuario..." />
+            <button type="submit" class="btn btn-outline btn-sm">Buscar</button>
+        </form>
+    </div>
+
+        @if (Model.Rows.Count == 0)
+        {
+            <p class="muted" style="padding:16px;">No hay usuarios que coincidan con la búsqueda.</p>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Nombre</th>
+                            <th>Dashboards</th>
+                            <th>Estado</th>
+                            <th>Último ingreso</th>
+                            <th class="actions-col">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            var u = row.User;
+                            <tr>
+                                <td class="cell-strong">@u.Username</td>
+                                <td class="muted">@(string.IsNullOrWhiteSpace(u.DisplayName) ? "—" : u.DisplayName)</td>
+                                <td><span class="badge badge-info">@row.PermissionCount</span></td>
+                                <td>
+                                    @if (u.IsActive)
+                                    {
+                                        <span class="badge badge-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-muted">Inactivo</span>
+                                    }
+                                </td>
+                                <td class="nowrap muted">@(u.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
+                                <td class="actions-col">
+                                    <div class="row-actions">
+                                        <a href="/Admin/Users/Permissions?id=@u.Id" class="btn btn-sm btn-outline">Permisos</a>
+                                        <form method="post" asp-page-handler="Toggle" asp-route-Q="@Model.Q" class="inline-form">
+                                            <input type="hidden" name="id" value="@u.Id" />
+                                            <input type="hidden" name="active" value="@((!u.IsActive).ToString().ToLower())" />
+                                            <button type="submit" class="btn btn-sm btn-ghost">@(u.IsActive ? "Deshabilitar" : "Habilitar")</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Delete" asp-route-Q="@Model.Q" class="inline-form" onsubmit="return confirm('¿Eliminar este usuario y sus permisos?');">
+                                            <input type="hidden" name="id" value="@u.Id" />
+                                            <button type="submit" class="btn btn-sm btn-danger-outline">Eliminar</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+</div>

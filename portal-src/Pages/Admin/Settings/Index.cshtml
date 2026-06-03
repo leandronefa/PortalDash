@@ -1,0 +1,55 @@
+@page
+@model DashboardPortal.Pages.Admin.Settings.IndexModel
+@{
+    ViewData["Title"] = "Configuración";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Configuración</h1>
+        <p class="page-subtitle">Parámetros generales del portal.</p>
+    </div>
+</div>
+
+<div class="panel form-panel">
+    <form method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+        <div class="form-group">
+            <label class="label" asp-for="Input.PortalTitle"></label>
+            <input class="input" asp-for="Input.PortalTitle" maxlength="100" placeholder="Portal de Dashboards" />
+            <span class="hint">Texto que aparece en la barra superior y en el título de la página.</span>
+        </div>
+
+        <div class="form-group">
+            <label class="label" asp-for="Input.ServerHost"></label>
+            <input class="input" asp-for="Input.ServerHost" placeholder="ej.: 10.0.0.115 o servidor" />
+            <span class="hint">
+                Host base para construir las URLs de los dashboards (<code>esquema://host:puerto</code>).
+                Si se deja vacío, se usa automáticamente el host con el que se accede al portal.
+            </span>
+        </div>
+
+        <div class="form-group">
+            <label class="label" asp-for="Input.DefaultScheme"></label>
+            <select class="select" asp-for="Input.DefaultScheme">
+                <option value="http">http</option>
+                <option value="https">https</option>
+            </select>
+            <span class="hint">Protocolo usado al generar las URLs de los dashboards.</span>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Guardar configuración</button>
+        </div>
+    </form>
+</div>
+
+<div class="panel info-panel">
+    <h2 class="panel-title">Acerca del portal</h2>
+    <ul class="info-list">
+        <li>Autenticación corporativa mediante el procedimiento almacenado configurado en <code>appsettings.json</code>.</li>
+        <li>Usuario administrador local independiente de SQL Server.</li>
+        <li>Las URLs de los dashboards se generan como <code>esquema://host:puerto</code>.</li>
+    </ul>
+</div>

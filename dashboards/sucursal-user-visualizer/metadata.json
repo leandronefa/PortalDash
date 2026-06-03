@@ -1,0 +1,6 @@
+{
+  "name": "Sucursal-User Visualizer",
+  "description": "Visualizador de relaciones entre sucursales y usuarios mediante un grafo interactivo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

@@ -1,0 +1,24 @@
+@inject ISettingsService Settings
+@{
+    string portalTitle;
+    try { portalTitle = await Settings.GetAsync(AppConstants.Settings.PortalTitle, "Portal de Dashboards") ?? "Portal de Dashboards"; }
+    catch { portalTitle = "Portal de Dashboards"; }
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] ?? "Iniciar sesión") · @portalTitle</title>
+    <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="login-body">
+    <div class="login-wrap">
+        @RenderBody()
+        <p class="login-foot">@portalTitle · Acceso centralizado</p>
+    </div>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

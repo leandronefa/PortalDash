@@ -1,0 +1,87 @@
+@inject ISettingsService Settings
+@{
+    var portalTitle = await Settings.GetAsync(AppConstants.Settings.PortalTitle, "Portal de Dashboards");
+    var isMaster = User.IsInRole(AppConstants.Roles.Master);
+    var displayName = User.FindFirst(AppConstants.Claims.DisplayName)?.Value ?? User.Identity?.Name ?? "Usuario";
+    var initials = string.Concat((displayName ?? "U").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpper(p[0])));
+    var fullBleed = ViewData["FullBleed"] as bool? ?? false;
+    var path = Context.Request.Path.Value ?? "/";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " · " + portalTitle : portalTitle)</title>
+    <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="@(fullBleed ? "full-bleed" : "")">
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="topbar-inner">
+                <a class="brand" href="/" title="@portalTitle">
+                    <span class="brand-mark">@Html.Raw(IconLibrary.Render("dashboard", 22))</span>
+                    <span class="brand-text">@portalTitle</span>
+                </a>
+
+                <nav class="nav-links">
+                    <a class="nav-link @(path == "/" || path.StartsWith("/View") ? "active" : "")" href="/">Catálogo</a>
+                    @if (isMaster)
+                    {
+                        <a class="nav-link @(path.StartsWith("/Admin") ? "active" : "")" href="/Admin">Administración</a>
+                    }
+                </nav>
+
+                <details class="user-menu">
+                    <summary class="user-trigger">
+                        <span class="avatar">@initials</span>
+                        <span class="user-name">
+                            @displayName
+                            @if (isMaster)
+                            {
+                                <span class="role-tag">Master</span>
+                            }
+                        </span>
+                        <span class="caret">@Html.Raw(IconLibrary.Render("chart", 14))</span>
+                    </summary>
+                    <div class="user-dropdown">
+                        <div class="user-dropdown-head">
+                            <div class="avatar avatar-lg">@initials</div>
+                            <div>
+                                <div class="dd-name">@displayName</div>
+                                <div class="dd-sub">@User.Identity?.Name</div>
+                            </div>
+                        </div>
+                        <a class="dd-item" href="/">Catálogo de dashboards</a>
+                        @if (isMaster)
+                        {
+                            <a class="dd-item" href="/Admin">Panel de administración</a>
+                        }
+                        <form method="post" action="/Logout" class="dd-form">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="dd-item dd-item-danger">Cerrar sesión</button>
+                        </form>
+                    </div>
+                </details>
+            </div>
+        </header>
+
+        <main class="app-main">
+            @RenderBody()
+        </main>
+
+        @if (!fullBleed)
+        {
+            <footer class="footer">
+                <span>@portalTitle</span>
+                <span class="footer-sep">·</span>
+                <span>Portal centralizado de dashboards</span>
+            </footer>
+        }
+    </div>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Portal compilado/desplegado (no es código fuente)
+portal/
+
+# .NET build artifacts
+portal-src/bin/
+portal-src/obj/
+portal-src/App_Data/
+portal-src/.vs/
+
+# Secretos de producción (contienen contraseñas reales)
+portal-src/appsettings.Production.json
+
+# Node.js
+dashboards/**/node_modules/
+dashboards/**/.env
+dashboards/**/dist/
+dashboards/**/dist-server/
+dashboards/**/daemon/
+
+# Logs
+dashboards/**/*.log
+
+# Artefactos, datos generados y binarios de instalación
+*.zip
+*.csv
+*.msi
+dashboards/**/nssm.exe
+
+# Miscelánea
+*.user
+.DS_Store
+Thumbs.db

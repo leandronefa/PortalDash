@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comisiones - Panel de Administracion</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --success: #0d904f;
+            --danger: #d93025;
+            --warning: #f9ab00;
+            --bg: #f1f3f4;
+            --card: #ffffff;
+            --text: #202124;
+            --text-muted: #5f6368;
+            --border: #dadce0;
+            --sidebar-bg: #202124;
+            --sidebar-text: #e8eaed;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #3c4043;
+        }
+        .sidebar-header h1 { font-size: 18px; font-weight: 500; }
+        .sidebar-header small { color: #9aa0a6; font-size: 12px; }
+        .sidebar nav { flex: 1; padding: 12px 0; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-size: 14px;
+            gap: 12px;
+            border: none;
+            background: none;
+            color: var(--sidebar-text);
+            width: 100%;
+            text-align: left;
+        }
+        .nav-item:hover { background: #3c4043; }
+        .nav-item.active { background: var(--primary); border-radius: 0 24px 24px 0; margin-right: 12px; }
+        .nav-icon { font-size: 20px; width: 24px; text-align: center; }
+
+        /* Main content */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .topbar h2 { font-size: 20px; font-weight: 500; }
+        .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card h3 { font-size: 16px; margin-bottom: 16px; color: var(--text); font-weight: 500; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th {
+            text-align: left; padding: 10px 12px; background: #f8f9fa;
+            border-bottom: 2px solid var(--border); font-weight: 600;
+            color: var(--text-muted); font-size: 12px; text-transform: uppercase;
+            letter-spacing: 0.5px; white-space: nowrap;
+        }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:hover { background: #f8f9fa; }
+
+        /* Forms */
+        .form-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+        input, select {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px;
+            font-size: 14px; outline: none; transition: border 0.15s;
+        }
+        input:focus, select:focus { border-color: var(--primary); }
+        input[type="number"] { width: 130px; }
+        input[type="date"] { width: 150px; }
+        select { min-width: 130px; }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 20px; border: none; border-radius: 4px; font-size: 14px;
+            cursor: pointer; font-weight: 500; transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #0b7a43; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: #b3261e; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background: #f8f9fa; }
+        .btn-sm { padding: 4px 12px; font-size: 12px; }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #e6f4ea; color: var(--success); }
+        .badge-danger { background: #fce8e6; color: var(--danger); }
+        .badge-warning { background: #fef7e0; color: #e37400; }
+        .badge-info { background: #e8f0fe; color: var(--primary); }
+
+        /* Result cards */
+        .result-summary {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px; margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 16px; text-align: center;
+        }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: var(--primary); }
+        .stat-card .label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; background: #323232; color: #fff;
+            padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 9999;
+            display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .toast.show { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Loading */
+        .spinner {
+            display: inline-block; width: 20px; height: 20px;
+            border: 3px solid #dadce0; border-top: 3px solid var(--primary);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay { text-align: center; padding: 40px; color: var(--text-muted); }
+
+        .table-scroll { overflow-x: auto; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .money { font-variant-numeric: tabular-nums; }
+
+        /* Login */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+        }
+        .login-box {
+            background: #fff; border-radius: 12px; padding: 40px;
+            width: 380px; box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .login-box h2 { margin-bottom: 8px; color: #202124; }
+        .login-box p { color: #5f6368; margin-bottom: 24px; font-size: 14px; }
+        .login-box .form-group { text-align: left; margin-bottom: 16px; }
+        .login-box input {
+            width: 100%; padding: 10px 12px; border: 1px solid #dadce0;
+            border-radius: 6px; font-size: 14px; box-sizing: border-box;
+        }
+        .login-box input:focus { border-color: var(--primary); outline: none; }
+        .login-box .btn { width: 100%; padding: 12px; font-size: 15px; }
+        .login-error { color: var(--danger); font-size: 13px; margin-top: 12px; display: none; }
+        #appContainer { display: none; }
+        #appContainer.logged-in { display: flex; width: 100%; }
+        #logoutBtn { cursor: pointer; color: var(--text-muted); font-size: 13px; border: none; background: none; }
+        #logoutBtn:hover { color: var(--danger); text-decoration: underline; }
+
+        /* Dark mode */
+        html.dark {
+            --primary: #8ab4f8;
+            --primary-dark: #669df6;
+            --success: #81c995;
+            --danger: #f28b82;
+            --warning: #fdd663;
+            --bg: #1e1e1e;
+            --card: #2d2d2d;
+            --text: #e8eaed;
+            --text-muted: #9aa0a6;
+            --border: #3c4043;
+            --sidebar-bg: #171717;
+            --sidebar-text: #e8eaed;
+        }
+        html.dark th { background: #353535; }
+        html.dark tr:hover { background: #353535; }
+        html.dark input, html.dark select { background: #3c4043; color: #e8eaed; border-color: #5f6368; }
+        html.dark .login-box { background: #2d2d2d; }
+        html.dark .login-box h2 { color: #e8eaed; }
+        html.dark .login-box p { color: #9aa0a6; }
+        html.dark .login-box input { background: #3c4043; color: #e8eaed; border-color: #5f6368; }
+        html.dark .btn-outline { color: #e8eaed; border-color: #5f6368; }
+        html.dark .btn-outline:hover { background: #3c4043; }
+        html.dark .badge-success { background: #1b3a2a; }
+        html.dark .badge-danger { background: #3a1c1a; }
+        html.dark .badge-warning { background: #3a3017; }
+        html.dark .badge-info { background: #1a2a3a; }
+        html.dark .toast { background: #e8eaed; color: #202124; }
+        #darkModeBtn { cursor: pointer; font-size: 20px; background: none; border: none; padding: 4px; line-height: 1; }
+    </style>
+</head>
+<body>
+    <!-- LOGIN -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2>Comisiones</h2>
+            <p>Panel de Administracion</p>
+            <div class="form-group">
+                <label>Usuario</label>
+                <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
+            </div>
+            <button class="btn btn-primary" onclick="doLogin()" id="btnLogin">Ingresar</button>
+            <div class="login-error" id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div id="appContainer">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>Comisiones</h1>
+            <small>Panel de Administracion</small>
+        </div>
+        <nav>
+            <button class="nav-item active" data-page="dashboard">
+                <span class="nav-icon">📊</span> Dashboard
+            </button>
+            <button class="nav-item" data-page="reglas">
+                <span class="nav-icon">⚙️</span> Configuracion General
+            </button>
+            <button class="nav-item" data-page="indices">
+                <span class="nav-icon">🏷️</span> Indices Categoria
+            </button>
+            <button class="nav-item" data-page="licencias">
+                <span class="nav-icon">🏖️</span> Licencias
+            </button>
+            <button class="nav-item" data-page="escalas">
+                <span class="nav-icon">📈</span> Escalas Comisiones
+            </button>
+            <button class="nav-item" data-page="calcular">
+                <span class="nav-icon">🧮</span> Calcular Comisiones
+            </button>
+            <button class="nav-item" data-page="detalle-vendedor">
+                <span class="nav-icon">🔍</span> Detalle Vendedor
+            </button>
+            <button class="nav-item" data-page="auditoria">
+                <span class="nav-icon">📋</span> Auditoria
+            </button>
+        </nav>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <h2 id="pageTitle">Dashboard</h2>
+            <div style="display:flex;align-items:center;gap:16px">
+                <span style="color: var(--text-muted); font-size: 13px;" id="serverInfo">Servidor: 10.0.0.115</span>
+                <button id="darkModeBtn" onclick="toggleDarkMode()" title="Modo oscuro/claro">🌙</button>
+                <span style="font-size:13px;font-weight:600" id="userDisplay"></span>
+                <button id="logoutBtn" onclick="doLogout()">Cerrar sesion</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- DASHBOARD -->
+            <div id="page-dashboard" class="page active">
+                <div class="result-summary" id="dashboardStats">
+                    <div class="stat-card"><div class="value" id="statReglas">-</div><div class="label">Reglas Activas</div></div>
+                    <div class="stat-card"><div class="value" id="statIndices">-</div><div class="label">Indices Categoria</div></div>
+                    <div class="stat-card"><div class="value" id="statCambios">-</div><div class="label">Cambios Recientes</div></div>
+                </div>
+                <div class="card">
+                    <h3>Resumen de Configuracion</h3>
+                    <div id="dashboardReglas"></div>
+                </div>
+            </div>
+
+            <!-- REGLAS -->
+            <div id="page-reglas" class="page">
+                <div class="card">
+                    <h3>Parametros de Configuracion</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 13px;">
+                        Estos valores se leen al ejecutar el calculo de comisiones. Modificarlos afecta la proxima ejecucion.
+                    </p>
+                    <div id="reglasTable"></div>
+                </div>
+            </div>
+
+            <!-- INDICES CATEGORIA -->
+            <div id="page-indices" class="page">
+                <div class="card">
+                    <h3>Filtros</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>Seccion</label><select id="idxSeccion"><option value="">Todas</option></select></div>
+                        <div class="form-group"><label>Marca</label><select id="idxMarca"><option value="">Todas</option></select></div>
+                        <button class="btn btn-primary" onclick="loadIndices()">Buscar</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Indices por Categoria / Marca</h3>
+                    <div class="table-scroll" id="indicesTable"></div>
+                </div>
+                <div class="card">
+                    <h3>Agregar Indice</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>Seccion</label>
+                            <select id="newIdxSeccion"><option value="">(cualquiera)</option></select>
+                        </div>
+                        <div class="form-group"><label>Genero</label>
+                            <select id="newIdxGenero"><option value="">(cualquiera)</option></select>
+                        </div>
+                        <div class="form-group"><label>Familia</label>
+                            <select id="newIdxFamilia"><option value="">(cualquiera)</option></select>
+                        </div>
+                        <div class="form-group"><label>Linea</label>
+                            <select id="newIdxLinea"><option value="">(cualquiera)</option></select>
+                        </div>
+                        <div class="form-group"><label>Marca</label>
+                            <select id="newIdxMarca"><option value="">(cualquiera)</option></select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Proveedor</label>
+                            <select id="newIdxProv"><option value="">(cualquiera)</option></select>
+                        </div>
+                        <div class="form-group"><label>Operacion</label>
+                            <select id="newIdxOp"><option>Incluye</option><option>Excluye</option></select>
+                        </div>
+                        <div class="form-group"><label>Porcentaje</label>
+                            <input type="number" id="newIdxPorc" step="0.01" min="0" max="1" placeholder="ej: 0.15">
+                        </div>
+                        <div class="form-group"><label>Tipo</label>
+                            <select id="newIdxTipo"><option>VENDEDOR</option><option>CAJERO</option></select>
+                        </div>
+                        <div class="form-group"><label>Nivel</label>
+                            <input type="number" id="newIdxNivel" min="1" max="10" placeholder="1-10">
+                        </div>
+
+                        <div class="form-group"><label>Empresa</label>
+                            <select id="newIdxEmpresa"><option>Tesi</option><option>Pueblo</option></select>
+                        </div>
+                        <button class="btn btn-success" onclick="crearIndice()">Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LICENCIAS -->
+            <div id="page-licencias" class="page">
+                <div class="card">
+                    <h3>Politicas de Licencias</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 13px;">
+                        Seleccione que tipos de licencia se incluyen en el calculo de venta proporcional.
+                        Solo las licencias APROBADAS de los tipos habilitados se consideran.
+                    </p>
+                    <div id="licenciasTable"></div>
+                </div>
+            </div>
+
+            <!-- ESCALAS COMISIONES -->
+            <div id="page-escalas" class="page">
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h3>Escalas de Comisiones</h3>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <select id="escalasEmpresa" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                                <option value="">Todas las empresas</option>
+                                <option value="Tesi">Tesi</option>
+                                <option value="Pueblo">Pueblo</option>
+                            </select>
+                            <select id="escalasTipo" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                                <option value="">Todos los tipos</option>
+                                <option value="CAJERO">CAJERO</option>
+                                <option value="VENDEDOR">VENDEDOR</option>
+                            </select>
+                            <select id="escalasPeriodo" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                            </select>
+                            <button class="btn btn-primary" onclick="showNuevoEscalonForm()">+ Nuevo Escalon</button>
+                            <button class="btn" onclick="showCopiarPeriodoForm()" style="background:var(--warning);color:#000;">Copiar Periodo</button>
+                        </div>
+                    </div>
+                    <p style="color:var(--text-muted);margin-bottom:12px;font-size:13px;">
+                        Escalones que determinan el porcentaje fijo de comision por rango de venta.
+                        El SP usa siempre el periodo con MAX año y MAX mes.
+                    </p>
+                    <div class="table-scroll" id="escalasTable"><p style="color:var(--text-muted);">Cargando...</p></div>
+                </div>
+
+                <!-- Form nuevo escalon -->
+                <div id="nuevoEscalonForm" class="card" style="display:none;margin-top:16px;">
+                    <h3 id="escalonFormTitle">Nuevo Escalon</h3>
+                    <input type="hidden" id="escalonEditId" value="">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Empresa</label>
+                            <select id="escalonEmpresa" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                                <option value="Tesi">Tesi</option>
+                                <option value="Pueblo">Pueblo</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Tipo</label>
+                            <select id="escalonTipo" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                                <option value="CAJERO">CAJERO</option>
+                                <option value="VENDEDOR">VENDEDOR</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Comision %</label>
+                            <input type="number" id="escalonComision" step="0.01" placeholder="Ej: 0.5" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Valor Inferior</label>
+                            <input type="number" id="escalonInferior" step="1" placeholder="Ej: 6196701" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Valor Superior</label>
+                            <input type="number" id="escalonSuperior" step="1" placeholder="Ej: 10002600" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Año</label>
+                            <input type="number" id="escalonAnio" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Mes</label>
+                            <input type="number" id="escalonMes" min="1" max="12" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-primary" onclick="guardarEscalon()">Guardar</button>
+                        <button class="btn" onclick="cancelarEscalon()">Cancelar</button>
+                    </div>
+                </div>
+
+                <!-- Form copiar periodo -->
+                <div id="copiarPeriodoForm" class="card" style="display:none;margin-top:16px;">
+                    <h3>Copiar Escalones a Nuevo Periodo</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Año Origen</label>
+                            <input type="number" id="copiarAnioOrigen" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Mes Origen</label>
+                            <input type="number" id="copiarMesOrigen" min="1" max="12" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Año Destino</label>
+                            <input type="number" id="copiarAnioDestino" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:var(--text-muted);">Mes Destino</label>
+                            <input type="number" id="copiarMesDestino" min="1" max="12" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-primary" onclick="copiarPeriodo()">Copiar</button>
+                        <button class="btn" onclick="document.getElementById('copiarPeriodoForm').style.display='none';">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CALCULAR COMISIONES -->
+            <div id="page-calcular" class="page">
+                <div class="card">
+                    <h3>Ejecutar Calculo de Comisiones</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 12px; font-size: 13px;">
+                        Formula: CANTIDAD &times; |PRECIO| - |DESCUENTO2| &nbsp;|&nbsp;
+                        Comision linea = Monto &times; Indice &nbsp;|&nbsp;
+                        Part-time: venta &times; Factor PT para evaluar piso &nbsp;|&nbsp;
+                        Vta Proporcional: promedio diario 6 meses &times; dias licencia
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fecha Ejecucion</label>
+                            <input type="date" id="calcFecha">
+                        </div>
+                        <div class="form-group">
+                            <label>Empresa</label>
+                            <select id="calcEmpresa">
+                                <option value="Tesi">Tesi</option>
+                                <option value="Pueblo">Pueblo</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="ejecutarCalculo()" id="btnCalcular">
+                            🧮 Calcular
+                        </button>
+                    </div>
+                </div>
+                <div id="calculoResultado"></div>
+            </div>
+
+            <!-- DETALLE VENDEDOR -->
+            <div id="page-detalle-vendedor" class="page">
+                <div class="card">
+                    <h3>Comision con Detalle por Vendedor</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 12px; font-size: 13px;">
+                        Seleccione un vendedor para ver el resumen y el detalle linea por linea de su comision.
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Vendedor</label>
+                            <select id="dvVendedor" style="min-width:320px"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha Ejecucion</label>
+                            <input type="date" id="dvFecha">
+                        </div>
+                        <div class="form-group">
+                            <label>Empresa</label>
+                            <select id="dvEmpresa">
+                                <option value="Tesi">Tesi</option>
+                                <option value="Pueblo">Pueblo</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="ejecutarDetalleVendedor()" id="btnDetalleVend">
+                            🔍 Calcular Detalle
+                        </button>
+                    </div>
+                </div>
+                <div id="detalleVendedorResultado"></div>
+            </div>
+
+            <!-- AUDITORIA -->
+            <div id="page-auditoria" class="page">
+                <div class="card">
+                    <h3>Ultimos Cambios en Configuracion</h3>
+                    <button class="btn btn-outline btn-sm" onclick="loadAuditoria()" style="margin-bottom:12px">Actualizar</button>
+                    <div class="table-scroll" id="auditoriaTable"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- /appContainer -->
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    const API = '';
+
+    // =====================
+    // NAVIGATION
+    // =====================
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const page = btn.dataset.page;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.getElementById('pageTitle').textContent = btn.textContent.trim();
+            if (page === 'dashboard') loadDashboard();
+            if (page === 'reglas') loadReglas();
+            if (page === 'indices') { loadIndicesFiltros(); loadIndices(); loadJerarquia(); }
+            if (page === 'licencias') loadLicencias();
+            if (page === 'escalas') { loadEscalasPeriodos(); loadEscalas(); }
+            if (page === 'detalle-vendedor') loadVendedoresSelect();
+            if (page === 'auditoria') loadAuditoria();
+        });
+    });
+
+    // =====================
+    // UTILS
+    // =====================
+    function toast(msg, duration = 3000) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), duration);
+    }
+
+    function formatMoney(n) {
+        if (n == null) return '-';
+        return '$' + Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatPct(n) {
+        if (n == null) return '-';
+        return (Number(n) * 100).toFixed(1) + '%';
+    }
+
+    // Para indices de comision: 0.15 = 0.15% (NO multiplicar por 100)
+    function formatIndice(n) {
+        if (n == null) return '-';
+        return Number(n).toFixed(2) + '%';
+    }
+
+    function formatDate(d) {
+        if (!d) return '-';
+        return new Date(d).toLocaleDateString('es-AR');
+    }
+
+    function formatDateTime(d) {
+        if (!d) return '-';
+        return new Date(d).toLocaleString('es-AR');
+    }
+
+    async function apiFetch(url, opts = {}) {
+        const res = await fetch(API + url, {
+            headers: { 'Content-Type': 'application/json' },
+            ...opts
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: res.statusText }));
+            throw new Error(err.error || 'Error');
+        }
+        return res.json();
+    }
+
+    function fillSelect(selectId, values, emptyLabel) {
+        const sel = document.getElementById(selectId);
+        sel.innerHTML = '<option value="">' + (emptyLabel || '(cualquiera)') + '</option>' +
+            values.map(v => '<option value="' + v + '">' + v + '</option>').join('');
+    }
+
+    // =====================
+    // DASHBOARD
+    // =====================
+    async function loadDashboard() {
+        try {
+            const [reglas, indices, auditoria] = await Promise.all([
+                apiFetch('/api/reglas'),
+                apiFetch('/api/indices'),
+                apiFetch('/api/comisiones/auditoria')
+            ]);
+
+            document.getElementById('statReglas').textContent = reglas.filter(r => r.activo).length;
+            document.getElementById('statIndices').textContent = indices.length;
+            document.getElementById('statCambios').textContent = auditoria.length;
+
+            let html = '<table><tr><th>Parametro</th><th>Valor</th><th>Estado</th></tr>';
+            reglas.forEach(r => {
+                let displayVal = r.valor;
+                if (r.clave.includes('PISO') || r.clave.includes('MINIMO')) displayVal = formatMoney(r.valor);
+                if (r.clave.includes('BONUS') && !r.clave.includes('ACTIVO')) displayVal = formatIndice(r.valor);
+
+                if (r.clave === 'FACTOR_PART_TIME') displayVal = 'x' + r.valor;
+                html += '<tr><td><strong>' + r.clave + '</strong><br><small style="color:var(--text-muted)">' + (r.descripcion||'') + '</small></td><td>' + displayVal + '</td><td>' + (r.activo ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>') + '</td></tr>';
+            });
+            html += '</table>';
+            document.getElementById('dashboardReglas').innerHTML = html;
+        } catch (e) {
+            toast('Error cargando dashboard: ' + e.message);
+        }
+    }
+
+    // =====================
+    // REGLAS
+    // =====================
+    async function loadReglas() {
+        try {
+            const reglas = await apiFetch('/api/reglas');
+            let html = '<table><tr><th>Clave</th><th>Valor</th><th>Descripcion</th><th>Activo</th><th>Ultima Modif.</th><th>Accion</th></tr>';
+            reglas.forEach(r => {
+                html += '<tr id="regla-' + r.idRegla + '">' +
+                    '<td><strong>' + r.clave + '</strong></td>' +
+                    '<td><input type="text" value="' + r.valor + '" id="regla-val-' + r.idRegla + '" style="width:180px"></td>' +
+                    '<td style="font-size:12px;color:var(--text-muted);max-width:250px">' + (r.descripcion||'') + '</td>' +
+                    '<td><select id="regla-act-' + r.idRegla + '"><option value="1"' + (r.activo ? ' selected' : '') + '>Si</option><option value="0"' + (!r.activo ? ' selected' : '') + '>No</option></select></td>' +
+                    '<td style="font-size:12px">' + formatDateTime(r.fechaModificacion) + '</td>' +
+                    '<td><button class="btn btn-primary btn-sm" onclick="guardarRegla(' + r.idRegla + ')">Guardar</button></td>' +
+                    '</tr>';
+            });
+            html += '</table>';
+            document.getElementById('reglasTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('reglasTable').innerHTML = '<p style="color:var(--danger)">Error: ' + e.message + '</p>';
+        }
+    }
+
+    async function guardarRegla(id) {
+        try {
+            const valor = document.getElementById('regla-val-' + id).value;
+            const activo = parseInt(document.getElementById('regla-act-' + id).value);
+            await apiFetch('/api/reglas/' + id, {
+                method: 'PUT',
+                body: JSON.stringify({ valor, activo })
+            });
+            toast('Regla actualizada correctamente');
+            loadReglas();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    // =====================
+    // INDICES CATEGORIA
+    // =====================
+    async function loadIndicesFiltros() {
+        try {
+            const filtros = await apiFetch('/api/indices/filtros');
+            fillSelect('idxSeccion', filtros.secciones, 'Todas');
+            fillSelect('idxMarca', filtros.marcas, 'Todas');
+        } catch (e) { /* ignore */ }
+    }
+
+    // Load dropdown options from cgd_ARTICULOS
+    async function loadJerarquia() {
+        try {
+            const j = await apiFetch('/api/indices/jerarquia');
+            fillSelect('newIdxSeccion', j.secciones, '(cualquiera)');
+            fillSelect('newIdxGenero', j.generos, '(cualquiera)');
+            fillSelect('newIdxFamilia', j.familias, '(cualquiera)');
+            fillSelect('newIdxLinea', j.lineas, '(cualquiera)');
+            fillSelect('newIdxMarca', j.marcas, '(cualquiera)');
+            fillSelect('newIdxProv', j.proveedores, '(cualquiera)');
+        } catch (e) {
+            toast('Error cargando jerarquia de articulos: ' + e.message);
+        }
+    }
+
+    async function loadIndices() {
+        try {
+            const seccion = document.getElementById('idxSeccion').value;
+            const marca = document.getElementById('idxMarca').value;
+            let url = '/api/indices?';
+            if (seccion) url += 'seccion=' + encodeURIComponent(seccion) + '&';
+            if (marca) url += 'marca=' + encodeURIComponent(marca) + '&';
+
+            const data = await apiFetch(url);
+            let html = '<table><tr><th>ID</th><th>Niv</th><th>Seccion</th><th>Marca</th><th>Genero</th><th>Familia</th><th>Linea</th><th>Proveedor</th><th>Articulo</th><th>Op</th><th>%</th><th>Tipo</th><th>Empresa</th><th>Acciones</th></tr>';
+            data.forEach(r => {
+                html += '<tr>' +
+                    '<td>' + r.idComision + '</td>' +
+                    '<td class="text-center"><span class="badge badge-info">' + r.Nivel + '</span></td>' +
+                    '<td>' + (r.seccion||'-') + '</td>' +
+                    '<td><strong>' + (r.marca||'-') + '</strong></td>' +
+                    '<td>' + (r.genero||'-') + '</td>' +
+                    '<td>' + (r.familia||'-') + '</td>' +
+                    '<td>' + (r.linea||'-') + '</td>' +
+                    '<td>' + (r.proveedor||'-') + '</td>' +
+                    '<td>' + (r.articulo||'-') + '</td>' +
+                    '<td>' + (r.operacion||'-') + '</td>' +
+                    '<td class="text-center"><strong>' + formatIndice(r.porcentaje) + '</strong></td>' +
+                    '<td>' + (r.tipo||'-') + '</td>' +
+                    '<td>' + (r.empresa||'-') + '</td>' +
+                    '<td>' +
+                        '<button class="btn btn-outline btn-sm" onclick="editIndice(' + r.idComision + ')">Editar</button> ' +
+                        '<button class="btn btn-danger btn-sm" onclick="deleteIndice(' + r.idComision + ')">X</button>' +
+                    '</td>' +
+                    '</tr>';
+            });
+            html += '</table>';
+            if (data.length === 0) html = '<p style="color:var(--text-muted)">No se encontraron indices.</p>';
+            document.getElementById('indicesTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('indicesTable').innerHTML = '<p style="color:var(--danger)">Error: ' + e.message + '</p>';
+        }
+    }
+
+    function editIndice(id) {
+        const newPorc = prompt('Nuevo porcentaje (decimal, ej 0.15):');
+        if (newPorc === null) return;
+
+        apiFetch('/api/indices/' + id, {
+            method: 'PUT',
+            body: JSON.stringify({
+                porcentaje: parseFloat(newPorc)
+            })
+        }).then(function() { toast('Indice actualizado'); loadIndices(); })
+          .catch(function(e) { toast('Error: ' + e.message); });
+    }
+
+    async function deleteIndice(id) {
+        if (!confirm('Eliminar este indice?')) return;
+        try {
+            await apiFetch('/api/indices/' + id, { method: 'DELETE' });
+            toast('Indice eliminado');
+            loadIndices();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    async function crearIndice() {
+        try {
+            await apiFetch('/api/indices', {
+                method: 'POST',
+                body: JSON.stringify({
+                    seccion: document.getElementById('newIdxSeccion').value || null,
+                    genero: document.getElementById('newIdxGenero').value || null,
+                    familia: document.getElementById('newIdxFamilia').value || null,
+                    linea: document.getElementById('newIdxLinea').value || null,
+                    marca: document.getElementById('newIdxMarca').value || null,
+                    proveedor: document.getElementById('newIdxProv').value || null,
+                    articulo: null,
+                    operacion: document.getElementById('newIdxOp').value,
+                    porcentaje: parseFloat(document.getElementById('newIdxPorc').value),
+                    tipo: document.getElementById('newIdxTipo').value,
+                    Nivel: parseInt(document.getElementById('newIdxNivel').value),
+                    empresa: document.getElementById('newIdxEmpresa').value
+                })
+            });
+            toast('Indice creado');
+            loadIndices();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    // =====================
+    // LICENCIAS
+    // =====================
+    async function loadLicencias() {
+        try {
+            const politicas = await apiFetch('/api/licencias/politicas');
+            let html = '<table><tr><th>ID Humand</th><th>Descripcion</th><th>Habilitado</th><th>Accion</th></tr>';
+            politicas.forEach(function(p) {
+                html += '<tr>' +
+                    '<td>' + p.idPoliticaHumand + '</td>' +
+                    '<td><strong>' + p.descripcion + '</strong></td>' +
+                    '<td>' + (p.habilitado ? '<span class="badge badge-success">SI</span>' : '<span class="badge badge-danger">NO</span>') + '</td>' +
+                    '<td><button class="btn btn-sm ' + (p.habilitado ? 'btn-danger' : 'btn-success') + '" onclick="toggleLicencia(' + p.idPolitica + ',' + (p.habilitado ? 0 : 1) + ')">' + (p.habilitado ? 'Desactivar' : 'Activar') + '</button></td>' +
+                    '</tr>';
+            });
+            html += '</table>';
+            document.getElementById('licenciasTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('licenciasTable').innerHTML = '<p style="color:var(--danger)">Error: ' + e.message + '</p>';
+        }
+    }
+
+    async function toggleLicencia(id, habilitado) {
+        try {
+            await apiFetch('/api/licencias/politicas/' + id, {
+                method: 'PUT',
+                body: JSON.stringify({ habilitado: habilitado })
+            });
+            toast('Politica actualizada');
+            loadLicencias();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    // =====================
+    // ESCALAS COMISIONES
+    // =====================
+    async function loadEscalasPeriodos() {
+        try {
+            const periodos = await apiFetch('/api/escalas/periodos');
+            const sel = document.getElementById('escalasPeriodo');
+            sel.innerHTML = '<option value="">Todos los periodos</option>';
+            periodos.forEach(function(p) {
+                sel.innerHTML += '<option value="' + p.anio + '-' + p.mes + '">' + p.anio + '-' + String(p.mes).padStart(2,'0') + '</option>';
+            });
+            sel.onchange = function() { loadEscalas(); };
+            document.getElementById('escalasEmpresa').onchange = function() { loadEscalas(); };
+            document.getElementById('escalasTipo').onchange = function() { loadEscalas(); };
+        } catch (e) { console.error(e); }
+    }
+
+    async function loadEscalas() {
+        try {
+            var params = [];
+            var empresa = document.getElementById('escalasEmpresa').value;
+            var tipo = document.getElementById('escalasTipo').value;
+            var periodo = document.getElementById('escalasPeriodo').value;
+            if (empresa) params.push('empresa=' + empresa);
+            if (tipo) params.push('tipo=' + tipo);
+            if (periodo) {
+                var parts = periodo.split('-');
+                params.push('anio=' + parts[0]);
+                params.push('mes=' + parts[1]);
+            }
+            var url = '/api/escalas' + (params.length ? '?' + params.join('&') : '');
+            var data = await apiFetch(url);
+            if (data.length === 0) {
+                document.getElementById('escalasTable').innerHTML = '<p style="color:var(--text-muted);">No hay escalones para los filtros seleccionados.</p>';
+                return;
+            }
+            var html = '<table><thead><tr><th>Empresa</th><th>Tipo</th><th>Año</th><th>Mes</th><th>Valor Inferior</th><th>Valor Superior</th><th>Comision %</th><th>Acciones</th></tr></thead><tbody>';
+            data.forEach(function(e) {
+                html += '<tr>';
+                html += '<td>' + e.empresa + '</td>';
+                html += '<td><span style="padding:2px 8px;border-radius:4px;font-size:12px;background:' + (e.tipo === 'CAJERO' ? 'var(--warning)' : 'var(--info)') + ';color:#000;">' + e.tipo + '</span></td>';
+                html += '<td>' + e.anio + '</td>';
+                html += '<td>' + e.mes + '</td>';
+                html += '<td style="text-align:right;">$' + Number(e.valorInferior).toLocaleString('es-AR') + '</td>';
+                html += '<td style="text-align:right;">$' + Number(e.valorSuperior).toLocaleString('es-AR') + '</td>';
+                html += '<td style="text-align:right;font-weight:600;">' + e.comision + '%</td>';
+                html += '<td>';
+                html += '<button class="btn btn-outline btn-sm" onclick="editarEscalon(' + e.idComision + ',' + JSON.stringify(e.empresa).replace(/"/g,'&quot;') + ',\'' + e.tipo + '\',' + e.comision + ',' + e.valorInferior + ',' + e.valorSuperior + ',' + e.anio + ',' + e.mes + ')">Editar</button> ';
+                html += '<button class="btn btn-sm" style="background:var(--danger);color:#fff;" onclick="eliminarEscalon(' + e.idComision + ')">Eliminar</button>';
+                html += '</td></tr>';
+            });
+            html += '</tbody></table>';
+            document.getElementById('escalasTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('escalasTable').innerHTML = '<p style="color:var(--danger);">Error: ' + e.message + '</p>';
+        }
+    }
+
+    function showNuevoEscalonForm() {
+        document.getElementById('escalonFormTitle').textContent = 'Nuevo Escalon';
+        document.getElementById('escalonEditId').value = '';
+        document.getElementById('escalonEmpresa').value = 'Tesi';
+        document.getElementById('escalonTipo').value = 'CAJERO';
+        document.getElementById('escalonComision').value = '';
+        document.getElementById('escalonInferior').value = '';
+        document.getElementById('escalonSuperior').value = '';
+        var now = new Date();
+        document.getElementById('escalonAnio').value = now.getFullYear();
+        document.getElementById('escalonMes').value = now.getMonth() + 1;
+        document.getElementById('nuevoEscalonForm').style.display = 'block';
+    }
+
+    function editarEscalon(id, empresa, tipo, comision, inf, sup, anio, mes) {
+        document.getElementById('escalonFormTitle').textContent = 'Editar Escalon #' + id;
+        document.getElementById('escalonEditId').value = id;
+        document.getElementById('escalonEmpresa').value = empresa;
+        document.getElementById('escalonTipo').value = tipo;
+        document.getElementById('escalonComision').value = comision;
+        document.getElementById('escalonInferior').value = inf;
+        document.getElementById('escalonSuperior').value = sup;
+        document.getElementById('escalonAnio').value = anio;
+        document.getElementById('escalonMes').value = mes;
+        document.getElementById('nuevoEscalonForm').style.display = 'block';
+    }
+
+    function cancelarEscalon() {
+        document.getElementById('nuevoEscalonForm').style.display = 'none';
+    }
+
+    async function guardarEscalon() {
+        try {
+            var id = document.getElementById('escalonEditId').value;
+            var body = {
+                empresa: document.getElementById('escalonEmpresa').value,
+                tipo: document.getElementById('escalonTipo').value,
+                comision: parseFloat(document.getElementById('escalonComision').value),
+                valorInferior: parseFloat(document.getElementById('escalonInferior').value),
+                valorSuperior: parseFloat(document.getElementById('escalonSuperior').value),
+                anio: parseInt(document.getElementById('escalonAnio').value),
+                mes: parseInt(document.getElementById('escalonMes').value)
+            };
+            if (id) {
+                await apiFetch('/api/escalas/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+                toast('Escalon actualizado');
+            } else {
+                await apiFetch('/api/escalas', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+                toast('Escalon creado');
+            }
+            document.getElementById('nuevoEscalonForm').style.display = 'none';
+            loadEscalasPeriodos();
+            loadEscalas();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    async function eliminarEscalon(id) {
+        if (!confirm('Eliminar este escalon?')) return;
+        try {
+            await apiFetch('/api/escalas/' + id, { method: 'DELETE' });
+            toast('Escalon eliminado');
+            loadEscalas();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    function showCopiarPeriodoForm() {
+        document.getElementById('copiarPeriodoForm').style.display = 'block';
+        var now = new Date();
+        document.getElementById('copiarAnioDestino').value = now.getFullYear();
+        document.getElementById('copiarMesDestino').value = now.getMonth() + 1;
+    }
+
+    async function copiarPeriodo() {
+        try {
+            var body = {
+                anioOrigen: parseInt(document.getElementById('copiarAnioOrigen').value),
+                mesOrigen: parseInt(document.getElementById('copiarMesOrigen').value),
+                anioDestino: parseInt(document.getElementById('copiarAnioDestino').value),
+                mesDestino: parseInt(document.getElementById('copiarMesDestino').value)
+            };
+            await apiFetch('/api/escalas/copiar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+            toast('Escalones copiados al nuevo periodo');
+            document.getElementById('copiarPeriodoForm').style.display = 'none';
+            loadEscalasPeriodos();
+            loadEscalas();
+        } catch (e) { toast('Error: ' + e.message); }
+    }
+
+    // =====================
+    // CALCULAR COMISIONES
+    // =====================
+    async function ejecutarCalculo() {
+        const btn = document.getElementById('btnCalcular');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Calculando...';
+        document.getElementById('calculoResultado').innerHTML = '<div class="loading-overlay"><div class="spinner"></div><p>Ejecutando SP_CalcularComisionesVendedores...</p></div>';
+
+        try {
+            const data = await apiFetch('/api/comisiones/calcular', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fechaEjecucion: document.getElementById('calcFecha').value || null,
+                    empresa: document.getElementById('calcEmpresa').value,
+                    mostrarDetalle: true
+                })
+            });
+
+            // Guardar data global para descarga Excel
+            window._lastCalculo = data;
+
+            const resumen = data.resumen || [];
+            const totalVendedores = resumen.length;
+            const alcanzanPiso = resumen.filter(function(r) { return r.AlcanzaPiso === 'SI'; }).length;
+            const totalComision = resumen.reduce(function(s, r) { return s + (r.TotalComision || 0); }, 0);
+            const totalVentas = resumen.reduce(function(s, r) { return s + (r.TotalVentas || 0); }, 0);
+            const partTimeCount = resumen.filter(function(r) { return r.PartTime === 'SI'; }).length;
+            const conLicencia = resumen.filter(function(r) { return r.DiasLicencia > 0; }).length;
+            let html = '' +
+            '<div class="result-summary">' +
+                '<div class="stat-card"><div class="value">' + totalVendedores + '</div><div class="label">Vendedores</div></div>' +
+                '<div class="stat-card"><div class="value">' + alcanzanPiso + '</div><div class="label">Alcanzan Piso</div></div>' +
+                '<div class="stat-card"><div class="value">' + partTimeCount + '</div><div class="label">Part-Time</div></div>' +
+                '<div class="stat-card"><div class="value">' + conLicencia + '</div><div class="label">Con Licencia</div></div>' +
+                '<div class="stat-card"><div class="value">' + formatMoney(totalVentas) + '</div><div class="label">Total Ventas</div></div>' +
+                '<div class="stat-card"><div class="value" style="color:var(--success)">' + formatMoney(totalComision) + '</div><div class="label">Total Comisiones</div></div>' +
+            '</div>' +
+            '<div class="card"><h3>Resumen por Vendedor (' + resumen.length + ')</h3><div class="table-scroll"><table>' +
+            '<tr><th>Vendedor</th><th>Nombre</th><th>Tipo</th><th>PT</th><th class="text-right">Venta Real</th><th class="text-right">Vta Otras Emp.</th><th class="text-right">Vta Proporcional</th><th>Dias Lic.</th><th class="text-right">Vta Ahijados</th><th class="text-right">Vta Global</th><th class="text-right">Vta Evaluada</th><th>Piso</th><th>Escalon%</th><th class="text-right">Com. Real</th><th class="text-right">Com. Prop.</th><th class="text-right">Com. Ahij.</th><th class="text-right">Reemplazos</th><th class="text-right">Comision Total</th><th>Ventas</th><th>Lineas</th><th>Periodo</th></tr>';
+
+            resumen.forEach(function(r) {
+                html += '<tr>' +
+                    '<td>' + r.NroVendedor + '</td>' +
+                    '<td><strong>' + r.NombreVendedor + '</strong></td>' +
+                    '<td>' + r.TipoVendedor + '</td>' +
+                    '<td class="text-center">' + (r.PartTime === 'SI' ? '<span class="badge badge-warning">PT</span>' : '-') + '</td>' +
+                    '<td class="text-right money">' + formatMoney(r.TotalVentas) + '</td>' +
+                    '<td class="text-right money">' + (r.VentaOtrasEmpresas > 0 ? formatMoney(r.VentaOtrasEmpresas) : '-') + '</td>' +
+                    '<td class="text-right money">' + (r.VentaProporcional > 0 ? formatMoney(r.VentaProporcional) : '-') + '</td>' +
+                    '<td class="text-center">' + (r.DiasLicencia > 0 ? r.DiasLicencia : '-') + '</td>' +
+                    '<td class="text-right money">' + (r.VentaAhijados > 0 ? formatMoney(r.VentaAhijados) : '-') + '</td>' +
+                    '<td class="text-right money">' + formatMoney(r.VentaRealMasProporcional) + '</td>' +
+                    '<td class="text-right money">' + formatMoney(r.VentaEvaluada) + '</td>' +
+                    '<td class="text-center">' + (r.AlcanzaPiso === 'N/A' ? '<span class="badge" style="background:var(--text-muted);color:#fff;">N/A</span>' : r.AlcanzaPiso === 'SI' ? '<span class="badge badge-success">SI</span>' : '<span class="badge badge-danger">NO</span>') + '</td>' +
+                    '<td class="text-center">' + (r.EscalonPorcentaje > 0 ? r.EscalonPorcentaje + '%' : '-') + '</td>' +
+                    '<td class="text-right money">' + formatMoney(r.ComisionReal) + '</td>' +
+                    '<td class="text-right money">' + (r.ComisionProporcional > 0 ? formatMoney(r.ComisionProporcional) : '-') + '</td>' +
+                    '<td class="text-right money">' + (r.ComisionAhijados > 0 ? formatMoney(r.ComisionAhijados) : '-') + '</td>' +
+                    '<td class="text-right money">' + (r.MontoReemplazos > 0 ? formatMoney(r.MontoReemplazos) : '-') + '</td>' +
+                    '<td class="text-right money"><strong>' + formatMoney(r.TotalComision) + '</strong></td>' +
+                    '<td class="text-center">' + r.CantidadVentas + '</td>' +
+                    '<td class="text-center">' + r.CantidadLineas + '</td>' +
+                    '<td style="font-size:11px">' + (r.Periodo||'') + '</td>' +
+                    '</tr>';
+            });
+            html += '</table></div></div>';
+
+            // Botones de descarga Excel
+            html += '<div style="display:flex;gap:12px;margin:16px 0">';
+            html += '<button class="btn btn-success" onclick="descargarExcel(\'resumen\')">📥 Descargar Resumen (.xlsx)</button>';
+            if (data.detalle && data.detalle.length > 0) {
+                html += '<button class="btn btn-success" onclick="descargarExcel(\'detalle\')">📥 Descargar Detalle (' + data.detalle.length.toLocaleString() + ' lineas) (.xlsx)</button>';
+            }
+            html += '</div>';
+
+            document.getElementById('calculoResultado').innerHTML = html;
+        } catch (e) {
+            document.getElementById('calculoResultado').innerHTML = '<div class="card"><p style="color:var(--danger)"><strong>Error:</strong> ' + e.message + '</p></div>';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '🧮 Calcular';
+        }
+    }
+
+    // =====================
+    // DESCARGAR EXCEL
+    // =====================
+    function descargarExcel(tipo) {
+        if (!window._lastCalculo) { toast('No hay datos para descargar'); return; }
+        var wb = XLSX.utils.book_new();
+        var periodo = '';
+        if (tipo === 'resumen') {
+            var rows = window._lastCalculo.resumen.map(function(r) {
+                return {
+                    'Nro Vendedor': r.NroVendedor,
+                    'Nombre': r.NombreVendedor,
+                    'Tipo': r.TipoVendedor,
+                    'Part-Time': r.PartTime,
+                    'Venta Real': r.TotalVentas,
+                    'Vta Otras Empresas': r.VentaOtrasEmpresas,
+                    'Vta Proporcional': r.VentaProporcional,
+                    'Dias Licencia': r.DiasLicencia,
+                    'Vta Ahijados': r.VentaAhijados,
+                    'Venta Global': r.VentaRealMasProporcional,
+                    'Venta Evaluada': r.VentaEvaluada,
+                    'Piso Minimo': r.PisoMinimo,
+                    'Alcanza Piso': r.AlcanzaPiso,
+                    'Escalon %': r.EscalonPorcentaje,
+                    'Comision Real': r.ComisionReal,
+                    'Comision Proporcional': r.ComisionProporcional,
+                    'Comision Ahijados': r.ComisionAhijados,
+                    'Monto Reemplazos': r.MontoReemplazos,
+                    'Total Comision': r.TotalComision,
+                    'Cant. Ventas': r.CantidadVentas,
+                    'Cant. Lineas': r.CantidadLineas,
+                    'Periodo': r.Periodo
+                };
+            });
+            periodo = rows.length > 0 ? rows[0]['Periodo'] : '';
+            var ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [{wch:12},{wch:30},{wch:12},{wch:10},{wch:16},{wch:16},{wch:16},{wch:12},{wch:16},{wch:18},{wch:16},{wch:14},{wch:12},{wch:10},{wch:16},{wch:18},{wch:16},{wch:16},{wch:16},{wch:12},{wch:12},{wch:28}];
+            XLSX.utils.book_append_sheet(wb, ws, 'Resumen');
+        } else {
+            var rows = window._lastCalculo.detalle.map(function(d) {
+                return {
+                    'Nro Vendedor': d.NroVendedor,
+                    'Nombre': d.NombreVendedor,
+                    'Part-Time': d.PartTime,
+                    'Nro Venta': d.NroVenta,
+                    'Fecha': d.FechaVenta ? d.FechaVenta.substring(0,10) : '',
+                    'Sucursal': d.Sucursal,
+                    'Linea': d.NroLinea,
+                    'Articulo': d.CodigoArticulo,
+                    'Seccion': d.Seccion,
+                    'Marca': d.Marca,
+                    'Familia': d.Familia,
+                    'Monto Venta': d.MontoVenta,
+                    'Indice (%)': d.IndiceCategoria,
+                    'Nivel Regla': d.NivelRegla,
+                    'Comision Base': d.ComisionBase,
+                    'Bonus Accesorios': d.BonusAccesorios,
+                    'Comision Con Bonus': d.ComisionConBonus,
+                    'Comision Final': d.ComisionFinal
+                };
+            });
+            periodo = (window._lastCalculo.resumen.length > 0) ? window._lastCalculo.resumen[0].Periodo : '';
+            var ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [{wch:12},{wch:30},{wch:10},{wch:10},{wch:12},{wch:10},{wch:6},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:10},{wch:10},{wch:14},{wch:14},{wch:16},{wch:14}];
+            XLSX.utils.book_append_sheet(wb, ws, 'Detalle');
+        }
+        var filename = 'Comisiones_' + tipo + (periodo ? '_' + periodo.replace(/\//g, '-').replace(/ /g, '') : '') + '.xlsx';
+        XLSX.writeFile(wb, filename);
+        toast('Archivo descargado: ' + filename);
+    }
+
+    // =====================
+    // DETALLE VENDEDOR
+    // =====================
+    var _vendedoresList = null;
+    async function loadVendedoresSelect() {
+        var sel = document.getElementById('dvVendedor');
+        if (!document.getElementById('dvFecha').value) document.getElementById('dvFecha').valueAsDate = new Date();
+        if (_vendedoresList) return; // ya cargado
+        sel.innerHTML = '<option value="">Cargando...</option>';
+        try {
+            _vendedoresList = await apiFetch('/api/comisiones/vendedores');
+            sel.innerHTML = '<option value="">-- Seleccione vendedor --</option>';
+            _vendedoresList.forEach(function(v) {
+                var opt = document.createElement('option');
+                opt.value = v.NRO_VENDEDOR;
+                opt.textContent = v.NRO_VENDEDOR + ' - ' + (v.APELLIDO||'') + ', ' + (v.NOMBRE||'') + ' (' + (v.TIPO||'') + ')';
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            sel.innerHTML = '<option value="">Error al cargar</option>';
+        }
+    }
+
+    async function ejecutarDetalleVendedor() {
+        var vendedor = document.getElementById('dvVendedor').value;
+        if (!vendedor) { toast('Seleccione un vendedor'); return; }
+        var btn = document.getElementById('btnDetalleVend');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Calculando...';
+        document.getElementById('detalleVendedorResultado').innerHTML = '<div class="loading-overlay"><div class="spinner"></div><p>Ejecutando calculo con detalle...</p></div>';
+
+        try {
+            var data = await apiFetch('/api/comisiones/calcular', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fechaEjecucion: document.getElementById('dvFecha').value || null,
+                    empresa: document.getElementById('dvEmpresa').value,
+                    mostrarDetalle: true
+                })
+            });
+
+            // Filtrar solo este vendedor
+            var resumen = (data.resumen || []).filter(function(r) { return String(r.NroVendedor) === String(vendedor); });
+            var detalle = (data.detalle || []).filter(function(d) { return String(d.NroVendedor) === String(vendedor); });
+
+            window._lastDetalleVendedor = { resumen: resumen, detalle: detalle, vendedor: vendedor };
+
+            if (resumen.length === 0) {
+                document.getElementById('detalleVendedorResultado').innerHTML = '<div class="card"><p style="color:var(--text-muted)">No se encontraron datos para el vendedor ' + vendedor + ' en este periodo.</p></div>';
+                return;
+            }
+
+            var r = resumen[0];
+            var html = '';
+
+            // Tarjeta resumen del vendedor
+            html += '<div class="card"><h3>' + r.NroVendedor + ' - ' + r.NombreVendedor + '</h3>';
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;">';
+            html += '<div class="stat-card"><div class="value" style="font-size:18px">' + r.TipoVendedor + '</div><div class="label">Tipo</div></div>';
+            html += '<div class="stat-card"><div class="value" style="font-size:18px">' + formatMoney(r.TotalVentas) + '</div><div class="label">Venta Real</div></div>';
+            if (r.VentaOtrasEmpresas > 0) html += '<div class="stat-card"><div class="value" style="font-size:18px">' + formatMoney(r.VentaOtrasEmpresas) + '</div><div class="label">Vta Otras Emp.</div></div>';
+            if (r.VentaProporcional > 0) html += '<div class="stat-card"><div class="value" style="font-size:18px">' + formatMoney(r.VentaProporcional) + '</div><div class="label">Vta Proporcional (' + r.DiasLicencia + ' dias lic.)</div></div>';
+            if (r.VentaAhijados > 0) html += '<div class="stat-card"><div class="value" style="font-size:18px">' + formatMoney(r.VentaAhijados) + '</div><div class="label">Vta Ahijados</div></div>';
+            html += '<div class="stat-card"><div class="value" style="font-size:18px">' + formatMoney(r.VentaRealMasProporcional) + '</div><div class="label">Vta Global</div></div>';
+            html += '<div class="stat-card"><div class="value" style="font-size:18px">' + (r.AlcanzaPiso === 'N/A' ? '<span class="badge" style="background:var(--text-muted);color:#fff;">N/A</span>' : r.AlcanzaPiso === 'SI' ? '<span class="badge badge-success">SI</span>' : '<span class="badge badge-danger">NO</span>') + '</div><div class="label">Alcanza Piso</div></div>';
+            if (r.EscalonPorcentaje > 0) html += '<div class="stat-card"><div class="value" style="font-size:18px">' + r.EscalonPorcentaje + '%</div><div class="label">Escalon</div></div>';
+            html += '<div class="stat-card"><div class="value" style="font-size:18px;color:var(--success)">' + formatMoney(r.TotalComision) + '</div><div class="label">Comision Total</div></div>';
+            html += '</div>';
+
+            // Desglose comision
+            html += '<div style="display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:var(--text-muted);margin-bottom:8px;">';
+            html += '<span>Com. Real: <strong style="color:var(--text)">' + formatMoney(r.ComisionReal) + '</strong></span>';
+            if (r.ComisionProporcional > 0) html += '<span>Com. Proporcional: <strong style="color:var(--text)">' + formatMoney(r.ComisionProporcional) + '</strong></span>';
+            if (r.ComisionAhijados > 0) html += '<span>Com. Ahijados: <strong style="color:var(--text)">' + formatMoney(r.ComisionAhijados) + '</strong></span>';
+            if (r.MontoReemplazos > 0) html += '<span>Reemplazos: <strong style="color:var(--text)">' + formatMoney(r.MontoReemplazos) + '</strong></span>';
+            html += '<span>Periodo: <strong style="color:var(--text)">' + (r.Periodo||'') + '</strong></span>';
+            html += '<span>Ventas: <strong style="color:var(--text)">' + r.CantidadVentas + '</strong></span>';
+            html += '<span>Lineas: <strong style="color:var(--text)">' + r.CantidadLineas + '</strong></span>';
+            if (r.PartTime === 'SI') html += '<span class="badge badge-warning">Part-Time</span>';
+            html += '</div></div>';
+
+            // Tabla detalle
+            if (detalle.length > 0) {
+                html += '<div class="card"><h3>Detalle por Linea (' + detalle.length + ' lineas)</h3>';
+                html += '<div class="table-scroll"><table>';
+                html += '<tr><th>Nro Venta</th><th>Fecha</th><th>Sucursal</th><th>Linea</th><th>Articulo</th><th>Seccion</th><th>Marca</th><th>Familia</th><th class="text-right">Monto Venta</th><th>Indice</th><th>Nivel</th><th class="text-right">Com. Base</th><th>Bonus Acc.</th><th class="text-right">Com. c/Bonus</th><th class="text-right">Com. Final</th></tr>';
+                detalle.forEach(function(d) {
+                    html += '<tr>' +
+                        '<td>' + d.NroVenta + '</td>' +
+                        '<td>' + (d.FechaVenta ? d.FechaVenta.substring(0,10) : '') + '</td>' +
+                        '<td>' + d.Sucursal + '</td>' +
+                        '<td class="text-center">' + d.NroLinea + '</td>' +
+                        '<td style="font-size:11px">' + d.CodigoArticulo + '</td>' +
+                        '<td>' + (d.Seccion||'') + '</td>' +
+                        '<td>' + (d.Marca||'') + '</td>' +
+                        '<td>' + (d.Familia||'') + '</td>' +
+                        '<td class="text-right money">' + formatMoney(d.MontoVenta) + '</td>' +
+                        '<td class="text-center">' + formatIndice(d.IndiceCategoria) + '</td>' +
+                        '<td class="text-center">' + (d.NivelRegla||'-') + '</td>' +
+                        '<td class="text-right money">' + formatMoney(d.ComisionBase) + '</td>' +
+                        '<td class="text-center">' + (d.BonusAccesorios === 'SI' ? '<span class="badge badge-info">SI</span>' : '-') + '</td>' +
+                        '<td class="text-right money">' + formatMoney(d.ComisionConBonus) + '</td>' +
+                        '<td class="text-right money"><strong>' + formatMoney(d.ComisionFinal) + '</strong></td>' +
+                        '</tr>';
+                });
+                html += '</table></div></div>';
+            }
+
+            // Botones export
+            html += '<div style="display:flex;gap:12px;margin:16px 0">';
+            html += '<button class="btn btn-success" onclick="descargarExcelDetalleVendedor()">📥 Descargar Excel (.xlsx)</button>';
+            html += '</div>';
+
+            document.getElementById('detalleVendedorResultado').innerHTML = html;
+        } catch (e) {
+            document.getElementById('detalleVendedorResultado').innerHTML = '<div class="card"><p style="color:var(--danger)"><strong>Error:</strong> ' + e.message + '</p></div>';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '🔍 Calcular Detalle';
+        }
+    }
+
+    function descargarExcelDetalleVendedor() {
+        if (!window._lastDetalleVendedor) { toast('No hay datos para descargar'); return; }
+        var d = window._lastDetalleVendedor;
+        var r = d.resumen[0];
+        var wb = XLSX.utils.book_new();
+
+        // Hoja Resumen
+        var resRows = [{
+            'Nro Vendedor': r.NroVendedor,
+            'Nombre': r.NombreVendedor,
+            'Tipo': r.TipoVendedor,
+            'Part-Time': r.PartTime,
+            'Venta Real': r.TotalVentas,
+            'Vta Otras Empresas': r.VentaOtrasEmpresas,
+            'Vta Proporcional': r.VentaProporcional,
+            'Dias Licencia': r.DiasLicencia,
+            'Vta Ahijados': r.VentaAhijados,
+            'Venta Global': r.VentaRealMasProporcional,
+            'Venta Evaluada': r.VentaEvaluada,
+            'Alcanza Piso': r.AlcanzaPiso,
+            'Escalon %': r.EscalonPorcentaje,
+            'Comision Real': r.ComisionReal,
+            'Comision Proporcional': r.ComisionProporcional,
+            'Comision Ahijados': r.ComisionAhijados,
+            'Monto Reemplazos': r.MontoReemplazos,
+            'Total Comision': r.TotalComision,
+            'Cant. Ventas': r.CantidadVentas,
+            'Cant. Lineas': r.CantidadLineas,
+            'Periodo': r.Periodo
+        }];
+        var ws1 = XLSX.utils.json_to_sheet(resRows);
+        ws1['!cols'] = [{wch:12},{wch:30},{wch:12},{wch:10},{wch:16},{wch:16},{wch:16},{wch:12},{wch:16},{wch:18},{wch:16},{wch:12},{wch:10},{wch:16},{wch:18},{wch:16},{wch:16},{wch:16},{wch:12},{wch:12},{wch:28}];
+        XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
+
+        // Hoja Detalle
+        if (d.detalle.length > 0) {
+            var detRows = d.detalle.map(function(dl) {
+                return {
+                    'Nro Venta': dl.NroVenta,
+                    'Fecha': dl.FechaVenta ? dl.FechaVenta.substring(0,10) : '',
+                    'Sucursal': dl.Sucursal,
+                    'Linea': dl.NroLinea,
+                    'Articulo': dl.CodigoArticulo,
+                    'Seccion': dl.Seccion,
+                    'Marca': dl.Marca,
+                    'Familia': dl.Familia,
+                    'Monto Venta': dl.MontoVenta,
+                    'Indice (%)': dl.IndiceCategoria,
+                    'Nivel Regla': dl.NivelRegla,
+                    'Comision Base': dl.ComisionBase,
+                    'Bonus Accesorios': dl.BonusAccesorios,
+                    'Comision Con Bonus': dl.ComisionConBonus,
+                    'Comision Final': dl.ComisionFinal
+                };
+            });
+            var ws2 = XLSX.utils.json_to_sheet(detRows);
+            ws2['!cols'] = [{wch:10},{wch:12},{wch:10},{wch:6},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:10},{wch:10},{wch:14},{wch:14},{wch:16},{wch:14}];
+            XLSX.utils.book_append_sheet(wb, ws2, 'Detalle');
+        }
+
+        var nombre = r.NombreVendedor.replace(/[^a-zA-Z0-9]/g, '_');
+        var periodo = (r.Periodo||'').replace(/\//g, '-').replace(/ /g, '');
+        XLSX.writeFile(wb, 'Comision_' + r.NroVendedor + '_' + nombre + '_' + periodo + '.xlsx');
+        toast('Excel descargado');
+    }
+
+    // =====================
+    // AUDITORIA
+    // =====================
+    async function loadAuditoria() {
+        try {
+            const data = await apiFetch('/api/comisiones/auditoria');
+            let html = '<table><tr><th>Fecha</th><th>Clave</th><th>Valor Anterior</th><th>Valor Nuevo</th><th>Usuario</th></tr>';
+            data.forEach(function(r) {
+                html += '<tr>' +
+                    '<td style="font-size:12px">' + formatDateTime(r.fechaCambio) + '</td>' +
+                    '<td><strong>' + r.clave + '</strong></td>' +
+                    '<td>' + (r.valorAnterior||'-') + '</td>' +
+                    '<td>' + r.valorNuevo + '</td>' +
+                    '<td style="font-size:12px">' + (r.usuario||'-') + '</td>' +
+                    '</tr>';
+            });
+            html += '</table>';
+            if (data.length === 0) html = '<p style="color:var(--text-muted)">No hay cambios registrados.</p>';
+            document.getElementById('auditoriaTable').innerHTML = html;
+        } catch (e) {
+            document.getElementById('auditoriaTable').innerHTML = '<p style="color:var(--danger)">Error: ' + e.message + '</p>';
+        }
+    }
+
+    // =====================
+    // LOGIN / LOGOUT
+    // =====================
+    async function doLogin() {
+        var user = document.getElementById('loginUser').value.trim();
+        var pass = document.getElementById('loginPass').value;
+        var errEl = document.getElementById('loginError');
+        errEl.style.display = 'none';
+        if (!user || !pass) { errEl.textContent = 'Ingrese usuario y password'; errEl.style.display = 'block'; return; }
+        var btn = document.getElementById('btnLogin');
+        btn.disabled = true; btn.textContent = 'Ingresando...';
+        try {
+            var resp = await fetch(API + '/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario: user, password: pass })
+            });
+            var data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Error de autenticacion');
+            sessionStorage.setItem('comisiones_user', JSON.stringify(data));
+            showApp(data);
+        } catch (e) {
+            errEl.textContent = e.message;
+            errEl.style.display = 'block';
+        } finally {
+            btn.disabled = false; btn.textContent = 'Ingresar';
+        }
+    }
+
+    function showApp(user) {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('appContainer').classList.add('logged-in');
+        document.getElementById('userDisplay').textContent = user.nombre;
+        document.getElementById('calcFecha').valueAsDate = new Date();
+        loadDashboard();
+    }
+
+    function doLogout() {
+        sessionStorage.removeItem('comisiones_user');
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('appContainer').classList.remove('logged-in');
+        document.getElementById('loginUser').value = '';
+        document.getElementById('loginPass').value = '';
+    }
+
+    // Enter key on login fields
+    document.getElementById('loginPass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+
+    // =====================
+    // DARK MODE
+    // =====================
+    function toggleDarkMode() {
+        var isDark = document.documentElement.classList.toggle('dark');
+        document.getElementById('darkModeBtn').textContent = isDark ? '☀️' : '🌙';
+        localStorage.setItem('comisiones_dark', isDark ? '1' : '0');
+    }
+    // Apply saved preference
+    (function() {
+        if (localStorage.getItem('comisiones_dark') === '1') {
+            document.documentElement.classList.add('dark');
+            document.getElementById('darkModeBtn').textContent = '☀️';
+        }
+    })();
+
+    // =====================
+    // INIT
+    // =====================
+    (function() {
+        var saved = sessionStorage.getItem('comisiones_user');
+        if (saved) {
+            try { showApp(JSON.parse(saved)); } catch(e) { doLogout(); }
+        }
+    })();
+    </script>
+</body>
+</html>

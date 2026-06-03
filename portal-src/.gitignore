@@ -1,0 +1,23 @@
+# Compilados .NET
+bin/
+obj/
+out/
+publish/
+
+# Base de datos local de la aplicacion (SQLite)
+App_Data/*.db
+App_Data/*.db-shm
+App_Data/*.db-wal
+
+# Secretos de usuario
+*.user
+secrets.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# Logs
+*.log
+Logs/

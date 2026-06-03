@@ -1,0 +1,34 @@
+@page
+@model DashboardPortal.Pages.Admin.Dashboards.DeleteModel
+@{
+    ViewData["Title"] = "Eliminar dashboard";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Eliminar dashboard</h1>
+        <p class="page-subtitle">Esta acción no se puede deshacer.</p>
+    </div>
+    <a href="/Admin/Dashboards" class="btn btn-outline">Volver</a>
+</div>
+
+<div class="panel form-panel">
+    <div class="confirm-box">
+        <div class="confirm-icon">@Html.Raw(IconLibrary.Render(Model.Dashboard?.Icon, 28))</div>
+        <div>
+            <h2 class="confirm-title">¿Eliminar «@Model.Dashboard?.Name»?</h2>
+            <p class="muted">
+                Puerto <code>@Model.Dashboard?.Port</code>.
+                Se quitarán también todos los permisos de usuarios sobre este dashboard.
+            </p>
+        </div>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="id" value="@Model.Dashboard?.Id" />
+        <div class="form-actions">
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            <a href="/Admin/Dashboards" class="btn btn-ghost">Cancelar</a>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,97 @@
+@page
+@model DashboardPortal.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Administración";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Panel de administración</h1>
+        <p class="page-subtitle">Resumen general del portal de dashboards.</p>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-blue">@Html.Raw(IconLibrary.Render("layers", 22))</div>
+        <div>
+            <div class="stat-value">@Model.DashboardCount</div>
+            <div class="stat-label">Dashboards</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-green">@Html.Raw(IconLibrary.Render("trend", 22))</div>
+        <div>
+            <div class="stat-value">@Model.ActiveDashboardCount</div>
+            <div class="stat-label">Activos</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-violet">@Html.Raw(IconLibrary.Render("people", 22))</div>
+        <div>
+            <div class="stat-value">@Model.UserCount</div>
+            <div class="stat-label">Usuarios</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-amber">@Html.Raw(IconLibrary.Render("briefcase", 22))</div>
+        <div>
+            <div class="stat-value">@Model.PermissionCount</div>
+            <div class="stat-label">Permisos otorgados</div>
+        </div>
+    </div>
+</div>
+
+<div class="quick-actions">
+    <a href="/Admin/Dashboards/Create" class="btn btn-primary">Nuevo dashboard</a>
+    <a href="/Admin/Users" class="btn btn-outline">Gestionar usuarios</a>
+    <a href="/Admin/Permissions" class="btn btn-outline">Ver permisos</a>
+    <a href="/Admin/Settings" class="btn btn-outline">Configuración</a>
+</div>
+
+<div class="panel">
+    <div class="panel-head">
+        <h2 class="panel-title">Actividad reciente</h2>
+    </div>
+    @if (Model.RecentLogs.Count == 0)
+    {
+        <p class="muted" style="padding:16px;">Todavía no hay actividad registrada.</p>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Detalle</th>
+                        <th>Resultado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model.RecentLogs)
+                    {
+                        <tr>
+                            <td class="nowrap">@log.Timestamp.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@log.Username</td>
+                            <td>@log.Action</td>
+                            <td class="muted">@log.Detail</td>
+                            <td>
+                                @if (log.Success)
+                                {
+                                    <span class="badge badge-success">OK</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-danger">Falló</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

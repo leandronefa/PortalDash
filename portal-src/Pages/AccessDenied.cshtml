@@ -1,0 +1,17 @@
+@page
+@model AccessDeniedModel
+@{
+    ViewData["Title"] = "Acceso denegado";
+}
+
+<div class="container">
+    <div class="denied-state">
+        <div class="denied-icon">@Html.Raw(IconLibrary.Render("settings", 44))</div>
+        <h1 class="denied-title">Acceso denegado</h1>
+        <p class="denied-text">
+            No tiene permisos para acceder a este dashboard o el mismo no se encuentra disponible.
+            Si considera que se trata de un error, comuníquese con el administrador del portal.
+        </p>
+        <a href="/" class="btn btn-primary">Volver al catálogo</a>
+    </div>
+</div>

@@ -1,0 +1,76 @@
+@page
+@model DashboardPortal.Pages.Admin.Dashboards.EditModel
+@{
+    ViewData["Title"] = "Editar dashboard";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Editar dashboard</h1>
+        <p class="page-subtitle">Modifique los datos del tablero. La URL se recalcula automáticamente.</p>
+    </div>
+    <a href="/Admin/Dashboards" class="btn btn-outline">Volver</a>
+</div>
+
+<div class="panel form-panel">
+    <form method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <input type="hidden" asp-for="Input.Id" />
+
+        <div class="form-group">
+            <label class="label" asp-for="Input.Name"></label>
+            <input class="input" asp-for="Input.Name" maxlength="120" required />
+            <span class="field-error" asp-validation-for="Input.Name"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="label" asp-for="Input.Description"></label>
+            <textarea class="textarea" asp-for="Input.Description" rows="3" maxlength="500"></textarea>
+            <span class="field-error" asp-validation-for="Input.Description"></span>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="label" asp-for="Input.Port"></label>
+                <input class="input" asp-for="Input.Port" type="number" min="1" max="65535" required />
+                <span class="field-error" asp-validation-for="Input.Port"></span>
+            </div>
+            <div class="form-group">
+                <label class="label" asp-for="Input.Host"></label>
+                <input class="input" asp-for="Input.Host" placeholder="Vacío = host del portal" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="label" asp-for="Input.UrlOverride"></label>
+            <input class="input" asp-for="Input.UrlOverride" placeholder="http://servidor:puerto (opcional)" />
+            <span class="hint">Déjelo vacío para usar la URL generada automáticamente.</span>
+        </div>
+
+        <div class="form-group">
+            <label class="label">Icono</label>
+            <div class="icon-picker">
+                @foreach (var opt in Model.Icons)
+                {
+                    <label class="icon-option">
+                        <input type="radio" asp-for="Input.Icon" value="@opt.Key" />
+                        <span class="icon-glyph">@Html.Raw(IconLibrary.Render(opt.Key, 22))</span>
+                        <span class="icon-name">@opt.Label</span>
+                    </label>
+                }
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox">
+                <input type="checkbox" asp-for="Input.IsActive" />
+                <span>Activo (visible en el catálogo)</span>
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            <a href="/Admin/Dashboards" class="btn btn-ghost">Cancelar</a>
+        </div>
+    </form>
+</div>

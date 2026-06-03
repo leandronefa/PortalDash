@@ -1,0 +1,21 @@
+@page
+@model ErrorModel
+@{
+    Layout = "_LoginLayout";
+    ViewData["Title"] = "Error";
+}
+
+<div class="login-card">
+    <div class="login-logo">@Html.Raw(IconLibrary.Render("settings", 30))</div>
+    <h1 class="login-title">Se produjo un error</h1>
+    <p class="login-sub">Ocurrió un problema al procesar su solicitud. Intente nuevamente.</p>
+
+    @if (Model.ShowRequestId)
+    {
+        <div class="alert alert-info">
+            Código de seguimiento: <code>@Model.RequestId</code>
+        </div>
+    }
+
+    <a href="/" class="btn btn-primary btn-block">Volver al inicio</a>
+</div>

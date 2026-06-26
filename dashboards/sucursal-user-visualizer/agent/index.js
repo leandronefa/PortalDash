@@ -1,6 +1,6 @@
 // Agente de monitoreo - corre en cada servidor monitoreado
 // Verifica procesos locales y reporta al servidor central cada 5 minutos
-// Sin dependencias externas - solo Node.js built-ins
+// Dependencias: mssql (PassReset)
 
 'use strict';
 
@@ -276,7 +276,10 @@ console.log(`[${new Date().toISOString()}] Agente iniciado - SERVER_ID=${SERVER_
 console.log(`[${new Date().toISOString()}] Monitoreando: ${PROCESSES.join(', ')}`);
 
 report();
-passreset();
+passreset().catch(e => console.error(`[${new Date().toISOString()}] [passreset] Unhandled: ${e.message}`));
 
-setInterval(() => { report(); passreset(); }, INTERVAL_MS);
+setInterval(() => {
+  report();
+  passreset().catch(e => console.error(`[${new Date().toISOString()}] [passreset] Unhandled: ${e.message}`));
+}, INTERVAL_MS);
 

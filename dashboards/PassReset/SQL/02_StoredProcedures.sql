@@ -350,14 +350,15 @@ BEGIN
     DECLARE @body     NVARCHAR(MAX);
     DECLARE @fechaStr NVARCHAR(20);
 
-    -- Leer profile default de Database Mail
-    SELECT TOP 1 @profile = profile_name
-    FROM msdb.dbo.sysmail_principalprofile
-    WHERE is_default = 1;
+    -- Leer profile default de Database Mail (columna 'name' en sysmail_profile)
+    SELECT TOP 1 @profile = p.name
+    FROM msdb.dbo.sysmail_principalprofile pp
+    JOIN msdb.dbo.sysmail_profile p ON p.profile_id = pp.profile_id
+    WHERE pp.is_default = 1;
 
     -- Fallback: primer profile disponible si no hay default marcado
     IF @profile IS NULL
-        SELECT TOP 1 @profile = profile_name
+        SELECT TOP 1 @profile = name
         FROM msdb.dbo.sysmail_profile;
 
     IF @profile IS NULL

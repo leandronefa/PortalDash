@@ -16,6 +16,7 @@
   --border-focus:     #1e2d4f;
   --btn-outline-bg:   #ffffff;
   --btn-outline-hover:#f0f4ff;
+  --accent:           #1e2d4f;
 }
 
 [data-theme="dark"] {
@@ -35,6 +36,7 @@
   --border-focus:     #4a6fa5;
   --btn-outline-bg:   #1a2438;
   --btn-outline-hover:#243354;
+  --accent:           #6aa3d5;
 }
 
 /* ── Reset ── */
@@ -100,8 +102,8 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-body); c
   margin-bottom: -2px;
   transition: color .15s, border-color .15s;
 }
-.tab-btn:hover { color: #1e2d4f; }
-.tab-btn.active { color: #1e2d4f; border-bottom-color: #1e2d4f; font-weight: 600; }
+.tab-btn:hover { color: var(--accent); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
 /* ── Panel / Tabla ── */
 .panel {
@@ -117,7 +119,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-body); c
   gap: 12px;
   border-bottom: 1px solid var(--border-light);
 }
-.panel-header h2 { font-size: 1rem; font-weight: 600; color: #1e2d4f; }
+.panel-header h2 { font-size: 1rem; font-weight: 600; color: var(--accent); }
 .panel-header .spacer { flex: 1; }
 
 .table-wrap { overflow-x: auto; }

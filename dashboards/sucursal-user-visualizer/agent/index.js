@@ -7,13 +7,62 @@
 const http  = require('http');
 const https = require('https');
 const { execSync } = require('child_process');
-const os = require('os');
+const os     = require('os');
+const sql    = require('mssql');
+const crypto = require('crypto');
 
 const CENTRAL_URL  = (process.env.CENTRAL_URL  || 'http://10.0.0.118:3002').replace(/\/$/, '');
 const AGENT_TOKEN  = process.env.AGENT_TOKEN   || 'sucursal-agent-token';
 const SERVER_ID    = process.env.SERVER_ID     || getLocalIP();
 const INTERVAL_MS  = parseInt(process.env.INTERVAL_MS || '300000', 10); // 5 min
 const PROCESSES    = (process.env.PROCESSES    || 'FileAppCliente.exe,DOAStatus.exe').split(',').map(s => s.trim());
+
+const PASSRESET_ENABLED      = process.env.PASSRESET_ENABLED === 'true';
+const PASSRESET_SQL_SERVER   = process.env.PASSRESET_SQL_SERVER || '10.0.0.115';
+const PASSRESET_SQL_DB       = process.env.PASSRESET_SQL_DB     || 'db_Cegid';
+const PASSRESET_SQL_USER     = process.env.PASSRESET_SQL_USER   || 'sa';
+const PASSRESET_SQL_PASSWORD = process.env.PASSRESET_SQL_PASSWORD || '';
+
+// ---- PassReset: pool SQL ----
+let prPool = null;
+
+async function getPassResetPool() {
+  if (prPool && prPool.connected) return prPool;
+  prPool = new sql.ConnectionPool({
+    server:   PASSRESET_SQL_SERVER,
+    user:     PASSRESET_SQL_USER,
+    password: PASSRESET_SQL_PASSWORD,
+    database: PASSRESET_SQL_DB,
+    options:  { trustServerCertificate: true, encrypt: false },
+    pool:     { max: 3, min: 0, idleTimeoutMillis: 30000 },
+  });
+  await prPool.connect();
+  return prPool;
+}
+
+function generatePassword() {
+  const lower   = 'abcdefghijklmnopqrstuvwxyz';
+  const upper   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits  = '0123456789';
+  const special = '@#$!%';
+  const all     = lower + upper + digits + special;
+
+  const mandatory = [
+    lower  [crypto.randomBytes(1)[0] % lower.length],
+    upper  [crypto.randomBytes(1)[0] % upper.length],
+    digits [crypto.randomBytes(1)[0] % digits.length],
+    special[crypto.randomBytes(1)[0] % special.length],
+  ];
+
+  const rest = Array.from({ length: 8 }, () => all[crypto.randomBytes(1)[0] % all.length]);
+
+  const chars = [...mandatory, ...rest];
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomBytes(1)[0] % (i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
 
 function getLocalIP() {
   try {
@@ -157,9 +206,77 @@ function report() {
   }
 }
 
+// ---- PassReset: ciclo de cambio de contraseñas ----
+async function passreset() {
+  if (!PASSRESET_ENABLED) return;
+
+  let db;
+  try {
+    db = await getPassResetPool();
+  } catch (e) {
+    console.error(`[${new Date().toISOString()}] [passreset] Error conectando a SQL: ${e.message}`);
+    prPool = null;
+    return;
+  }
+
+  let pendientes;
+  try {
+    const result = await db.request()
+      .input('Servidor', sql.NVarChar, SERVER_ID)
+      .execute('sp_PassReset_AgentGetPendientes');
+    pendientes = result.recordset;
+  } catch (e) {
+    console.error(`[${new Date().toISOString()}] [passreset] Error consultando pendientes: ${e.message}`);
+    return;
+  }
+
+  if (!pendientes || pendientes.length === 0) {
+    console.log(`[${new Date().toISOString()}] [passreset] Sin pendientes para ${SERVER_ID}`);
+    return;
+  }
+
+  console.log(`[${new Date().toISOString()}] [passreset] ${pendientes.length} usuario(s) pendiente(s)`);
+
+  for (const u of pendientes) {
+    const { Id, UsuarioWindows, CorreoDestino, MaxDias } = u;
+    const password = generatePassword();
+    const fechaProximoCambio = new Date(Date.now() + MaxDias * 86400000);
+
+    let resultado    = 'OK';
+    let mensajeError = null;
+
+    try {
+      execSync(`net user "${UsuarioWindows}" "${password}"`, { encoding: 'utf8', timeout: 10000 });
+      console.log(`[${new Date().toISOString()}] [passreset] Contraseña cambiada: ${UsuarioWindows}`);
+    } catch (e) {
+      resultado    = 'ERROR';
+      mensajeError = e.message.slice(0, 500);
+      console.error(`[${new Date().toISOString()}] [passreset] Error net user ${UsuarioWindows}: ${mensajeError}`);
+    }
+
+    try {
+      await db.request()
+        .input('IdUsuario',          sql.Int,      Id)
+        .input('Servidor',           sql.NVarChar, SERVER_ID)
+        .input('UsuarioWindows',     sql.NVarChar, UsuarioWindows)
+        .input('PasswordGenerada',   sql.NVarChar, password)
+        .input('CorreoDestino',      sql.NVarChar, CorreoDestino)
+        .input('Resultado',          sql.NVarChar, resultado)
+        .input('MensajeError',       sql.NVarChar, mensajeError)
+        .input('FechaProximoCambio', sql.DateTime, fechaProximoCambio)
+        .input('Origen',             sql.NVarChar, 'AUTO')
+        .execute('sp_PassReset_AgentReportarCambio');
+    } catch (e) {
+      console.error(`[${new Date().toISOString()}] [passreset] Error reportando cambio ${UsuarioWindows}: ${e.message}`);
+    }
+  }
+}
+
 console.log(`[${new Date().toISOString()}] Agente iniciado - SERVER_ID=${SERVER_ID} -> ${CENTRAL_URL} cada ${INTERVAL_MS / 1000}s`);
 console.log(`[${new Date().toISOString()}] Monitoreando: ${PROCESSES.join(', ')}`);
 
-report(); // reporte inmediato al arrancar
-setInterval(report, INTERVAL_MS);
+report();
+passreset();
+
+setInterval(() => { report(); passreset(); }, INTERVAL_MS);
 

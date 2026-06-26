@@ -14,7 +14,12 @@ C:\apps\
 └── dashboards\
     ├── comisiones-app\              Node/Express  → servicio "dashcomisiones",  puerto 3001
     ├── DashPromocionesMP\           Node/Express  → servicio "dashpromociones", puerto 3002
-    └── sucursal-user-visualizer\    Node/Express  → servicio "dashsucursal",    puerto 3003
+    ├── sucursal-user-visualizer\    Node/Express  → servicio "dashsucursal",    puerto 3003
+    ├── MovimientosCaja\             Node/Express  → servicio "dashmovimientoscaja.exe",   puerto 3004
+    ├── ConciliacionPunitorios\      Node/Express  → servicio "dashconciliacionpunitorios.exe", puerto 3006
+    ├── ValidacionCobranzas\         Node/Express  → servicio "dashvalidacioncobranzas.exe", puerto 3007
+    ├── EstadoResultado\             Node/Express  → servicio "dashestadoresultado.exe",     puerto 3008
+    └── PassReset\                   Node/Express  → servicio "dashpassreset.exe",           puerto 3009
 ```
 
 > `\\10.0.0.118\apps` es el recurso compartido que apunta a `C:\apps`. En el server SIEMPRE usar la ruta **local `C:\apps\...`** (los servicios no deben referenciar rutas UNC).
@@ -27,6 +32,9 @@ C:\apps\
 | `dashcomisiones.exe` | Dash-Comisiones | comisiones-app / **3001** | `server.cjs` |
 | `dashpromociones.exe` | Dash-Promociones | DashPromocionesMP / **3002** | `server.js` |
 | `dashsucursal.exe` | Dash-Sucursal | sucursal-user-visualizer / **3003** | `dist-server\index.js` |
+| `dashvalidacioncobranzas.exe` | Dash-ValidacionCobranzas | ValidacionCobranzas / **3007** | `server.cjs` |
+| `dashestadoresultado.exe` | Dash-EstadoResultado | EstadoResultado / **3008** | `server.js` |
+| `dashpassreset.exe` | Dash-PassReset | PassReset / **3009** | `server.cjs` |
 
 ⚠️ **node-windows registra los servicios con sufijo `.exe`** en el Name real. `Get-Service Dash-*` **no** los encuentra. Usar:
 ```powershell
@@ -41,7 +49,7 @@ Restart-Service dashpromociones.exe
 ```powershell
 # Estado de todo
 Get-Service DashboardPortal, dash* | Format-Table Name, Status
-Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003 | Format-Table LocalPort, OwningProcess
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009 | Format-Table LocalPort, OwningProcess
 
 # Reiniciar / detener (nombre real con .exe)
 Restart-Service dashcomisiones.exe
@@ -50,6 +58,80 @@ Stop-Service dashpromociones.exe
 # Logs de cada dashboard (node-windows)
 Get-Content C:\apps\dashboards\<carpeta>\daemon\<servicio>.err.log -Tail 30
 ```
+
+## PassReset — sistema de reset automático de contraseñas Windows
+
+Dashboard en `http://10.0.0.118:3009` (servicio `dashpassreset.exe`). Gestiona el ciclo de cambio de contraseñas Windows en los servidores remotos monitoreados.
+
+### Arquitectura
+
+- **Agente** (`sucursal-user-visualizer/agent/index.js`) corre en cada servidor remoto con `PASSRESET_ENABLED=true`.
+- **Base de datos** `db_Cegid` en `10.0.0.115`: tablas `tbl_PassReset_Usuarios` y `tbl_PassReset_Log`.
+- **Correo** vía Database Mail de SQL Server (`msdb.dbo.sp_send_dbmail`).
+
+### Flujo por servidor remoto
+
+1. Al arrancar, el agente registra todos los usuarios Windows locales habilitados en `tbl_PassReset_Usuarios` (`sp_PassReset_AgentUpsertUsuario`). Los nuevos quedan con correo vacío.
+2. Cada 5 min consulta `sp_PassReset_AgentGetPendientes`: usuarios activos **con correo asignado** cuya contraseña venció.
+3. Genera contraseña (12 chars: lower/upper/dígito/especial), la aplica con `net user`, reporta con `sp_PassReset_AgentReportarCambio`.
+4. SQL Server envía el correo con la nueva contraseña post-commit (`sp_PassReset_EnviarCorreo`).
+
+### Asignar correo a un usuario
+
+Desde el dashboard PassReset → tabla de usuarios → columna **Correo** → ícono lápiz (✎). Sin correo asignado, el agente registra al usuario pero no le cambia la contraseña.
+
+### Instalar el agente en un servidor remoto
+
+```powershell
+# Copiar agent\ al servidor remoto, luego ejecutar:
+cd <ruta-del-agente>
+.\install-agent.ps1 `
+  -ServerName "NOMBRESERVIDOR" `
+  -CentralUrl "http://10.0.0.118:3003" `
+  -PassresetEnabled "true" `
+  -PassresetSqlServer "10.0.0.115" `
+  -PassresetSqlDb "db_Cegid" `
+  -PassresetSqlUser "sa" `
+  -PassresetSqlPass "la_contraseña"
+```
+
+### Consideraciones
+
+- El agente corre como SYSTEM → `net user` funciona para cuentas locales.
+- Contraseñas generadas con charset `@#$!` (sin `%` — cmd.exe lo expande).
+- Si Database Mail no está configurado en SQL Server: el cambio se aplica igual pero `Resultado` queda `OK_MAIL_ERROR` en el log.
+- Scripts SQL en `dashboards/PassReset/SQL/`: `01_Database.sql` (tablas) y `02_StoredProcedures.sql` (SPs). Ya ejecutados en `db_Cegid`.
+
+---
+
+## EstadoResultado — flujo de datos (importante)
+
+El servicio `dashestadoresultado.exe` **NO puede acceder a rutas UNC** porque corre como SYSTEM (sin credenciales de red). El archivo `.env` usa un **inbox local**:
+
+```
+SAP_SOURCE_PATH=C:\apps\dashboards\EstadoResultado\sap-inbox
+```
+
+### Flujo mensual para cargar un nuevo período
+
+```powershell
+# 1) Copiar los archivos desde el servidor Cegid al inbox local (ejecutar como Administrador)
+$inbox = "C:\apps\dashboards\EstadoResultado\sap-inbox"
+Copy-Item "\\10.0.0.115\Cegid\SAP_PU_RESULT.txt" -Destination "$inbox\SAP_PU_RESULT.txt" -Force
+Copy-Item "\\10.0.0.115\Cegid\SAP_RESULT.txt"    -Destination "$inbox\SAP_RESULT.txt"    -Force
+
+# 2) Disparar el procesamiento (el servicio lee, parsea y archiva automáticamente)
+Invoke-RestMethod -Method POST "http://localhost:3008/api/refresh"
+
+# 3) Verificar
+Invoke-RestMethod "http://localhost:3008/api/status"
+```
+
+El servicio mueve los archivos procesados a `sap-inbox\SAPResultProcesado\` con timestamp.
+El chequeo automático diario (01:00 hs) también procesa si hay archivos en el inbox.
+Los archivos originales en `\\10.0.0.115\Cegid\` no se tocan (copiar, no mover desde UNC).
+
+---
 
 ## Particularidades / problemas resueltos (importante)
 

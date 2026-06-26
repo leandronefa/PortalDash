@@ -229,7 +229,14 @@ export default function App() {
 
             {loading
               ? <div className="empty-state">Cargando…</div>
-              : <UserTable usuarios={usuarios} />
+              : <UserTable
+                  usuarios={usuarios}
+                  onUpdateCorreo={async (id, correo) => {
+                    await api.updateCorreo(id, correo)
+                    push('Correo actualizado', 'success')
+                    await cargarDatos()
+                  }}
+                />
             }
           </div>
         )}

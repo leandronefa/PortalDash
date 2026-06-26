@@ -188,8 +188,8 @@ GO
 CREATE PROCEDURE dbo.sp_PassReset_AgentUpsertUsuario
     @Servidor       NVARCHAR(100),
     @UsuarioWindows NVARCHAR(100),
-    @CorreoDestino  NVARCHAR(255),
-    @MaxDias        INT = 30
+    @CorreoDestino  NVARCHAR(255) = NULL,  -- NULL = no sobreescribir correo existente
+    @MaxDias        INT           = 30
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -200,7 +200,8 @@ BEGIN
     )
     BEGIN
         UPDATE dbo.tbl_PassReset_Usuarios
-        SET CorreoDestino = @CorreoDestino,
+        SET -- Solo actualizar correo si se provee explícitamente (no NULL)
+            CorreoDestino = CASE WHEN @CorreoDestino IS NOT NULL THEN @CorreoDestino ELSE CorreoDestino END,
             MaxDias       = @MaxDias,
             FechaModif    = GETDATE()
         WHERE Servidor = @Servidor AND UsuarioWindows = @UsuarioWindows;
@@ -210,7 +211,7 @@ BEGIN
         INSERT INTO dbo.tbl_PassReset_Usuarios
             (Servidor, UsuarioWindows, CorreoDestino, MaxDias)
         VALUES
-            (@Servidor, @UsuarioWindows, @CorreoDestino, @MaxDias);
+            (@Servidor, @UsuarioWindows, ISNULL(@CorreoDestino, ''), @MaxDias);
     END
 
     SELECT Id FROM dbo.tbl_PassReset_Usuarios
@@ -318,6 +319,7 @@ BEGIN
     FROM dbo.tbl_PassReset_Usuarios
     WHERE Servidor = @Servidor
       AND Activo = 1
+      AND CorreoDestino <> ''          -- solo usuarios con correo asignado
       AND (
           UltimoCambio IS NULL
           OR DATEDIFF(DAY, UltimoCambio, GETDATE()) >= MaxDias
@@ -388,6 +390,28 @@ BEGIN
         @subject      = @subject,
         @body         = @body,
         @body_format  = 'TEXT';
+END
+GO
+
+-- =============================================================================
+--  sp_PassReset_SetCorreo
+--  La web app llama a este SP para asignar/actualizar el correo de un usuario.
+-- =============================================================================
+IF OBJECT_ID('dbo.sp_PassReset_SetCorreo', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_PassReset_SetCorreo;
+GO
+
+CREATE PROCEDURE dbo.sp_PassReset_SetCorreo
+    @Id            INT,
+    @CorreoDestino NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.tbl_PassReset_Usuarios
+    SET CorreoDestino = @CorreoDestino,
+        FechaModif    = GETDATE()
+    WHERE Id = @Id;
+    SELECT @@ROWCOUNT AS Updated;
 END
 GO
 

@@ -208,6 +208,28 @@ function report() {
   }
 }
 
+// ---- PassReset: registro de usuarios locales ----
+async function passresetRegistrarUsuarios(db) {
+  const localUsers = getLocalUsers();
+  if (!localUsers.length) return;
+
+  let ok = 0;
+  for (const usuario of localUsers) {
+    if (!/^[\w.\-]+$/.test(usuario)) continue;
+    try {
+      await db.request()
+        .input('Servidor',       sql.NVarChar, SERVER_ID)
+        .input('UsuarioWindows', sql.NVarChar, usuario)
+        // Sin correo: SP no sobreescribe si ya tiene uno asignado
+        .execute('sp_PassReset_AgentUpsertUsuario');
+      ok++;
+    } catch (e) {
+      console.error(`[${new Date().toISOString()}] [passreset] Error registrando usuario ${usuario}: ${e.message}`);
+    }
+  }
+  console.log(`[${new Date().toISOString()}] [passreset] Usuarios registrados/verificados: ${ok}/${localUsers.length}`);
+}
+
 // ---- PassReset: ciclo de cambio de contraseñas ----
 async function passreset() {
   if (!PASSRESET_ENABLED) return;
@@ -225,6 +247,9 @@ async function passreset() {
       prPool = null;
       return;
     }
+
+    // Registrar usuarios locales (inserta nuevos, preserva correo de los existentes)
+    await passresetRegistrarUsuarios(db);
 
     let pendientes;
     try {

@@ -10,7 +10,12 @@ param(
     [string]$AgentToken  = "sucursal-agent-token",
     [string]$ServerId    = "",
     [string]$Processes   = "FileAppCliente.exe,DOAStatus.exe",
-    [string]$IntervalMs  = "300000"
+    [string]$IntervalMs  = "300000",
+    [string]$PassresetEnabled   = "true",
+    [string]$PassresetSqlServer = "10.0.0.115",
+    [string]$PassresetSqlDb     = "db_Cegid",
+    [string]$PassresetSqlUser   = "sa",
+    [string]$PassresetSqlPass   = ""
 )
 
 $AgentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -57,6 +62,11 @@ AGENT_TOKEN=$AgentToken
 SERVER_ID=$ServerId
 PROCESSES=$Processes
 INTERVAL_MS=$IntervalMs
+PASSRESET_ENABLED=$PassresetEnabled
+PASSRESET_SQL_SERVER=$PassresetSqlServer
+PASSRESET_SQL_DB=$PassresetSqlDb
+PASSRESET_SQL_USER=$PassresetSqlUser
+PASSRESET_SQL_PASSWORD=$PassresetSqlPass
 "@
 Set-Content -Path "$AgentDir\.env" -Value $EnvContent
 Write-Host ".env del agente configurado (SERVER_ID=$ServerId)" -ForegroundColor Green
@@ -82,12 +92,25 @@ module.exports = {
       AGENT_TOKEN: '$AgentToken',
       SERVER_ID: '$ServerId',
       PROCESSES: '$Processes',
-      INTERVAL_MS: '$IntervalMs'
+      INTERVAL_MS: '$IntervalMs',
+      PASSRESET_ENABLED: '$PassresetEnabled',
+      PASSRESET_SQL_SERVER: '$PassresetSqlServer',
+      PASSRESET_SQL_DB: '$PassresetSqlDb',
+      PASSRESET_SQL_USER: '$PassresetSqlUser',
+      PASSRESET_SQL_PASSWORD: '$PassresetSqlPass'
     }
   }]
 };
 "@
 Set-Content -Path "$AgentDir\ecosystem.config.cjs" -Value $EcoContent
+
+# ---- Instalar dependencias npm ----
+# Instalar dependencias npm del agente (mssql para PassReset)
+Write-Host "Instalando dependencias npm del agente..." -ForegroundColor Cyan
+npm install --prefix $AgentDir mssql
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "npm install falló. El agente arrancará pero PassReset no funcionará sin mssql."
+}
 
 # ---- Iniciar con PM2 ----
 Write-Host "Iniciando agente con PM2..." -ForegroundColor Cyan

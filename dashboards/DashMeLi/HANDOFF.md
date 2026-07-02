@@ -234,6 +234,13 @@ Configurables vía modal (persisten en `localStorage`):
 4. **Logística — costos de envío** — el campo "Envío a tu cargo" (visible en las imágenes de referencia `envio..png`) no está implementado. Requiere fetchear `GET /shipments/{id}` para cada orden (costoso) o usar la API de billing de ML. Explorar: `GET /users/{uid}/expenses` o `GET /billing/charges/search`.
 5. ~~**Logística — desempeño Flex/Colecta**~~ ✅ **RESUELTO (2026-07-02, aproximación)** — Las métricas oficiales de "Exposición" NO están en la API pública (`seller_performance`, `/flex/.../performance`, `/shipments/{id}/delays` → todos 404; `estimated_handling_limit` viene vacío). Se implementó una réplica calculada: % de envíos entregados a tiempo vs `estimated_delivery_limit` (fecha prometida al comprador), por grupo Flex / Colecta-ME, esta semana y 30 días, con etiquetas tipo ML (≥97% Excelente, ≥94% Regular, <94% Muy mala). **Ojo**: incluye demoras del correo (no solo del vendedor), por eso Colecta da más bajo que la métrica oficial. También se reemplazó el historial semanal por el diario de `envio3..png`: barras apiladas Correctos/Demorados/En camino/Cancelados, últimas 4 semanas, con leyenda de totales. El cache de shipments ahora guarda `{lt, status, closed, shipped, delivered, limit}` y re-consulta los envíos no cerrados.
 
+### Implementado después (2026-07-02)
+- **Columna MLA en tablas de stock** (EBITDA/Rotación/Ranking/Retiro): muestra el id de publicación ML (link) y su estado (Activa/Pausada/etc.) por artículo. Backend `GET /api/ml/publicaciones`:
+  - Cruce principal por **código de barras**: `v_cgd_codigosbarraTodos` (artprove → codbar, cubre 164/164 artículos) contra el `seller_custom_field`/GTIN de las **variaciones** del catálogo ML completo de ambas cuentas (descarga con `search_type=scan` + multiget de a 20, atributos `id,status,seller_custom_field,variations`).
+  - Cruce complementario por `TBL_STOCK_MELI_SPT/VALLEJO` (`Código` = artprove + "-COLOR"), validado contra el catálogo vivo.
+  - **NO sirven**: match por `Código` solo (15/164), match por EAN contra las TBL Producteca (4/164), `seller_custom_field` del ítem raíz (es `PRD-<id Producteca>`).
+  - Cache 30 min + warmup al arrancar el servicio (la descarga tarda ~50 s). Resultado actual: 65/164 artículos con publicación viva; el resto no está publicado en ninguna de las dos cuentas.
+
 ### Baja prioridad
 6. **Modo oscuro** — CSS variables ya preparadas (`--bg`, `--surface`, etc.), pero el toggle no hace nada visible actualmente. Verificar función `toggleDark()`.
 7. **Paginación** — la tabla de stock completa puede tener miles de filas. Hay un sistema de paginación (`PAGE = 100`) pero revisar que todas las tabs lo usen correctamente.

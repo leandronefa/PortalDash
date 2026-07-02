@@ -656,6 +656,126 @@ app.get('/api/ml/premium-items', async (req, res) => {
   res.json(items);
 });
 
+// ── Publicaciones ML por artículo ────────────────────────
+// Cruce por código de barras: v_cgd_codigosbarraTodos da los EAN de cada artprove
+// del stock, y las variaciones de las publicaciones ML llevan ese EAN en
+// seller_custom_field (o GTIN). Requiere bajar el catálogo completo de ambas
+// cuentas (~5k ítems c/u), por eso se cachea 30 minutos.
+let pubCache = { ts: 0, data: null, building: null };
+
+async function fetchAllItemIds(account, uid) {
+  const ids = [];
+  let scroll = '';
+  for (;;) {
+    const q = `/users/${uid}/items/search?search_type=scan&limit=100${scroll ? `&scroll_id=${encodeURIComponent(scroll)}` : ''}`;
+    const page = await mlFetch(account, q);
+    if (!page.results?.length) break;
+    ids.push(...page.results);
+    scroll = page.scroll_id;
+    if (!scroll) break;
+  }
+  return ids;
+}
+
+async function fetchItemsDetail(account, ids) {
+  const out = [];
+  const batches = [];
+  for (let i = 0; i < ids.length; i += 20) batches.push(ids.slice(i, i + 20));
+  const CONC = 10;
+  for (let i = 0; i < batches.length; i += CONC) {
+    const rs = await Promise.allSettled(batches.slice(i, i + CONC).map(b =>
+      mlFetch(account, `/items?ids=${b.join(',')}&attributes=id,status,seller_custom_field,variations`)));
+    for (const r of rs) {
+      if (r.status !== 'fulfilled') continue;
+      for (const it of r.value) if (it.body?.id) out.push(it.body);
+    }
+  }
+  return out;
+}
+
+function itemBarcodes(item) {
+  const codes = new Set();
+  const collect = obj => {
+    if (obj.seller_custom_field) codes.add(String(obj.seller_custom_field).trim());
+    for (const a of obj.attributes || []) {
+      if ((a.id === 'GTIN' || a.id === 'SELLER_SKU') && a.value_name) codes.add(String(a.value_name).trim());
+    }
+  };
+  collect(item);
+  for (const v of item.variations || []) collect(v);
+  return codes;
+}
+
+async function buildPublicaciones() {
+  const db = await getPool();
+  const barras = await db.request().query(`
+    SELECT DISTINCT v.artprove, v.codbar
+    FROM (SELECT DISTINCT artprove FROM FOTOSTOCK_Diaria WHERE Sucursal IN ('000198','000199')) s
+    JOIN v_cgd_codigosbarraTodos v ON v.artprove = s.artprove
+    WHERE LEN(ISNULL(v.codbar, '')) >= 8`);
+
+  const codbarToArt = new Map();
+  for (const r of barras.recordset) codbarToArt.set(String(r.codbar).trim(), r.artprove);
+
+  const byArt = {};
+  const addPub = (art, mla, status, account) => {
+    if (!byArt[art]) byArt[art] = [];
+    if (!byArt[art].some(p => p.mla === mla)) byArt[art].push({ mla, status, account });
+  };
+
+  const catalog = { sportotal: new Map(), vallejo: new Map() }; // mla → status
+  const cfg = loadMlConfig();
+  for (const account of ['sportotal', 'vallejo']) {
+    if (!cfg[account]?.token) continue;
+    const uid = cfg[account].userId;
+    const ids = await fetchAllItemIds(account, uid);
+    const items = await fetchItemsDetail(account, ids);
+    console.log(`[ML] publicaciones ${account}: ${items.length} ítems descargados`);
+    for (const item of items) {
+      catalog[account].set(item.id, item.status);
+      const arts = new Set();
+      for (const code of itemBarcodes(item)) {
+        const art = codbarToArt.get(code);
+        if (art) arts.add(art);
+      }
+      for (const art of arts) addPub(art, item.id, item.status, account);
+    }
+  }
+
+  // Complemento: tablas Producteca (Código = artprove + "-COLOR" → MLA).
+  // Solo se suman MLAs vivos (presentes en el catálogo recién bajado).
+  const artSet = new Set(barras.recordset.map(r => r.artprove));
+  for (const [table, account] of [['TBL_STOCK_MELI_SPT', 'sportotal'], ['TBL_STOCK_MELI_VALLEJO', 'vallejo']]) {
+    const rows = await db.request().query(`
+      SELECT DISTINCT [Código] codigo, [Id Publicación MercadoLibre] mla
+      FROM [${table}] WHERE [Id Publicación MercadoLibre] LIKE 'MLA%' AND [Código] IS NOT NULL`);
+    for (const { codigo, mla } of rows.recordset) {
+      const status = catalog[account].get(mla);
+      if (!status) continue;
+      const base = codigo.slice(0, codigo.lastIndexOf('-'));
+      const art = artSet.has(codigo) ? codigo : artSet.has(base) ? base : null;
+      if (art) addPub(art, mla, status, account);
+    }
+  }
+  return byArt;
+}
+
+app.get('/api/ml/publicaciones', async (req, res) => {
+  if (pubCache.data && Date.now() - pubCache.ts < 30 * 60 * 1000) return res.json(pubCache.data);
+  try {
+    if (!pubCache.building) {
+      pubCache.building = buildPublicaciones()
+        .then(data => { pubCache = { ts: Date.now(), data, building: null }; return data; })
+        .catch(e => { pubCache.building = null; throw e; });
+    }
+    res.json(await pubCache.building);
+  } catch (e) {
+    // Si falló pero hay un cache viejo, mejor eso que nada
+    if (pubCache.data) return res.json(pubCache.data);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Renueva los tokens de las cuentas que tengan refresh_token (los access token duran 6 h)
@@ -672,6 +792,12 @@ app.listen(PORT, async () => {
   console.log(`Dashboard corriendo en http://localhost:${PORT}`);
   refreshAllMlTokens();
   setInterval(refreshAllMlTokens, 5 * 60 * 60 * 1000);
+  // Precalentar el cruce artículo↔publicación ML (tarda ~1 min la primera vez)
+  setTimeout(() => {
+    pubCache.building = buildPublicaciones()
+      .then(data => { pubCache = { ts: Date.now(), data, building: null }; return data; })
+      .catch(e => { pubCache.building = null; console.error(`[ML] warmup publicaciones: ${e.message}`); });
+  }, 15000);
   try {
     await getPool();
     console.log(`Conectado a SQL Server ${dbConfig.server}/${dbConfig.database}`);

@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tablero Stock Depósito 198 / 199</title>
+  <title>Tablero Stock DepÃ³sito 198 / 199</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -164,7 +164,7 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* Sección genérica */
+    /* SecciÃ³n genÃ©rica */
     .section { padding: 16px 28px; }
     .section-title {
       font-size: 0.88rem;
@@ -249,8 +249,8 @@
       user-select: none;
     }
     th:hover { background: var(--th-hover); }
-    th.sort-asc::after { content: ' ↑'; }
-    th.sort-desc::after { content: ' ↓'; }
+    th.sort-asc::after { content: ' â†‘'; }
+    th.sort-desc::after { content: ' â†“'; }
     td { padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; color: var(--text); }
     tr:hover td { background: var(--row-hover); }
     tr.row-green td { background: var(--row-green); }
@@ -266,7 +266,7 @@
     .badge-zero { background: #f3f4f6; color: #6b7280; }
     .badge-new  { background: #ede9fe; color: #6d28d9; }
 
-    /* Paginación */
+    /* PaginaciÃ³n */
     .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 10px 28px 20px; }
     .pager button { padding: 5px 12px; border: 1px solid var(--input-border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 0.8rem; }
     .pager button:disabled { opacity: .4; cursor: default; }
@@ -368,7 +368,7 @@
     .ranking-pager button:disabled { opacity: .4; cursor: default; }
     .ranking-pager span { font-size: 0.7rem; color: var(--text3); }
 
-    /* Modal configuración EBITDA */
+    /* Modal configuraciÃ³n EBITDA */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -467,7 +467,7 @@
     }
     .chart-chip button:hover { background: var(--chip-btn-hover); color: var(--chip-strong); }
 
-    /* ── MercadoLibre tab — split layout ── */
+    /* â”€â”€ MercadoLibre tab â€” split layout â”€â”€ */
     .ml-split {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -535,7 +535,7 @@
     .ml-premium-stock { color: var(--text3); white-space: nowrap; }
     .ml-premium-sold  { color: #4361ee; white-space: nowrap; }
 
-    /* ── Logística ─────────────────────────────────────── */
+    /* â”€â”€ LogÃ­stica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .log-split { display:grid; grid-template-columns:1fr 1fr; height:calc(100vh - 160px); }
     .log-panel { display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); }
     .log-panel:last-child { border-right:none; }
@@ -581,9 +581,9 @@
 <body>
 
 <header>
-  <h1>📦 Stock MercadoLibre — Dep. 198 / 199</h1>
+  <h1>ðŸ“¦ Stock MercadoLibre â€” Dep. 198 / 199</h1>
   <div style="display:flex;align-items:center;gap:6px;margin-left:24px">
-    <label style="font-size:0.78rem;color:#ccc;white-space:nowrap">Depósito:</label>
+    <label style="font-size:0.78rem;color:#ccc;white-space:nowrap">DepÃ³sito:</label>
     <select id="globalDep" onchange="onGlobalDepChange()" style="padding:6px 12px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;min-width:160px">
       <option value="">Ambos (198 + 199)</option>
       <option value="000198">198 - Tesi</option>
@@ -592,21 +592,21 @@
   </div>
   <div class="tabs-bar">
     <button class="tab-btn active"  onclick="switchTab('ebitda')">EBITDA</button>
-    <button class="tab-btn"         onclick="switchTab('rotacion')">Rotación</button>
-    <button class="tab-btn"         onclick="switchTab('ranking')">📊 Ranking</button>
-    <button class="tab-btn danger"  onclick="switchTab('retiro')">⚠ Retiro Recomendado</button>
-    <button class="tab-btn"         onclick="switchTab('mercadolibre')">🛒 MercadoLibre</button>
-    <button class="tab-btn"         onclick="switchTab('logistica')">🚚 Logística</button>
+    <button class="tab-btn"         onclick="switchTab('rotacion')">RotaciÃ³n</button>
+    <button class="tab-btn"         onclick="switchTab('ranking')">ðŸ“Š Ranking</button>
+    <button class="tab-btn danger"  onclick="switchTab('retiro')">âš  Retiro Recomendado</button>
+    <button class="tab-btn"         onclick="switchTab('mercadolibre')">ðŸ›’ MercadoLibre</button>
+    <button class="tab-btn"         onclick="switchTab('logistica')">ðŸšš LogÃ­stica</button>
   </div>
-  <button class="dark-toggle" id="darkToggleBtn" onclick="toggleDark()" title="Modo oscuro">🌙</button>
+  <button class="dark-toggle" id="darkToggleBtn" onclick="toggleDark()" title="Modo oscuro">ðŸŒ™</button>
 </header>
 
 <!-- KPIs siempre visibles -->
 <div class="kpis" id="kpis"><div class="loading">Cargando datos SQL...</div></div>
 
-<!-- ════════════════════════════════════════════════
-     TAB 1 — EBITDA
-════════════════════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     TAB 1 â€” EBITDA
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div id="tab-ebitda" class="tab-content active">
 
   <div class="ebitda-summary" id="ebitdaSummary" style="display:none"></div>
@@ -620,9 +620,9 @@
   <div class="chart-chip" id="eChartChip"></div>
 
   <div class="filters" id="ebitdaFilters" style="display:none">
-    <button class="cfg-btn" onclick="openEbitdaConfig()">⚙ Variables EBITDA</button>
-    <button class="cfg-btn" onclick="openPvpMinConfig()">💲 PVP Mínimo</button>
-    <label>Depósito:
+    <button class="cfg-btn" onclick="openEbitdaConfig()">âš™ Variables EBITDA</button>
+    <button class="cfg-btn" onclick="openPvpMinConfig()">ðŸ’² PVP MÃ­nimo</button>
+    <label>DepÃ³sito:
       <select id="eDep" onchange="applyEbitdaFilters()">
         <option value="">Todos</option>
         <option value="000198">198 - Tesi</option>
@@ -635,12 +635,12 @@
     <label>Resultado:
       <select id="eRes" onchange="applyEbitdaFilters()">
         <option value="">Todos</option>
-        <option value="pos">Positivo ✅</option>
-        <option value="neg">Negativo ❌</option>
+        <option value="pos">Positivo âœ…</option>
+        <option value="neg">Negativo âŒ</option>
       </select>
     </label>
     <label>Buscar:
-      <input type="text" id="eSearch" placeholder="artículo..." oninput="applyEbitdaFilters()">
+      <input type="text" id="eSearch" placeholder="artÃ­culo..." oninput="applyEbitdaFilters()">
     </label>
     <span class="row-count" id="eRowCount"></span>
   </div>
@@ -649,15 +649,15 @@
     <div class="table-wrap" id="ebitdaTable"><div class="loading">Cargando...</div></div>
   </div>
   <div class="pager" id="ePager" style="display:none">
-    <button id="ePrev" onclick="changePage('e',-1)">← Ant</button>
+    <button id="ePrev" onclick="changePage('e',-1)">â† Ant</button>
     <span id="ePageInfo"></span>
-    <button id="eNext" onclick="changePage('e',1)">Sig →</button>
+    <button id="eNext" onclick="changePage('e',1)">Sig â†’</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════
-     TAB 2 — ROTACIÓN
-════════════════════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     TAB 2 â€” ROTACIÃ“N
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div id="tab-rotacion" class="tab-content">
 
   <div class="charts-grid" id="rotCharts" style="display:none; padding-top:16px"></div>
@@ -667,24 +667,24 @@
   <div class="chart-chip" id="rChartChip"></div>
 
   <div class="filters" id="rotFilters" style="display:none">
-    <label>Depósito:
+    <label>DepÃ³sito:
       <select id="rDep" onchange="applyRotFilters()">
         <option value="">Todos</option>
         <option value="000198">198 - Tesi</option>
         <option value="000199">199 - Pueblo</option>
       </select>
     </label>
-    <label>Rotación:
+    <label>RotaciÃ³n:
       <select id="rRot" onchange="applyRotFilters()">
         <option value="">Todas</option>
-        <option value="ok">Alta ✅</option>
-        <option value="warn">Media ⚠</option>
-        <option value="bad">Sin ventas ❌</option>
-        <option value="new">Ingreso reciente 🆕</option>
+        <option value="ok">Alta âœ…</option>
+        <option value="warn">Media âš </option>
+        <option value="bad">Sin ventas âŒ</option>
+        <option value="new">Ingreso reciente ðŸ†•</option>
       </select>
     </label>
     <label>Buscar:
-      <input type="text" id="rSearch" placeholder="artículo..." oninput="applyRotFilters()">
+      <input type="text" id="rSearch" placeholder="artÃ­culo..." oninput="applyRotFilters()">
     </label>
     <span class="row-count" id="rRowCount"></span>
   </div>
@@ -693,15 +693,15 @@
     <div class="table-wrap" id="rotTable"><div class="loading">Cargando...</div></div>
   </div>
   <div class="pager" id="rPager" style="display:none">
-    <button id="rPrev" onclick="changePage('r',-1)">← Ant</button>
+    <button id="rPrev" onclick="changePage('r',-1)">â† Ant</button>
     <span id="rPageInfo"></span>
-    <button id="rNext" onclick="changePage('r',1)">Sig →</button>
+    <button id="rNext" onclick="changePage('r',1)">Sig â†’</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════
-     TAB 3 — RANKING POR DEPÓSITO
-════════════════════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     TAB 3 â€” RANKING POR DEPÃ“SITO
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div id="tab-ranking" class="tab-content">
   <div class="ranking-grid">
     <div class="ranking-panel" id="rankPanel198"><div class="loading">Cargando...</div></div>
@@ -709,20 +709,20 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════
-     TAB 4 — RETIRO RECOMENDADO
-════════════════════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     TAB 4 â€” RETIRO RECOMENDADO
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div id="tab-retiro" class="tab-content">
   <div class="retiro-header">
-    <strong>⚠ Artículos recomendados para retirar del stock</strong>
-    Criterios (cualquiera activa el retiro): marca no permitida · EBITDA negativo + sin ventas 90d · PVP por debajo del mínimo configurado.
-    El capital inmovilizado en estos artículos podría liberarse.
+    <strong>âš  ArtÃ­culos recomendados para retirar del stock</strong>
+    Criterios (cualquiera activa el retiro): marca no permitida Â· EBITDA negativo + sin ventas 90d Â· PVP por debajo del mÃ­nimo configurado.
+    El capital inmovilizado en estos artÃ­culos podrÃ­a liberarse.
   </div>
 
   <div class="ebitda-summary" id="retiroSummary" style="display:none"></div>
 
   <div class="filters" id="retiroFilters" style="display:none">
-    <label>Depósito:
+    <label>DepÃ³sito:
       <select id="retDep" onchange="applyRetiroFilters()">
         <option value="">Todos</option>
         <option value="000198">198 - Tesi</option>
@@ -736,12 +736,12 @@
       <select id="retMotivo" onchange="applyRetiroFilters()">
         <option value="">Todos</option>
         <option value="marca">Marca no permitida</option>
-        <option value="ebitda">EBITDA neg. + sin rotación</option>
-        <option value="pvp">PVP bajo mínimo</option>
+        <option value="ebitda">EBITDA neg. + sin rotaciÃ³n</option>
+        <option value="pvp">PVP bajo mÃ­nimo</option>
       </select>
     </label>
     <label>Buscar:
-      <input type="text" id="retSearch" placeholder="artículo..." oninput="applyRetiroFilters()">
+      <input type="text" id="retSearch" placeholder="artÃ­culo..." oninput="applyRetiroFilters()">
     </label>
     <span class="row-count" id="retRowCount"></span>
   </div>
@@ -750,21 +750,21 @@
     <div class="table-wrap" id="retiroTable"><div class="loading">Cargando...</div></div>
   </div>
   <div class="pager" id="retPager" style="display:none">
-    <button id="retPrev" onclick="changePage('ret',-1)">← Ant</button>
+    <button id="retPrev" onclick="changePage('ret',-1)">â† Ant</button>
     <span id="retPageInfo"></span>
-    <button id="retNext" onclick="changePage('ret',1)">Sig →</button>
+    <button id="retNext" onclick="changePage('ret',1)">Sig â†’</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════
-     TAB 5 — MERCADOLIBRE
-════════════════════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     TAB 5 â€” MERCADOLIBRE
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div id="tab-mercadolibre" class="tab-content">
   <div class="ml-split">
     <!-- Panel izquierdo: Sportotal -->
     <div class="ml-panel">
       <div class="ml-panel-hdr">
-        🏪 Sportotal
+        ðŸª Sportotal
         <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198</span>
         <span id="mlHdrStatus-sportotal" style="margin-left:auto;font-size:0.72rem;font-weight:400"></span>
       </div>
@@ -775,7 +775,7 @@
     <!-- Panel derecho: Calzados Vallejo -->
     <div class="ml-panel">
       <div class="ml-panel-hdr">
-        🏪 Calzados Vallejo
+        ðŸª Calzados Vallejo
         <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198 + 199</span>
         <span id="mlHdrStatus-vallejo" style="margin-left:auto;font-size:0.72rem;font-weight:400"></span>
       </div>
@@ -786,12 +786,12 @@
   </div>
 </div>
 
-<!-- Tab Logística -->
+<!-- Tab LogÃ­stica -->
 <div id="tab-logistica" class="tab-content">
   <div class="log-split">
     <div class="log-panel">
       <div class="log-panel-hdr">
-        🚚 Sportotal <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198</span>
+        ðŸšš Sportotal <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198</span>
         <span id="logHdrStatus-sportotal" style="margin-left:auto;font-size:0.72rem;font-weight:400"></span>
       </div>
       <div class="log-panel-body" id="logBody-sportotal">
@@ -800,7 +800,7 @@
     </div>
     <div class="log-panel">
       <div class="log-panel-hdr">
-        🚚 Calzados Vallejo <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198 + 199</span>
+        ðŸšš Calzados Vallejo <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198 + 199</span>
         <span id="logHdrStatus-vallejo" style="margin-left:auto;font-size:0.72rem;font-weight:400"></span>
       </div>
       <div class="log-panel-body" id="logBody-vallejo">
@@ -810,16 +810,16 @@
   </div>
 </div>
 
-<!-- Modal PVP Mínimo -->
+<!-- Modal PVP MÃ­nimo -->
 <div id="pvpMinModal" class="modal-overlay" onclick="closePvpMinConfig()">
   <div class="modal-box" style="width:320px" onclick="event.stopPropagation()">
-    <h3>💲 PVP Mínimo requerido</h3>
+    <h3>ðŸ’² PVP MÃ­nimo requerido</h3>
     <div class="cfg-row">
-      <label>Precio mínimo de venta</label>
+      <label>Precio mÃ­nimo de venta</label>
       <input type="number" id="cfgPvpMin" step="1000" min="0">
       <span class="cfg-unit">$</span>
     </div>
-    <p style="font-size:0.75rem;color:var(--text3);margin-top:10px">Afecta el KPI y el gráfico de PVP por sección.</p>
+    <p style="font-size:0.75rem;color:var(--text3);margin-top:10px">Afecta el KPI y el grÃ¡fico de PVP por secciÃ³n.</p>
     <div class="modal-footer">
       <button onclick="closePvpMinConfig()">Cancelar</button>
       <button class="btn-primary" onclick="savePvpMinConfig()">Aplicar</button>
@@ -827,12 +827,12 @@
   </div>
 </div>
 
-<!-- Modal configuración EBITDA -->
+<!-- Modal configuraciÃ³n EBITDA -->
 <div id="ebitdaConfigModal" class="modal-overlay" onclick="closeEbitdaConfig()">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <h3>⚙ Variables del cálculo EBITDA</h3>
+    <h3>âš™ Variables del cÃ¡lculo EBITDA</h3>
     <div class="cfg-row">
-      <label>Comisión MercadoLibre</label>
+      <label>ComisiÃ³n MercadoLibre</label>
       <input type="number" id="cfgComision" step="0.1" min="0" max="100">
       <span class="cfg-unit">%</span>
     </div>
@@ -842,7 +842,7 @@
       <span class="cfg-unit">%</span>
     </div>
     <div class="cfg-row">
-      <label>Costo de envío</label>
+      <label>Costo de envÃ­o</label>
       <input type="number" id="cfgEnvio" step="100" min="0">
       <span class="cfg-unit">$</span>
     </div>
@@ -860,14 +860,14 @@
 </div>
 
 <script>
-// ── Marcas no permitidas ─────────────────────────────────
+// â”€â”€ Marcas no permitidas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MARCAS_NO_PERMITIDAS = ['adidas', 'nike'];
 function esMarcaNoPermitida(r) {
   const marca = ((r.nommarca || '') + ' ' + (r.nomprov || '')).toLowerCase();
   return MARCAS_NO_PERMITIDAS.some(m => marca.includes(m));
 }
 
-// ── Fechas de recepción ──────────────────────────────────
+// â”€â”€ Fechas de recepciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function diasEnStock(primera_entrada) {
   if (!primera_entrada) return null;
   return Math.floor((Date.now() - new Date(primera_entrada).getTime()) / 86400000);
@@ -877,7 +877,7 @@ function fmtFecha(d) {
   return new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// ── Filtro global depósito ───────────────────────────────
+// â”€â”€ Filtro global depÃ³sito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let globalDep = '';
 
 function getActiveData() {
@@ -885,7 +885,7 @@ function getActiveData() {
   return stockData.filter(r => r.sucursal === globalDep);
 }
 
-// Agrupa los talles de un mismo artículo+color+depósito en una sola fila
+// Agrupa los talles de un mismo artÃ­culo+color+depÃ³sito en una sola fila
 function groupByProduct(data) {
   const map = new Map();
   data.forEach(r => {
@@ -940,7 +940,7 @@ function onGlobalDepChange() {
 
 const chartInstances = {};
 
-// ── Selección desde gráfico ──────────────────────────────
+// â”€â”€ SelecciÃ³n desde grÃ¡fico â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const chartSel = { e: { type: null, value: null }, r: { type: null, value: null } };
 let _provEData = [], _secsData = [], _topArtsData = [], _provRotData = [];
 
@@ -951,7 +951,7 @@ function setChartSel(tab, type, value, label, pvpSide = null) {
   }
   chartSel[tab] = { type, value, pvpSide };
   const chip = document.getElementById(tab === 'e' ? 'eChartChip' : 'rChartChip');
-  chip.innerHTML = `<span>Filtrando por: <strong>${label}</strong></span><button onclick="clearChartSel('${tab}')">✕ Limpiar filtro</button>`;
+  chip.innerHTML = `<span>Filtrando por: <strong>${label}</strong></span><button onclick="clearChartSel('${tab}')">âœ• Limpiar filtro</button>`;
   chip.style.display = 'flex';
   if (tab === 'e') { _updateEHighlight(); applyEbitdaFilters(); }
   else             { _updateRHighlight(); applyRotFilters(); }
@@ -988,11 +988,11 @@ function _updateEHighlight() {
   if (c2) {
     c2.data.datasets[0].backgroundColor = _secsData.map(s => {
       if (s[0] !== sel.value) return '#d1d5db';
-      return sel.pvpSide === 'sobre' ? '#fbb6ce' : '#f72585'; // rojo atenuado si seleccionó verde
+      return sel.pvpSide === 'sobre' ? '#fbb6ce' : '#f72585'; // rojo atenuado si seleccionÃ³ verde
     });
     c2.data.datasets[1].backgroundColor = _secsData.map(s => {
       if (s[0] !== sel.value) return '#d1d5db';
-      return sel.pvpSide === 'bajo' ? '#86efac' : '#06d6a0'; // verde atenuado si seleccionó rojo
+      return sel.pvpSide === 'bajo' ? '#86efac' : '#06d6a0'; // verde atenuado si seleccionÃ³ rojo
     });
     c2.update('none');
   }
@@ -1030,7 +1030,7 @@ function makeChart(id, config) {
   return chartInstances[id];
 }
 
-// ── Utilidades ──────────────────────────────────────────
+// â”€â”€ Utilidades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fmt  = n => (n||0).toLocaleString('es-AR');
 const fmtM = n => '$' + ((n||0)/1_000_000).toFixed(2) + 'M';
 const fmtK = n => { const v = n||0; return Math.abs(v) >= 1000 ? '$' + (v/1000).toFixed(1) + 'K' : '$' + Math.round(v).toLocaleString('es-AR'); };
@@ -1038,8 +1038,8 @@ const fmtP = n => (n||0).toFixed(1) + '%';
 
 const COLORS = ['#4361ee','#06d6a0','#f72585','#ffd60a','#7209b7','#fb5607','#3f88c5','#e63946','#8338ec','#118ab2','#ef476f','#2ec4b6'];
 
-// ── EBITDA cálculo ───────────────────────────────────────
-// Fórmula: (pvp/IVA - costo) - (pvp*COMISION_ML + COSTO_ENVIO + COSTO_EMPAQUE + pvp*IIBB)
+// â”€â”€ EBITDA cÃ¡lculo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// FÃ³rmula: (pvp/IVA - costo) - (pvp*COMISION_ML + COSTO_ENVIO + COSTO_EMPAQUE + pvp*IIBB)
 let COMISION_ML   = 0.127;
 let IIBB          = 0.055;
 let COSTO_ENVIO   = 7900;
@@ -1101,17 +1101,17 @@ function calcEbitda(pvp, costo) {
   return ventaSinIva - costo - costoML - COSTO_ENVIO - COSTO_EMPAQUE - costoIIBB;
 }
 
-// Ratio de rotación mensual: unidades vendidas 30d / stock
+// Ratio de rotaciÃ³n mensual: unidades vendidas 30d / stock
 function rotRatio(vta30, stock) {
   if (!stock || stock <= 0) return 0;
   return vta30 / stock;
 }
 
-// Clasificación de rotación (considera antigüedad en stock)
-// 'new'  = ingresó hace menos de 60 días, no hay base para juzgar
-// 'ok'   = buena rotación (≥10% del stock vendido en 30d)
-// 'warn' = rotación baja pero algo vendió
-// 'bad'  = sin ventas en 12 meses y con suficiente antigüedad
+// ClasificaciÃ³n de rotaciÃ³n (considera antigÃ¼edad en stock)
+// 'new'  = ingresÃ³ hace menos de 60 dÃ­as, no hay base para juzgar
+// 'ok'   = buena rotaciÃ³n (â‰¥10% del stock vendido en 30d)
+// 'warn' = rotaciÃ³n baja pero algo vendiÃ³
+// 'bad'  = sin ventas en 12 meses y con suficiente antigÃ¼edad
 function rotClass(vta30, vta90, vtaTot, stock, dias) {
   if (dias !== null && dias < 60) return 'new';
   if (vta30 > 0 && rotRatio(vta30, stock) >= 0.10) return 'ok';
@@ -1126,7 +1126,7 @@ function mesesCob(vta30, stock) {
   return (stock / vta30).toFixed(1);
 }
 
-// ── Tab switching ────────────────────────────────────────
+// â”€â”€ Tab switching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function switchTab(name) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -1137,7 +1137,7 @@ function switchTab(name) {
   if (name === 'logistica') initLogTab();
 }
 
-// ── Logística ────────────────────────────────────────────
+// â”€â”€ LogÃ­stica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let logTabInited = false;
 const logState = {};
 
@@ -1148,7 +1148,7 @@ function initLogTab() {
 }
 
 async function logFetchPanel(acc) {
-  document.getElementById(`logBody-${acc}`).innerHTML = '<div class="ml-loading">⏳ Cargando logística...</div>';
+  document.getElementById(`logBody-${acc}`).innerHTML = '<div class="ml-loading">â³ Cargando logÃ­stica...</div>';
   document.getElementById(`logHdrStatus-${acc}`).textContent = '';
   try {
     const r = await fetch(`/api/ml/logistics?account=${acc}`);
@@ -1167,12 +1167,12 @@ function logRenderPanel(d, acc, period) {
   const pct = n => (n || 0).toFixed(1) + '%';
   const data = d[period] || { total: 0, totalAmount: 0, tipos: [] };
 
-  const typeColors = { 'Flex': '#4361ee', 'Mercado Envíos': '#10b981', 'Full': '#f59e0b', 'Sin envío': '#9ca3af' };
-  const typeBadge  = t => t === 'Flex' ? 'log-flex-badge' : t === 'Full' ? 'log-full-badge' : t === 'Sin envío' ? '' : 'log-me-badge';
+  const typeColors = { 'Flex': '#4361ee', 'Mercado EnvÃ­os': '#10b981', 'Full': '#f59e0b', 'Sin envÃ­o': '#9ca3af' };
+  const typeBadge  = t => t === 'Flex' ? 'log-flex-badge' : t === 'Full' ? 'log-full-badge' : t === 'Sin envÃ­o' ? '' : 'log-me-badge';
 
   const tiposRows = data.tipos.map(t => `
     <tr>
-      <td>${t.nombre ? `<span class="${typeBadge(t.nombre)}">${t.nombre}</span>` : '—'}</td>
+      <td>${t.nombre ? `<span class="${typeBadge(t.nombre)}">${t.nombre}</span>` : 'â€”'}</td>
       <td style="text-align:right">${pct(t.porcentaje)}</td>
       <td style="text-align:right;font-weight:600">${t.cantidad}</td>
       <td style="text-align:right">${$(t.dinero)}</td>
@@ -1183,46 +1183,46 @@ function logRenderPanel(d, acc, period) {
   const chartData   = data.tipos.map(t => t.cantidad);
   const chartLabels = data.tipos.map(t => t.nombre);
 
-  // Desempeño en envíos (a tiempo vs fecha prometida)
+  // DesempeÃ±o en envÃ­os (a tiempo vs fecha prometida)
   const perfColors = { 'Excelente': '#10b981', 'Regular': '#f59e0b', 'Muy mala': '#ef4444' };
-  const perfIcons  = { 'Excelente': '↗', 'Regular': '→', 'Muy mala': '↘' };
+  const perfIcons  = { 'Excelente': 'â†—', 'Regular': 'â†’', 'Muy mala': 'â†˜' };
 
   function perfBlock(title, p) {
     if (!p || (p.mes.cerrados === 0 && p.mes.enCamino === 0)) return `
       <div style="flex:1;min-width:0">
         <div style="font-size:0.72rem;font-weight:600;margin-bottom:6px">${title}</div>
-        <div style="color:var(--text3);font-size:0.7rem">Sin envíos en el período</div>
+        <div style="color:var(--text3);font-size:0.7rem">Sin envÃ­os en el perÃ­odo</div>
       </div>`;
-    const label = p.mes.label || '—';
+    const label = p.mes.label || 'â€”';
     const color = perfColors[label] || 'var(--text3)';
     const row = (nombre, s) => s.cerrados === 0
       ? `<div style="display:flex;justify-content:space-between;font-size:0.7rem;padding:2px 0"><span style="color:var(--text3)">${nombre}</span><span style="color:var(--text3)">sin datos</span></div>`
       : `<div style="display:flex;justify-content:space-between;font-size:0.7rem;padding:2px 0">
            <span style="color:var(--text3)">${nombre}</span>
            <span><strong style="color:${perfColors[s.label] || 'inherit'}">${s.pct.toFixed(0)}%</strong>
-           <span style="color:var(--text3)"> · ${s.aTiempo} de ${s.cerrados}</span></span>
+           <span style="color:var(--text3)"> Â· ${s.aTiempo} de ${s.cerrados}</span></span>
          </div>`;
     return `
       <div style="flex:1;min-width:0">
         <div style="font-size:0.72rem;font-weight:600;margin-bottom:6px">${title}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${color};color:#fff;font-size:0.72rem">${perfIcons[label] || '·'}</span>
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${color};color:#fff;font-size:0.72rem">${perfIcons[label] || 'Â·'}</span>
           <strong style="font-size:0.86rem;color:${color}">${label}</strong>
         </div>
         ${row('Esta semana', p.semana)}
-        ${row('Últimos 30 días', p.mes)}
+        ${row('Ãšltimos 30 dÃ­as', p.mes)}
         ${p.mes.enCamino > 0 ? `<div style="font-size:0.64rem;color:var(--text3);margin-top:3px">${p.mes.enCamino} en camino (no computan)</div>` : ''}
       </div>`;
   }
 
   const perfHtml = d.desempeno ? `
     <div class="log-card">
-      <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Desempeño en envíos — a tiempo vs fecha prometida</h3>
+      <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">DesempeÃ±o en envÃ­os â€” a tiempo vs fecha prometida</h3>
       <div style="display:flex;gap:14px">
-        ${perfBlock('Envíos Flex', d.desempeno.flex)}
-        ${perfBlock('Colecta / Mercado Envíos', d.desempeno.colecta)}
+        ${perfBlock('EnvÃ­os Flex', d.desempeno.flex)}
+        ${perfBlock('Colecta / Mercado EnvÃ­os', d.desempeno.colecta)}
       </div>
-      <div style="font-size:0.64rem;color:var(--text3);margin-top:8px">Calculado sobre la fecha de entrega prometida al comprador — incluye demoras del correo, puede diferir de la métrica oficial de ML.</div>
+      <div style="font-size:0.64rem;color:var(--text3);margin-top:8px">Calculado sobre la fecha de entrega prometida al comprador â€” incluye demoras del correo, puede diferir de la mÃ©trica oficial de ML.</div>
     </div>` : '';
 
   document.getElementById(`logBody-${acc}`).innerHTML = `
@@ -1231,21 +1231,21 @@ function logRenderPanel(d, acc, period) {
       <div style="display:flex;gap:4px;align-items:center">
         <div class="log-period-tabs">
           <button class="log-period-btn ${period==='hoy'?'active':''}"    onclick="logChangePeriod('${acc}','hoy')">Hoy</button>
-          <button class="log-period-btn ${period==='semana'?'active':''}" onclick="logChangePeriod('${acc}','semana')">7 días</button>
-          <button class="log-period-btn ${period==='mes'?'active':''}"    onclick="logChangePeriod('${acc}','mes')">30 días</button>
+          <button class="log-period-btn ${period==='semana'?'active':''}" onclick="logChangePeriod('${acc}','semana')">7 dÃ­as</button>
+          <button class="log-period-btn ${period==='mes'?'active':''}"    onclick="logChangePeriod('${acc}','mes')">30 dÃ­as</button>
         </div>
         <button onclick="logFetchPanel('${acc}')" title="Actualizar"
-          style="padding:3px 9px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:0.7rem">↻</button>
+          style="padding:3px 9px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:0.7rem">â†»</button>
       </div>
     </div>
 
     <div class="log-card">
       <div class="log-kpi-row">
-        <div class="log-kpi"><span class="log-kpi-val">${data.total}</span><span class="log-kpi-lbl">Envíos</span></div>
+        <div class="log-kpi"><span class="log-kpi-val">${data.total}</span><span class="log-kpi-lbl">EnvÃ­os</span></div>
         <div class="log-kpi"><span class="log-kpi-val" style="font-size:1.1rem">${$(data.totalAmount)}</span><span class="log-kpi-lbl">Dinero transaccionado</span></div>
       </div>
       ${data.tipos.length === 0
-        ? '<div style="color:var(--text3);font-size:0.72rem">Sin envíos en el período</div>'
+        ? '<div style="color:var(--text3);font-size:0.72rem">Sin envÃ­os en el perÃ­odo</div>'
         : `<div class="log-tipos-wrap">
             <div class="log-tipos-chart"><canvas id="logDonut-${acc}"></canvas></div>
             <div style="flex:1;overflow-x:auto">
@@ -1266,7 +1266,7 @@ function logRenderPanel(d, acc, period) {
     ${perfHtml}
 
     <div class="log-card">
-      <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Historial de envíos — últimas 4 semanas</h3>
+      <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Historial de envÃ­os â€” Ãºltimas 4 semanas</h3>
       <div class="log-hist-chart"><canvas id="logHist-${acc}"></canvas></div>
       <div style="display:flex;gap:12px;margin-top:6px;font-size:0.66rem;color:var(--text3);flex-wrap:wrap" id="logHistLegend-${acc}"></div>
     </div>
@@ -1283,7 +1283,7 @@ function logRenderPanel(d, acc, period) {
     });
   }
 
-  // Historial diario de envíos
+  // Historial diario de envÃ­os
   logRenderHistChart(d.historialEnvios || [], acc);
 }
 
@@ -1302,7 +1302,7 @@ function logRenderHistChart(dias, acc) {
     ['enCamino',  'En camino',  '#93a8f4'],
     ['cancelado', 'Cancelados', '#9ca3af'],
   ];
-  const DIAS_SEM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const DIAS_SEM = ['Dom','Lun','Mar','MiÃ©','Jue','Vie','SÃ¡b'];
   const labels = dias.map(x => {
     const d = new Date(x.day + 'T00:00:00');
     return `${DIAS_SEM[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`;
@@ -1316,7 +1316,7 @@ function logRenderHistChart(dias, acc) {
   }
   const legend = document.getElementById(`logHistLegend-${acc}`);
   if (legend) legend.innerHTML =
-    `<span style="font-weight:600">${totalGeneral} envíos totales</span>` +
+    `<span style="font-weight:600">${totalGeneral} envÃ­os totales</span>` +
     series.map(([key, nombre, color]) => {
       const n = totales[key];
       const p = totalGeneral > 0 ? Math.round(n / totalGeneral * 100) : 0;
@@ -1346,7 +1346,7 @@ function logRenderHistChart(dias, acc) {
         tooltip: {
           mode: 'index',
           callbacks: {
-            footer: items => 'Envíos totales: ' + items.reduce((s, i) => s + i.parsed.y, 0),
+            footer: items => 'EnvÃ­os totales: ' + items.reduce((s, i) => s + i.parsed.y, 0),
           }
         }
       }
@@ -1354,7 +1354,7 @@ function logRenderHistChart(dias, acc) {
   });
 }
 
-// ── Paginación genérica ──────────────────────────────────
+// â”€â”€ PaginaciÃ³n genÃ©rica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PAGE = 100;
 const pages = { e: 0, r: 0, ret: 0 };
 const filtered = { e: [], r: [], ret: [] };
@@ -1381,10 +1381,51 @@ function pagerUpdate(key, total) {
   document.getElementById(ids.pager).style.display = 'flex';
   document.getElementById(ids.prev).disabled = p === 0;
   document.getElementById(ids.next).disabled = (p + 1) * PAGE >= total;
-  document.getElementById(ids.info).textContent = `Pág ${p+1} / ${Math.ceil(total/PAGE)||1}`;
+  document.getElementById(ids.info).textContent = `PÃ¡g ${p+1} / ${Math.ceil(total/PAGE)||1}`;
 }
 
-// ── CARGA PRINCIPAL ──────────────────────────────────────
+// â”€â”€ Publicaciones ML por artÃ­culo (columna MLA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+let mlPubs = {};
+const ML_PUB_STATUS = {
+  active:       ['Activa',      '#10b981'],
+  paused:       ['Pausada',     '#f59e0b'],
+  under_review: ['En revisiÃ³n', '#f59e0b'],
+  closed:       ['Cerrada',     '#9ca3af'],
+};
+
+function mlaCell(art, compact) {
+  const pubs = mlPubs[art];
+  const fs = compact ? '0.62rem' : '0.68rem';
+  if (!pubs || !pubs.length) return `<td style="color:var(--text4);font-size:${fs}">â€”</td>`;
+  const rank = { active: 0, paused: 1, under_review: 2, closed: 3 };
+  const sorted = [...pubs].sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9));
+  const p = sorted[0];
+  const [lbl, color] = ML_PUB_STATUS[p.status] || ['?', 'var(--text4)'];
+  const extra = sorted.length > 1 ? ` <span style="color:var(--text4)">+${sorted.length - 1}</span>` : '';
+  const title = sorted.map(x => `${x.mla} Â· ${(ML_PUB_STATUS[x.status] || ['?'])[0]} Â· ${x.account === 'sportotal' ? 'Sportotal' : 'Vallejo'}`).join('\n');
+  return `<td style="font-size:${fs};white-space:nowrap" title="${title}">
+    <a href="https://articulo.mercadolibre.com.ar/${p.mla.replace('MLA', 'MLA-')}" target="_blank"
+       style="font-family:monospace;color:var(--text2);text-decoration:none">${p.mla}</a>
+    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};margin-left:2px"></span>
+    <span style="color:${color}">${lbl}</span>${extra}</td>`;
+}
+
+fetch('/api/ml/publicaciones')
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) return;
+    mlPubs = data;
+    // Re-render de las tablas si el stock ya estaba pintado
+    if (stockData.length) {
+      applyEbitdaFilters();
+      applyRotFilters();
+      renderRankingTab();
+      buildRetiro(getGroupedDataCompleto());
+    }
+  })
+  .catch(() => {});
+
+// â”€â”€ CARGA PRINCIPAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let stockData = [];
 
 fetch('/api/stock')
@@ -1411,10 +1452,10 @@ fetch('/api/stock')
     renderRotCharts(active);
   })
   .catch(e => {
-    document.getElementById('kpis').innerHTML = `<div class="error-box">Error de conexión: ${e.message}</div>`;
+    document.getElementById('kpis').innerHTML = `<div class="error-box">Error de conexiÃ³n: ${e.message}</div>`;
   });
 
-// ── KPIs ─────────────────────────────────────────────────
+// â”€â”€ KPIs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderKPIs(data) {
   const totalStock     = data.reduce((s, r) => s + r.stock, 0);
   const articles       = new Set(data.map(r => r.artprove)).size;
@@ -1439,7 +1480,7 @@ function renderKPIs(data) {
       <div class="sub">198: ${fmt(total198)} | 199: ${fmt(total199)}</div>
     </div>
     <div class="kpi">
-      <div class="label">Artículos distintos</div>
+      <div class="label">ArtÃ­culos distintos</div>
       <div class="value">${fmt(articles)}</div>
       <div class="sub">${fmt(data.length)} combinaciones art/color</div>
     </div>
@@ -1449,33 +1490,33 @@ function renderKPIs(data) {
       <div class="sub">Capital inmovilizado</div>
     </div>
     <div class="kpi">
-      <div class="label">Ventas 30 días</div>
+      <div class="label">Ventas 30 dÃ­as</div>
       <div class="value">${fmt(vta30)} u</div>
       <div class="sub">Unidades vendidas (dep 198+199)</div>
     </div>
     <div class="kpi kpi-red">
       <div class="label" style="display:flex;align-items:center;gap:6px">
-        PVP bajo mínimo
-        <button onclick="openPvpMinConfig()" title="Cambiar PVP mínimo"
-          style="background:none;border:none;cursor:pointer;font-size:0.75rem;color:var(--text3);padding:0;line-height:1">✏️</button>
+        PVP bajo mÃ­nimo
+        <button onclick="openPvpMinConfig()" title="Cambiar PVP mÃ­nimo"
+          style="background:none;border:none;cursor:pointer;font-size:0.75rem;color:var(--text3);padding:0;line-height:1">âœï¸</button>
       </div>
-      <div class="value">${fmt(pvpBajoMin.length)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">· ${fmt(stockPvpBajo)} u</span></div>
-      <div class="sub">PVP &lt; $${fmt(PVP_MIN)} · Capital: ${fmtM(capPvpBajo)}</div>
+      <div class="value">${fmt(pvpBajoMin.length)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">Â· ${fmt(stockPvpBajo)} u</span></div>
+      <div class="sub">PVP &lt; $${fmt(PVP_MIN)} Â· Capital: ${fmtM(capPvpBajo)}</div>
     </div>
     <div class="kpi kpi-red">
-      <div class="label">Sin ventas — último mes</div>
-      <div class="value">${fmt(sinVta30)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">· ${fmt(stockSinVta30)} u</span></div>
-      <div class="sub">SKUs sin movimiento en 30 días</div>
+      <div class="label">Sin ventas â€” Ãºltimo mes</div>
+      <div class="value">${fmt(sinVta30)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">Â· ${fmt(stockSinVta30)} u</span></div>
+      <div class="sub">SKUs sin movimiento en 30 dÃ­as</div>
     </div>
     <div class="kpi kpi-red">
-      <div class="label">Sin ventas — últimos 2 meses</div>
-      <div class="value">${fmt(sinVta60)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">· ${fmt(stockSinVta60)} u</span></div>
-      <div class="sub">SKUs sin movimiento en 60 días</div>
+      <div class="label">Sin ventas â€” Ãºltimos 2 meses</div>
+      <div class="value">${fmt(sinVta60)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">Â· ${fmt(stockSinVta60)} u</span></div>
+      <div class="sub">SKUs sin movimiento en 60 dÃ­as</div>
     </div>
   `;
 }
 
-// ── EBITDA TAB ───────────────────────────────────────────
+// â”€â”€ EBITDA TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderEbitdaSummary(data) {
   const items = data.map(r => ({ ...r, ebitda: calcEbitda(r.pvp, r.costo) })).filter(r => r.ebitda !== null);
   const positivos     = items.filter(r => r.ebitda > 0);
@@ -1509,7 +1550,7 @@ function renderEbitdaSummary(data) {
       <div style="font-size:0.72rem;color:var(--text3);margin-top:3px">${fmt(stockNegativos)} u en stock</div>
     </div>
     <div class="ebitda-stat neutral">
-      <div class="label">Capital en artículos negativos</div>
+      <div class="label">Capital en artÃ­culos negativos</div>
       <div class="value">${fmtM(capitalEnRojo)}</div>
     </div>
   `;
@@ -1520,7 +1561,7 @@ function renderEbitdaCharts(data) {
   el.style.display = 'grid';
   el.innerHTML = `
     <div class="card"><h2>EBITDA promedio por Proveedor (Top 15)</h2><canvas id="cEProv"></canvas></div>
-    <div class="card"><h2>Rango de PVP por Sección — mín $${fmt(PVP_MIN)}</h2><canvas id="cEDist"></canvas></div>
+    <div class="card"><h2>Rango de PVP por SecciÃ³n â€” mÃ­n $${fmt(PVP_MIN)}</h2><canvas id="cEDist"></canvas></div>
   `;
 
   const hoverCursor = (event, elements) => {
@@ -1564,11 +1605,11 @@ function renderEbitdaCharts(data) {
     }
   });
 
-  // Rango PVP por sección: [min, max] con split en PVP_MIN
+  // Rango PVP por secciÃ³n: [min, max] con split en PVP_MIN
   const bySecPvp = {};
   data.forEach(r => {
     if (!r.pvp || r.pvp <= 0) return;
-    const sec = r.seccion || 'Sin sección';
+    const sec = r.seccion || 'Sin secciÃ³n';
     if (!bySecPvp[sec]) bySecPvp[sec] = { min: Infinity, max: -Infinity };
     if (r.pvp < bySecPvp[sec].min) bySecPvp[sec].min = r.pvp;
     if (r.pvp > bySecPvp[sec].max) bySecPvp[sec].max = r.pvp;
@@ -1592,20 +1633,20 @@ function renderEbitdaCharts(data) {
       labels: secsRange.map(s => s[0]),
       datasets: [
         {
-          label: 'Bajo mínimo',
+          label: 'Bajo mÃ­nimo',
           data: redData,
           backgroundColor: '#f72585',
           borderSkipped: false
         },
         {
-          label: `Sobre mínimo`,
+          label: `Sobre mÃ­nimo`,
           data: greenData,
           backgroundColor: '#06d6a0',
           borderSkipped: false
         },
         {
           type: 'line',
-          label: `Mín $${fmt(PVP_MIN)}`,
+          label: `MÃ­n $${fmt(PVP_MIN)}`,
           data: secsRange.map(() => PVP_MIN),
           borderColor: '#f59e0b',
           borderWidth: 2,
@@ -1630,12 +1671,12 @@ function renderEbitdaCharts(data) {
       onClick: (event, elements) => {
         if (!elements.length) return;
         const el = elements.find(e => e.datasetIndex < 2) || elements[0];
-        if (el.datasetIndex >= 2) return; // clic en la línea, ignorar
+        if (el.datasetIndex >= 2) return; // clic en la lÃ­nea, ignorar
         const sec     = _secsData[el.index][0];
         const pvpSide = el.datasetIndex === 0 ? 'bajo' : 'sobre';
         const label   = pvpSide === 'bajo'
-          ? `${sec} — PVP < $${fmt(PVP_MIN)}`
-          : `${sec} — PVP ≥ $${fmt(PVP_MIN)}`;
+          ? `${sec} â€” PVP < $${fmt(PVP_MIN)}`
+          : `${sec} â€” PVP â‰¥ $${fmt(PVP_MIN)}`;
         setChartSel('e', 'seccion', sec, label, pvpSide);
       }
     }
@@ -1695,11 +1736,12 @@ function renderEbitdaTable() {
       <thead>
         <tr>
           <th onclick="sortEbitda('sucursal')">Dep</th>
-          <th onclick="sortEbitda('artprove')">Código</th>
+          <th onclick="sortEbitda('artprove')">CÃ³digo</th>
+          <th>MLA</th>
           <th onclick="sortEbitda('nomprov')">Proveedor</th>
-          <th onclick="sortEbitda('nomartprove')">Artículo</th>
+          <th onclick="sortEbitda('nomartprove')">ArtÃ­culo</th>
           <th onclick="sortEbitda('primera_entrada')">Ingreso</th>
-          <th class="num" onclick="sortEbitda('_dias')">Días stock</th>
+          <th class="num" onclick="sortEbitda('_dias')">DÃ­as stock</th>
           <th class="num" onclick="sortEbitda('pvp')">PVP</th>
           <th class="num" onclick="sortEbitda('costo')">Costo</th>
           <th class="num" onclick="sortEbitda('ebitda')">EBITDA / u</th>
@@ -1716,8 +1758,8 @@ function renderEbitdaTable() {
           const badge  = e === null
             ? '<span class="badge badge-zero">Sin PVP</span>'
             : e >= 0
-              ? '<span class="badge badge-ok">✅ Positivo</span>'
-              : '<span class="badge badge-bad">❌ Negativo</span>';
+              ? '<span class="badge badge-ok">âœ… Positivo</span>'
+              : '<span class="badge badge-bad">âŒ Negativo</span>';
           const eStr   = e !== null ? fmtK(e) : '-';
           const eTotStr = eTotal !== null ? fmtK(eTotal) : '-';
           const diasStr = r._dias !== null ? r._dias + ' d' : '-';
@@ -1725,8 +1767,9 @@ function renderEbitdaTable() {
           return `<tr class="${rowCls}">
             <td><span class="badge-dep ${r.sucursal==='000198'?'dep-198':'dep-199'}">${r.sucursal==='000198'?'198':'199'}</span></td>
             <td style="font-family:monospace;font-size:0.75rem">${r.artprove}</td>
-            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'…':r.nomprov}</td>
-            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'…':r.nomartprove}</td>
+            ${mlaCell(r.artprove)}
+            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'â€¦':r.nomprov}</td>
+            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'â€¦':r.nomartprove}</td>
             <td>${fmtFecha(r.primera_entrada)}</td>
             <td class="num" ${diasCls}>${diasStr}</td>
             <td class="num">$${fmt(Math.round(r.pvp))}</td>
@@ -1740,7 +1783,7 @@ function renderEbitdaTable() {
       </tbody>
       <tfoot>
         <tr style="background:var(--tfoot-bg);font-weight:700;border-top:2px solid var(--border2)">
-          <td colspan="7" style="padding:9px 10px;font-size:0.8rem;color:var(--text2)">TOTAL (${fmt(data.length)} artículos)</td>
+          <td colspan="8" style="padding:9px 10px;font-size:0.8rem;color:var(--text2)">TOTAL (${fmt(data.length)} artÃ­culos)</td>
           <td></td><td></td><td></td>
           <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.stock,0))}</td>
           <td class="num" style="padding:9px 10px;color:#b91c1c">${fmtK(data.filter(r=>r.ebitda<0).reduce((s,r)=>s+r.ebitda*r.stock,0))}</td>
@@ -1751,7 +1794,7 @@ function renderEbitdaTable() {
   `;
 }
 
-// ── ROTACIÓN TAB ─────────────────────────────────────────
+// â”€â”€ ROTACIÃ“N TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderRotCharts(data) {
   const el = document.getElementById('rotCharts');
 
@@ -1759,7 +1802,7 @@ function renderRotCharts(data) {
     if (event.native) event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
   };
 
-  // Top 15 artículos por ventas 30d (agrupado por artprove)
+  // Top 15 artÃ­culos por ventas 30d (agrupado por artprove)
   const byArt = {};
   data.forEach(r => {
     if (!byArt[r.nomartprove]) byArt[r.nomartprove] = { vta30: 0, vta90: 0, stock: 0 };
@@ -1771,8 +1814,8 @@ function renderRotCharts(data) {
   _topArtsData = topArts;
 
   el.innerHTML = `
-    <div class="card"><h2>Top 15 artículos — Ventas 30 días</h2><canvas id="cRotTop"></canvas></div>
-    <div class="card"><h2>Stock vs Ventas 30d — Top 12 proveedores</h2><canvas id="cRotVsStock"></canvas></div>
+    <div class="card"><h2>Top 15 artÃ­culos â€” Ventas 30 dÃ­as</h2><canvas id="cRotTop"></canvas></div>
+    <div class="card"><h2>Stock vs Ventas 30d â€” Top 12 proveedores</h2><canvas id="cRotVsStock"></canvas></div>
   `;
 
   makeChart('cRotTop', {
@@ -1794,7 +1837,7 @@ function renderRotCharts(data) {
       onClick: (event, elements) => {
         if (!elements.length) return;
         const art = _topArtsData[elements[0].index][0];
-        setChartSel('r', 'art', art, 'Artículo: ' + art.slice(0, 40));
+        setChartSel('r', 'art', art, 'ArtÃ­culo: ' + art.slice(0, 40));
       }
     }
   });
@@ -1878,18 +1921,19 @@ function renderRotTable() {
       <thead>
         <tr>
           <th onclick="sortRot('sucursal')">Dep</th>
-          <th onclick="sortRot('artprove')">Código</th>
+          <th onclick="sortRot('artprove')">CÃ³digo</th>
+          <th>MLA</th>
           <th onclick="sortRot('nomprov')">Proveedor</th>
-          <th onclick="sortRot('nomartprove')">Artículo</th>
+          <th onclick="sortRot('nomartprove')">ArtÃ­culo</th>
           <th onclick="sortRot('primera_entrada')">Ingreso</th>
-          <th class="num" onclick="sortRot('_dias')">Días stock</th>
+          <th class="num" onclick="sortRot('_dias')">DÃ­as stock</th>
           <th class="num" onclick="sortRot('stock')">Stock</th>
           <th class="num" onclick="sortRot('vta30u')">Vta 30d</th>
           <th class="num" onclick="sortRot('vta90u')">Vta 90d</th>
           <th class="num" onclick="sortRot('vtaTotu')">Vta 12m</th>
           <th class="num">Ratio Mensual</th>
           <th class="num">Meses Cob.</th>
-          <th>Rotación</th>
+          <th>RotaciÃ³n</th>
         </tr>
       </thead>
       <tbody>
@@ -1899,21 +1943,22 @@ function renderRotTable() {
           const meses = mesesCob(r.vta30u, r.stock);
           const rowCls = cls === 'ok' ? 'row-green' : cls === 'bad' ? 'row-red' : cls === 'new' ? '' : 'row-yellow';
           const badge  = cls === 'ok'
-            ? '<span class="badge badge-ok">✅ Alta</span>'
+            ? '<span class="badge badge-ok">âœ… Alta</span>'
             : cls === 'new'
-              ? '<span class="badge badge-new">🆕 Ingreso reciente</span>'
+              ? '<span class="badge badge-new">ðŸ†• Ingreso reciente</span>'
               : cls === 'warn'
-                ? '<span class="badge badge-warn">⚠ Media</span>'
+                ? '<span class="badge badge-warn">âš  Media</span>'
                 : r.vtaTotu > 0
-                  ? '<span class="badge badge-warn">⚠ Sin vta 90d</span>'
-                  : '<span class="badge badge-bad">❌ Sin ventas</span>';
+                  ? '<span class="badge badge-warn">âš  Sin vta 90d</span>'
+                  : '<span class="badge badge-bad">âŒ Sin ventas</span>';
           const diasStr = r._dias !== null ? r._dias + ' d' : '-';
           const diasCls = r._dias !== null && r._dias < 60 ? 'style="color:#7c3aed;font-weight:600"' : '';
           return `<tr class="${rowCls}">
             <td><span class="badge-dep ${r.sucursal==='000198'?'dep-198':'dep-199'}">${r.sucursal==='000198'?'198':'199'}</span></td>
             <td style="font-family:monospace;font-size:0.75rem">${r.artprove}</td>
-            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'…':r.nomprov}</td>
-            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'…':r.nomartprove}</td>
+            ${mlaCell(r.artprove)}
+            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'â€¦':r.nomprov}</td>
+            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'â€¦':r.nomartprove}</td>
             <td>${fmtFecha(r.primera_entrada)}</td>
             <td class="num" ${diasCls}>${diasStr}</td>
             <td class="num"><strong>${fmt(r.stock)}</strong></td>
@@ -1921,14 +1966,14 @@ function renderRotTable() {
             <td class="num">${fmt(r.vta90u)}</td>
             <td class="num">${fmt(r.vtaTotu)}</td>
             <td class="num">${ratio}%</td>
-            <td class="num">${meses !== null ? meses + ' m' : '—'}</td>
+            <td class="num">${meses !== null ? meses + ' m' : 'â€”'}</td>
             <td>${badge}</td>
           </tr>`;
         }).join('')}
       </tbody>
       <tfoot>
         <tr style="background:var(--tfoot-bg);font-weight:700;border-top:2px solid var(--border2)">
-          <td colspan="7" style="padding:9px 10px;font-size:0.8rem;color:var(--text2)">TOTAL (${fmt(data.length)} artículos)</td>
+          <td colspan="8" style="padding:9px 10px;font-size:0.8rem;color:var(--text2)">TOTAL (${fmt(data.length)} artÃ­culos)</td>
           <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.stock,0))}</td>
           <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.vta30u,0))}</td>
           <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.vta90u,0))}</td>
@@ -1940,7 +1985,7 @@ function renderRotTable() {
   `;
 }
 
-// ── RETIRO TAB ───────────────────────────────────────────
+// â”€â”€ RETIRO TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let retiroBase = [];
 
 function buildRetiro(data = getGroupedDataCompleto()) {
@@ -1984,11 +2029,11 @@ function buildRetiro(data = getGroupedDataCompleto()) {
       <div class="value">${fmt(porMarca)}</div>
     </div>
     <div class="ebitda-stat negative">
-      <div class="label">EBITDA neg. + sin rotación</div>
+      <div class="label">EBITDA neg. + sin rotaciÃ³n</div>
       <div class="value">${fmt(porEbitda)}</div>
     </div>
     <div class="ebitda-stat negative">
-      <div class="label">PVP bajo mínimo ($${fmt(PVP_MIN)})</div>
+      <div class="label">PVP bajo mÃ­nimo ($${fmt(PVP_MIN)})</div>
       <div class="value">${fmt(porPvp)}</div>
     </div>
   `;
@@ -2028,7 +2073,7 @@ function renderRetiroTable() {
   const data  = filtered.ret;
   const start = pages.ret * PAGE;
   const rows  = data.slice(start, start + PAGE);
-  document.getElementById('retRowCount').textContent = `${fmt(data.length)} artículos`;
+  document.getElementById('retRowCount').textContent = `${fmt(data.length)} artÃ­culos`;
   pagerUpdate('ret', data.length);
 
   document.getElementById('retiroTable').innerHTML = `
@@ -2036,11 +2081,12 @@ function renderRetiroTable() {
       <thead>
         <tr>
           <th>Dep</th>
-          <th>Código</th>
+          <th>CÃ³digo</th>
+          <th>MLA</th>
           <th>Proveedor</th>
-          <th>Artículo</th>
+          <th>ArtÃ­culo</th>
           <th>Ingreso</th>
-          <th class="num">Días stock</th>
+          <th class="num">DÃ­as stock</th>
           <th class="num">PVP</th>
           <th class="num">Costo</th>
           <th class="num">EBITDA / u</th>
@@ -2053,15 +2099,16 @@ function renderRetiroTable() {
         ${rows.map(r => {
           const ebitdaStr = r.ebitda !== null ? fmtK(r.ebitda) : '-';
           const badgeParts = [];
-          if (r.motivo.includes('marca'))  badgeParts.push('🚫 Marca no perm.');
-          if (r.motivo.includes('ebitda')) badgeParts.push('❌ EBITDA neg.');
-          if (r.motivo.includes('pvp'))    badgeParts.push('💲 PVP bajo mín.');
+          if (r.motivo.includes('marca'))  badgeParts.push('ðŸš« Marca no perm.');
+          if (r.motivo.includes('ebitda')) badgeParts.push('âŒ EBITDA neg.');
+          if (r.motivo.includes('pvp'))    badgeParts.push('ðŸ’² PVP bajo mÃ­n.');
           const motivoBadge = badgeParts.map(p => `<span class="badge badge-bad">${p}</span>`).join(' ');
           return `<tr class="row-red">
             <td><span class="badge-dep ${r.sucursal==='000198'?'dep-198':'dep-199'}">${r.sucursal==='000198'?'198':'199'}</span></td>
             <td style="font-family:monospace;font-size:0.75rem">${r.artprove}</td>
-            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'…':r.nomprov}</td>
-            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'…':r.nomartprove}</td>
+            ${mlaCell(r.artprove)}
+            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'â€¦':r.nomprov}</td>
+            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'â€¦':r.nomartprove}</td>
             <td>${fmtFecha(r.primera_entrada)}</td>
             <td class="num">${r._dias !== null ? r._dias + ' d' : '-'}</td>
             <td class="num">$${fmt(Math.round(r.pvp||0))}</td>
@@ -2075,7 +2122,7 @@ function renderRetiroTable() {
       </tbody>
       <tfoot>
         <tr style="background:var(--tfoot-ret-bg);font-weight:700;border-top:2px solid var(--tfoot-ret-border)">
-          <td colspan="7" style="padding:9px 10px;font-size:0.8rem;color:var(--retiro-text)">TOTAL (${fmt(data.length)} artículos a retirar)</td>
+          <td colspan="8" style="padding:9px 10px;font-size:0.8rem;color:var(--retiro-text)">TOTAL (${fmt(data.length)} artÃ­culos a retirar)</td>
           <td></td><td></td><td></td>
           <td class="num" style="padding:9px 10px;color:var(--retiro-text)">${fmt(data.reduce((s,r)=>s+r.stock,0))}</td>
           <td class="num" style="padding:9px 10px;color:var(--retiro-text)">${fmtM(data.reduce((s,r)=>s+r.stockPesos,0))}</td>
@@ -2086,10 +2133,10 @@ function renderRetiroTable() {
   `;
 }
 
-// ── Dark mode ────────────────────────────────────────────
+// â”€â”€ Dark mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function toggleDark() {
   const isDark = document.body.classList.toggle('dark');
-  document.getElementById('darkToggleBtn').textContent = isDark ? '☀️' : '🌙';
+  document.getElementById('darkToggleBtn').textContent = isDark ? 'â˜€ï¸' : 'ðŸŒ™';
   localStorage.setItem('darkMode', isDark ? '1' : '0');
 }
 (function() {
@@ -2097,12 +2144,12 @@ function toggleDark() {
     document.body.classList.add('dark');
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('darkToggleBtn');
-      if (btn) btn.textContent = '☀️';
+      if (btn) btn.textContent = 'â˜€ï¸';
     });
   }
 })();
 
-// ── RANKING TAB ──────────────────────────────────────────
+// â”€â”€ RANKING TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const rankState = {
   '000198': { sort: 'vta30u', dir: -1, search: '', page: 0, filtered: [] },
   '000199': { sort: 'vta30u', dir: -1, search: '', page: 0, filtered: [] }
@@ -2158,8 +2205,8 @@ function renderRankPanel(dep) {
   const depCls = dep === '000198' ? 'dep-198' : 'dep-199';
   const sd    = st.sort;
 
-  const th  = (col, txt) => `<th onclick="sortRank('${dep}','${col}')" style="${sd===col?'color:#4361ee':''}">${txt}${sd===col?(st.dir===-1?' ↓':' ↑'):''}</th>`;
-  const thn = (col, txt) => `<th class="num" onclick="sortRank('${dep}','${col}')" style="${sd===col?'color:#4361ee':''}">${txt}${sd===col?(st.dir===-1?' ↓':' ↑'):''}</th>`;
+  const th  = (col, txt) => `<th onclick="sortRank('${dep}','${col}')" style="${sd===col?'color:#4361ee':''}">${txt}${sd===col?(st.dir===-1?' â†“':' â†‘'):''}</th>`;
+  const thn = (col, txt) => `<th class="num" onclick="sortRank('${dep}','${col}')" style="${sd===col?'color:#4361ee':''}">${txt}${sd===col?(st.dir===-1?' â†“':' â†‘'):''}</th>`;
 
   const totalStock = data.reduce((s,r)=>s+r.stock,0);
   const totalV30   = data.reduce((s,r)=>s+r.vta30u,0);
@@ -2175,16 +2222,17 @@ function renderRankPanel(dep) {
         ${name}
         <span style="font-weight:400;font-size:0.72rem;color:var(--text3)">${fmt(data.length)} arts.</span>
       </h3>
-      <input type="text" placeholder="🔍 buscar..." value="${st.search.replace(/"/g,'&quot;')}"
+      <input type="text" placeholder="ðŸ” buscar..." value="${st.search.replace(/"/g,'&quot;')}"
         oninput="rankState['${dep}'].search=this.value;applyRankFilters('${dep}')">
     </div>
     <div class="ranking-table-wrap">
       <table>
         <thead><tr>
           <th style="width:26px;text-align:center">#</th>
-          ${th('artprove','Código')}
-          ${th('nomartprove','Artículo')}
-          ${thn('_dias','Días')}
+          ${th('artprove','CÃ³digo')}
+          <th>MLA</th>
+          ${th('nomartprove','ArtÃ­culo')}
+          ${thn('_dias','DÃ­as')}
           ${thn('pvp','PVP')}
           ${thn('costo','Costo')}
           ${thn('ebitda','EBITDA/u')}
@@ -2205,7 +2253,8 @@ function renderRankPanel(dep) {
             return `<tr class="${rowCls}">
               <td style="text-align:center;color:var(--text3)">${pos}</td>
               <td style="font-family:monospace">${r.artprove}</td>
-              <td title="${r.nomprov} — ${r.nomartprove}">${r.nomartprove.length>20?r.nomartprove.slice(0,19)+'…':r.nomartprove}</td>
+              ${mlaCell(r.artprove, true)}
+              <td title="${r.nomprov} â€” ${r.nomartprove}">${r.nomartprove.length>20?r.nomartprove.slice(0,19)+'â€¦':r.nomartprove}</td>
               <td class="num" style="${diasCls}">${diasStr}</td>
               <td class="num">$${fmt(Math.round(r.pvp||0))}</td>
               <td class="num">$${fmt(Math.round(r.costo||0))}</td>
@@ -2218,7 +2267,7 @@ function renderRankPanel(dep) {
         </tbody>
         <tfoot>
           <tr style="background:var(--tfoot-bg);font-weight:700;border-top:2px solid var(--border2)">
-            <td colspan="7" style="padding:5px 6px;font-size:0.7rem;color:var(--text2)">TOTAL (${fmt(data.length)})</td>
+            <td colspan="8" style="padding:5px 6px;font-size:0.7rem;color:var(--text2)">TOTAL (${fmt(data.length)})</td>
             <td class="num" style="padding:5px 6px">${fmt(totalStock)}</td>
             <td class="num" style="padding:5px 6px">${fmt(totalV30)}</td>
             <td class="num" style="padding:5px 6px">${fmt(totalV90)}</td>
@@ -2227,14 +2276,14 @@ function renderRankPanel(dep) {
       </table>
     </div>
     <div class="ranking-pager">
-      <button onclick="changeRankPage('${dep}',-1)" ${prevOk?'':'disabled'}>← Ant</button>
-      <span>Pág ${st.page+1} / ${Math.ceil(data.length/PAGE)||1}</span>
-      <button onclick="changeRankPage('${dep}',1)"  ${nextOk?'':'disabled'}>Sig →</button>
+      <button onclick="changeRankPage('${dep}',-1)" ${prevOk?'':'disabled'}>â† Ant</button>
+      <span>PÃ¡g ${st.page+1} / ${Math.ceil(data.length/PAGE)||1}</span>
+      <button onclick="changeRankPage('${dep}',1)"  ${nextOk?'':'disabled'}>Sig â†’</button>
     </div>
   `;
 }
 
-// ── Poblar filtros proveedor/sección ─────────────────────
+// â”€â”€ Poblar filtros proveedor/secciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function populateFilters(data) {
   const provs = [...new Set(data.map(r => r.nomprov))].sort();
   ['eProv'].forEach(id => {
@@ -2243,9 +2292,9 @@ function populateFilters(data) {
   });
 }
 
-// ══════════════════════════════════════════════════════════
-//  MERCADOLIBRE TAB — dual panel
-// ══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  MERCADOLIBRE TAB â€” dual panel
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let mlTabInited = false;
 const mlState = { data: {} };
 
@@ -2260,7 +2309,7 @@ async function mlLoadConfig() {
     for (const acc of ['sportotal', 'vallejo']) {
       const hdr = document.getElementById(`mlHdrStatus-${acc}`);
       if (cfg[acc]?.configured) {
-        if (hdr) hdr.textContent = cfg[acc].nickname ? `@${cfg[acc].nickname}` : '✅';
+        if (hdr) hdr.textContent = cfg[acc].nickname ? `@${cfg[acc].nickname}` : 'âœ…';
         if (mlState.data[acc]) mlRenderPanel(mlState.data[acc], acc);
         else mlFetchPanel(acc);
       } else {
@@ -2279,8 +2328,8 @@ function mlShowCredForm(acc) {
   document.getElementById(`mlBody-${acc}`).innerHTML = `
     <div style="max-width:300px;margin:20px auto">
       <div class="ml-card-sm">
-        <h3>Configurar acceso — ${label}</h3>
-        <p style="font-size:0.73rem;color:var(--text3);margin-bottom:10px">Ingresá el access token de la cuenta de MercadoLibre.</p>
+        <h3>Configurar acceso â€” ${label}</h3>
+        <p style="font-size:0.73rem;color:var(--text3);margin-bottom:10px">IngresÃ¡ el access token de la cuenta de MercadoLibre.</p>
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <input type="password" id="mlToken-${acc}" placeholder="Access token..."
             style="flex:1;padding:6px 8px;border:1px solid var(--input-border);border-radius:6px;font-size:0.78rem;background:var(--input-bg);color:var(--text);font-family:monospace">
@@ -2294,7 +2343,7 @@ function mlShowCredForm(acc) {
 async function mlSaveToken(acc) {
   const token    = document.getElementById(`mlToken-${acc}`)?.value?.trim();
   const statusEl = document.getElementById(`mlStatus-${acc}`);
-  if (!token) { if (statusEl) statusEl.innerHTML = '<span class="ml-err">Ingresá el token</span>'; return; }
+  if (!token) { if (statusEl) statusEl.innerHTML = '<span class="ml-err">IngresÃ¡ el token</span>'; return; }
   if (statusEl) statusEl.innerHTML = '<span style="color:var(--text3)">Verificando...</span>';
   try {
     const r = await fetch('/api/ml/config', {
@@ -2303,7 +2352,7 @@ async function mlSaveToken(acc) {
       body: JSON.stringify({ account: acc, token })
     });
     const d = await r.json();
-    if (!r.ok) { if (statusEl) statusEl.innerHTML = `<span class="ml-err">❌ ${d.error}</span>`; return; }
+    if (!r.ok) { if (statusEl) statusEl.innerHTML = `<span class="ml-err">âŒ ${d.error}</span>`; return; }
     mlLoadConfig();
   } catch (e) {
     if (statusEl) statusEl.innerHTML = `<span class="ml-err">Error: ${e.message}</span>`;
@@ -2319,22 +2368,22 @@ async function mlDeleteToken(acc) {
 }
 
 async function mlFetchPanel(acc) {
-  document.getElementById(`mlBody-${acc}`).innerHTML = '<div class="ml-loading">⏳ Cargando...</div>';
+  document.getElementById(`mlBody-${acc}`).innerHTML = '<div class="ml-loading">â³ Cargando...</div>';
   try {
     const r = await fetch(`/api/ml/dashboard?account=${acc}`);
     const d = await r.json();
     if (!r.ok) {
       document.getElementById(`mlBody-${acc}`).innerHTML =
-        `<div class="ml-error">❌ ${d.error}</div>
+        `<div class="ml-error">âŒ ${d.error}</div>
          <div style="text-align:center;margin-top:8px">
-           <button onclick="mlDeleteToken('${acc}')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:0.75rem">✕ Desconectar</button>
+           <button onclick="mlDeleteToken('${acc}')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:0.75rem">âœ• Desconectar</button>
          </div>`;
       return;
     }
     mlState.data[acc] = d;
     mlRenderPanel(d, acc);
   } catch (e) {
-    document.getElementById(`mlBody-${acc}`).innerHTML = `<div class="ml-error">Error de conexión: ${e.message}</div>`;
+    document.getElementById(`mlBody-${acc}`).innerHTML = `<div class="ml-error">Error de conexiÃ³n: ${e.message}</div>`;
   }
 }
 
@@ -2354,11 +2403,11 @@ function mlRenderPanel(d, acc) {
     <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap">
       <strong style="font-size:0.84rem">${d.user?.nickname || acc}</strong>
       ${rl ? `<span class="ml-badge-level ${rbc}">${rl.replace(/_/g,' ')}</span>` : ''}
-      <a href="${d.user?.permalink||'#'}" target="_blank" style="font-size:0.68rem;color:var(--text3)">↗ tienda</a>
+      <a href="${d.user?.permalink||'#'}" target="_blank" style="font-size:0.68rem;color:var(--text3)">â†— tienda</a>
       <button onclick="mlFetchPanel('${acc}')" title="Actualizar"
-        style="margin-left:auto;padding:3px 9px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:0.7rem">↻</button>
+        style="margin-left:auto;padding:3px 9px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:0.7rem">â†»</button>
       <button onclick="mlDeleteToken('${acc}')" title="Desconectar"
-        style="padding:3px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:0.7rem">✕</button>
+        style="padding:3px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:0.7rem">âœ•</button>
     </div>
 
     <div class="ml-grid2">
@@ -2392,17 +2441,17 @@ function mlRenderPanel(d, acc) {
             <div><div class="ml-lbl">Pausadas</div><div class="ml-n-med ml-red">${fmt(pub.paused)}</div></div>
           </div>
           <hr class="ml-divider">
-          <!-- Clásica vs Premium -->
+          <!-- ClÃ¡sica vs Premium -->
           <div class="ml-row2" style="gap:10px;margin-top:6px">
             <div>
-              <div class="ml-lbl" style="color:#f59e0b;font-weight:700">★ Premium</div>
+              <div class="ml-lbl" style="color:#f59e0b;font-weight:700">â˜… Premium</div>
               <div class="ml-row2" style="gap:10px;margin-top:2px">
                 <div><div class="ml-lbl">Activas</div><div class="ml-n-sm" style="color:#f59e0b">${fmt(pub.premiumActive)}</div></div>
                 <div><div class="ml-lbl">Pausadas</div><div class="ml-n-sm" style="color:var(--text2)">${fmt(pub.premiumPaused)}</div></div>
               </div>
             </div>
             <div style="border-left:1px solid var(--border);padding-left:10px">
-              <div class="ml-lbl" style="font-weight:700">Clásica</div>
+              <div class="ml-lbl" style="font-weight:700">ClÃ¡sica</div>
               <div class="ml-row2" style="gap:10px;margin-top:2px">
                 <div><div class="ml-lbl">Activas</div><div class="ml-n-sm">${fmt(pub.clasicaActive)}</div></div>
                 <div><div class="ml-lbl">Pausadas</div><div class="ml-n-sm" style="color:var(--text2)">${fmt(pub.clasicaPaused)}</div></div>
@@ -2416,7 +2465,7 @@ function mlRenderPanel(d, acc) {
 
     <div class="ml-grid2">
       <div class="ml-card-sm">
-        <h3>Reputación</h3>
+        <h3>ReputaciÃ³n</h3>
         ${rep ? `
         <div class="ml-rep-line"><span>Opiniones</span><strong>${fmt(rep.transactions)}</strong></div>
         <div class="ml-rep-line"><span>Rating positivo</span><strong class="ml-green">${p(rep.rating_positive)}</strong></div>
@@ -2426,23 +2475,23 @@ function mlRenderPanel(d, acc) {
         ` : '<div style="color:var(--text3);font-size:0.72rem">Sin datos</div>'}
       </div>
       <div class="ml-card-sm">
-        <h3>Performance — 7 días</h3>
+        <h3>Performance â€” 7 dÃ­as</h3>
         <div class="ml-row2">
           <div><div class="ml-lbl">Ventas</div><div class="ml-n-med">${fmt(w7.ventas)}</div></div>
           <div><div class="ml-lbl">Monto</div><div class="ml-n-sm">${$(w7.monto)}</div></div>
         </div>
         <hr class="ml-divider">
         <div class="ml-lbl">Ticket promedio</div>
-        <div class="ml-n-sm">${w7.ventas>0?$(w7.monto/w7.ventas):'—'}</div>
+        <div class="ml-n-sm">${w7.ventas>0?$(w7.monto/w7.ventas):'â€”'}</div>
         <hr class="ml-divider">
         <div class="ml-lbl">Ventas 30d</div>
-        <div class="ml-n-sm">${fmt(d.month30?.ventas)} <span style="color:var(--text3);font-size:0.7rem">· ${$(d.month30?.monto)}</span></div>
+        <div class="ml-n-sm">${fmt(d.month30?.ventas)} <span style="color:var(--text3);font-size:0.7rem">Â· ${$(d.month30?.monto)}</span></div>
       </div>
     </div>
 
     <div class="ml-card-sm">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-        <h3 style="margin-bottom:0">Histórico 30 días</h3>
+        <h3 style="margin-bottom:0">HistÃ³rico 30 dÃ­as</h3>
         <button class="ml-metric-tab active" id="mlMv-${acc}" onclick="mlSwitchMetric('ventas','${acc}')">Ventas</button>
         <button class="ml-metric-tab"        id="mlMm-${acc}" onclick="mlSwitchMetric('monto','${acc}')">Monto</button>
       </div>
@@ -2450,7 +2499,7 @@ function mlRenderPanel(d, acc) {
     </div>
 
     <div class="ml-premium-section ml-card-sm" id="mlPremium-${acc}">
-      <div class="ml-loading" style="padding:12px">⏳ Cargando publicaciones premium...</div>
+      <div class="ml-loading" style="padding:12px">â³ Cargando publicaciones premium...</div>
     </div>
   `;
 
@@ -2463,7 +2512,7 @@ function mlRenderPanel(d, acc) {
     chartInstances[k] = new Chart(document.getElementById(k), {
       type: 'doughnut',
       data: {
-        labels: ['Premium','Clásica','Otras'],
+        labels: ['Premium','ClÃ¡sica','Otras'],
         datasets: [{ data:[premiumTotal, clasicaTotal, otrosTotal], backgroundColor:['#f59e0b','#4361ee','#9ca3af'], borderWidth:1, borderColor:'transparent' }]
       },
       options: { cutout:'62%', plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}} } }
@@ -2490,7 +2539,7 @@ function mlRenderPremiumItems(items, acc) {
   if (!el) return;
   const $ = n => '$' + Math.round(n || 0).toLocaleString('es-AR');
   el.innerHTML = `
-    <h3>★ Publicaciones Premium activas (${items.length})</h3>
+    <h3>â˜… Publicaciones Premium activas (${items.length})</h3>
     ${items.length === 0
       ? '<div style="color:var(--text3);font-size:0.72rem;padding:4px">Sin publicaciones premium activas</div>'
       : items.map(it => `
@@ -2500,8 +2549,8 @@ function mlRenderPremiumItems(items, acc) {
             <span class="ml-premium-title" title="${(it.title||'').replace(/"/g,'&quot;')}">${it.title || it.id}</span>
             <div class="ml-premium-meta">
               <span class="ml-premium-price">${$(it.price)}</span>
-              <span class="ml-premium-stock">stock ${it.available_quantity ?? '—'}</span>
-              <span class="ml-premium-sold">vendidos ${it.sold_quantity ?? '—'}</span>
+              <span class="ml-premium-stock">stock ${it.available_quantity ?? 'â€”'}</span>
+              <span class="ml-premium-sold">vendidos ${it.sold_quantity ?? 'â€”'}</span>
             </div>
           </div>
         </a>`).join('')

@@ -246,20 +246,47 @@ async function mlOrdersAll(account, query, maxResults = 1000) {
   return { paging: { total }, results };
 }
 
-// orders/search solo trae shipping.id; el logistic_type hay que buscarlo en /shipments/{id}.
-// Como no cambia nunca, se cachea en memoria por id de envío.
-const shipmentTypeCache = new Map();
+// orders/search solo trae shipping.id; el detalle (logistic_type, fechas, promesa)
+// hay que buscarlo en /shipments/{id}. Se cachea en memoria por id de envío,
+// pero los envíos aún no cerrados se re-consultan para actualizar su estado.
+const shipmentCache = new Map();
 
-async function cacheShipmentTypes(account, orders) {
+function shipmentClosed(s) {
+  return s.status === 'delivered' || s.status === 'cancelled' || s.status === 'not_delivered';
+}
+
+async function cacheShipments(account, orders) {
   const ids = [...new Set(orders.map(o => o.shipping?.id).filter(Boolean))]
-    .filter(id => !shipmentTypeCache.has(id));
+    .filter(id => !shipmentCache.has(id) || !shipmentCache.get(id).closed);
   const CONC = 20;
   for (let i = 0; i < ids.length; i += CONC) {
     await Promise.allSettled(ids.slice(i, i + CONC).map(async id => {
       const s = await mlFetch(account, `/shipments/${id}`);
-      shipmentTypeCache.set(id, s.logistic_type || 'not_specified');
+      shipmentCache.set(id, {
+        lt:        s.logistic_type || 'not_specified',
+        status:    s.status,
+        closed:    shipmentClosed(s),
+        shipped:   s.status_history?.date_shipped || null,
+        delivered: s.status_history?.date_delivered || null,
+        limit:     s.shipping_option?.estimated_delivery_limit?.date || s.shipping_option?.estimated_delivery_final?.date || null,
+      });
     }));
   }
+}
+
+// Clasifica un envío contra su fecha prometida (fin del día del limit):
+// aTiempo | demorado | enCamino | cancelado | sinDato
+function classifyShipment(sh) {
+  if (!sh) return 'sinDato';
+  if (sh.status === 'cancelled') return 'cancelado';
+  const eod = sh.limit ? new Date(sh.limit).getTime() + 86399000 : null;
+  if (sh.delivered) {
+    if (!eod) return 'sinDato';
+    return new Date(sh.delivered).getTime() <= eod ? 'aTiempo' : 'demorado';
+  }
+  if (sh.status === 'not_delivered') return 'demorado';
+  if (!eod) return 'sinDato';
+  return Date.now() > eod ? 'demorado' : 'enCamino';
 }
 
 function mlRedirectUri(req) {
@@ -486,9 +513,9 @@ app.get('/api/ml/logistics', async (req, res) => {
     ml(`/users/${uid}/seller_performance`),
   ]);
 
-  // Enriquecer con el tipo logístico real de cada envío (cacheado)
+  // Enriquecer con el detalle real de cada envío (cacheado)
   const allOrders = [...(ordersToday?.results || []), ...(orders7d?.results || []), ...(orders30d?.results || [])];
-  try { await cacheShipmentTypes(account, allOrders); } catch (e) { console.error(`[ML] shipments ${account}: ${e.message}`); }
+  try { await cacheShipments(account, allOrders); } catch (e) { console.error(`[ML] shipments ${account}: ${e.message}`); }
 
   function processOrders(data) {
     const results = data?.results || [];
@@ -496,7 +523,7 @@ app.get('/api/ml/logistics', async (req, res) => {
     let totalAmount = 0;
 
     for (const o of results) {
-      const lt = shipmentTypeCache.get(o.shipping?.id) || o.shipping?.logistic_type || 'not_specified';
+      const lt = shipmentCache.get(o.shipping?.id)?.lt || o.shipping?.logistic_type || 'not_specified';
       const name = lt === 'self_service'  ? 'Flex'
         : lt === 'fulfillment'           ? 'Full'
         : lt === 'not_specified'         ? 'Sin envío'
@@ -540,12 +567,60 @@ app.get('/api/ml/logistics', async (req, res) => {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([week, d]) => ({ week, ...d, total: d.paid + d.cancelled + d.other }));
 
+  // ── Desempeño en envíos (réplica aproximada de Métricas ML) ──
+  // ML no expone su métrica de "Exposición" por API; se calcula % de envíos
+  // a tiempo contra la fecha prometida, por grupo Flex vs Colecta/ME.
+  const weekStart = new Date();
+  const wd = weekStart.getDay();
+  weekStart.setDate(weekStart.getDate() + (wd === 0 ? -6 : 1 - wd));
+  weekStart.setHours(0, 0, 0, 0);
+
+  const shipments30d = (orders30d?.results || [])
+    .map(o => ({ sh: shipmentCache.get(o.shipping?.id), created: o.date_created }))
+    .filter(x => x.sh);
+
+  function perfStats(items) {
+    const c = { aTiempo: 0, demorado: 0, enCamino: 0, cancelado: 0, sinDato: 0 };
+    for (const { sh } of items) c[classifyShipment(sh)]++;
+    const cerrados = c.aTiempo + c.demorado;
+    const pct = cerrados > 0 ? c.aTiempo / cerrados * 100 : null;
+    const label = pct === null ? null : pct >= 97 ? 'Excelente' : pct >= 94 ? 'Regular' : 'Muy mala';
+    return { ...c, cerrados, pct, label };
+  }
+
+  const desempeno = {};
+  for (const [key, match] of [
+    ['flex',    sh => sh.lt === 'self_service'],
+    ['colecta', sh => sh.lt !== 'self_service' && sh.lt !== 'not_specified'],
+  ]) {
+    const grupo = shipments30d.filter(x => match(x.sh));
+    desempeno[key] = {
+      mes:    perfStats(grupo),
+      semana: perfStats(grupo.filter(x => new Date(x.created) >= weekStart)),
+    };
+  }
+
+  // ── Historial diario de envíos (últimos 28 días) ──
+  const dayMap = {};
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    dayMap[d.toISOString().slice(0, 10)] = { aTiempo: 0, demorado: 0, enCamino: 0, cancelado: 0 };
+  }
+  for (const { sh, created } of shipments30d) {
+    const day = (sh.shipped || created)?.slice(0, 10);
+    const cls = classifyShipment(sh);
+    if (day && dayMap[day] && cls !== 'sinDato') dayMap[day][cls]++;
+  }
+  const historialEnvios = Object.entries(dayMap).map(([day, d]) => ({ day, ...d }));
+
   res.json({
     hoy:        processOrders(ordersToday),
     semana:     processOrders(orders7d),
     mes:        processOrders(orders30d),
     performance: performance || null,
+    desempeno,
     historial,
+    historialEnvios,
   });
 });
 

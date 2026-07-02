@@ -1183,28 +1183,47 @@ function logRenderPanel(d, acc, period) {
   const chartData   = data.tipos.map(t => t.cantidad);
   const chartLabels = data.tipos.map(t => t.nombre);
 
-  // Performance section
-  let perfHtml = '';
-  if (d.performance) {
-    const p = d.performance;
-    const metricas = [];
-    if (p.sales)                      metricas.push(['Ventas totales', p.sales?.total || p.sales]);
-    if (p.claims?.rate !== undefined) metricas.push(['Reclamos', pct(p.claims.rate * 100)]);
-    if (p.delayed_handling_time?.rate !== undefined)
-      metricas.push(['Demora en despacho', pct(p.delayed_handling_time.rate * 100)]);
-    if (p.cancellations?.rate !== undefined)
-      metricas.push(['Cancelaciones', pct(p.cancellations.rate * 100)]);
-    if (metricas.length > 0) {
-      perfHtml = `
-        <div class="log-card">
-          <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Desempeño</h3>
-          ${metricas.map(([k,v]) => `
-            <div style="display:flex;justify-content:space-between;font-size:0.73rem;padding:3px 0;border-bottom:1px solid var(--border)">
-              <span>${k}</span><strong>${v}</strong>
-            </div>`).join('')}
-        </div>`;
-    }
+  // Desempeño en envíos (a tiempo vs fecha prometida)
+  const perfColors = { 'Excelente': '#10b981', 'Regular': '#f59e0b', 'Muy mala': '#ef4444' };
+  const perfIcons  = { 'Excelente': '↗', 'Regular': '→', 'Muy mala': '↘' };
+
+  function perfBlock(title, p) {
+    if (!p || (p.mes.cerrados === 0 && p.mes.enCamino === 0)) return `
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.72rem;font-weight:600;margin-bottom:6px">${title}</div>
+        <div style="color:var(--text3);font-size:0.7rem">Sin envíos en el período</div>
+      </div>`;
+    const label = p.mes.label || '—';
+    const color = perfColors[label] || 'var(--text3)';
+    const row = (nombre, s) => s.cerrados === 0
+      ? `<div style="display:flex;justify-content:space-between;font-size:0.7rem;padding:2px 0"><span style="color:var(--text3)">${nombre}</span><span style="color:var(--text3)">sin datos</span></div>`
+      : `<div style="display:flex;justify-content:space-between;font-size:0.7rem;padding:2px 0">
+           <span style="color:var(--text3)">${nombre}</span>
+           <span><strong style="color:${perfColors[s.label] || 'inherit'}">${s.pct.toFixed(0)}%</strong>
+           <span style="color:var(--text3)"> · ${s.aTiempo} de ${s.cerrados}</span></span>
+         </div>`;
+    return `
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.72rem;font-weight:600;margin-bottom:6px">${title}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${color};color:#fff;font-size:0.72rem">${perfIcons[label] || '·'}</span>
+          <strong style="font-size:0.86rem;color:${color}">${label}</strong>
+        </div>
+        ${row('Esta semana', p.semana)}
+        ${row('Últimos 30 días', p.mes)}
+        ${p.mes.enCamino > 0 ? `<div style="font-size:0.64rem;color:var(--text3);margin-top:3px">${p.mes.enCamino} en camino (no computan)</div>` : ''}
+      </div>`;
   }
+
+  const perfHtml = d.desempeno ? `
+    <div class="log-card">
+      <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Desempeño en envíos — a tiempo vs fecha prometida</h3>
+      <div style="display:flex;gap:14px">
+        ${perfBlock('Envíos Flex', d.desempeno.flex)}
+        ${perfBlock('Colecta / Mercado Envíos', d.desempeno.colecta)}
+      </div>
+      <div style="font-size:0.64rem;color:var(--text3);margin-top:8px">Calculado sobre la fecha de entrega prometida al comprador — incluye demoras del correo, puede diferir de la métrica oficial de ML.</div>
+    </div>` : '';
 
   document.getElementById(`logBody-${acc}`).innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1247,13 +1266,9 @@ function logRenderPanel(d, acc, period) {
     ${perfHtml}
 
     <div class="log-card">
-      <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Historial semanal — últimos 30 días</h3>
+      <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Historial de envíos — últimas 4 semanas</h3>
       <div class="log-hist-chart"><canvas id="logHist-${acc}"></canvas></div>
-      <div style="display:flex;gap:12px;margin-top:6px;font-size:0.66rem;color:var(--text3)">
-        <span><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;margin-right:3px"></span>Pagados</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:3px"></span>Otros</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:3px"></span>Cancelados</span>
-      </div>
+      <div style="display:flex;gap:12px;margin-top:6px;font-size:0.66rem;color:var(--text3);flex-wrap:wrap" id="logHistLegend-${acc}"></div>
     </div>
   `;
 
@@ -1268,23 +1283,45 @@ function logRenderPanel(d, acc, period) {
     });
   }
 
-  // Weekly historial chart
-  logRenderHistChart(d.historial || [], acc);
+  // Historial diario de envíos
+  logRenderHistChart(d.historialEnvios || [], acc);
 }
 
 function logChangePeriod(acc, period) {
   if (logState[acc]) logRenderPanel(logState[acc], acc, period);
 }
 
-function logRenderHistChart(historial, acc) {
+function logRenderHistChart(dias, acc) {
   const k = `logHist-${acc}`;
   if (chartInstances[k]) { try { chartInstances[k].destroy(); } catch(e){} }
-  if (!historial.length || !document.getElementById(k)) return;
+  if (!dias.length || !document.getElementById(k)) return;
 
-  const labels = historial.map(w => {
-    const d = new Date(w.week + 'T00:00:00');
-    return `${d.getDate()}/${d.getMonth()+1}`;
+  const series = [
+    ['aTiempo',   'Correctos',  '#10b981'],
+    ['demorado',  'Demorados',  '#ef4444'],
+    ['enCamino',  'En camino',  '#93a8f4'],
+    ['cancelado', 'Cancelados', '#9ca3af'],
+  ];
+  const DIAS_SEM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const labels = dias.map(x => {
+    const d = new Date(x.day + 'T00:00:00');
+    return `${DIAS_SEM[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`;
   });
+
+  const totales = {};
+  let totalGeneral = 0;
+  for (const [key] of series) {
+    totales[key] = dias.reduce((s, x) => s + (x[key] || 0), 0);
+    totalGeneral += totales[key];
+  }
+  const legend = document.getElementById(`logHistLegend-${acc}`);
+  if (legend) legend.innerHTML =
+    `<span style="font-weight:600">${totalGeneral} envíos totales</span>` +
+    series.map(([key, nombre, color]) => {
+      const n = totales[key];
+      const p = totalGeneral > 0 ? Math.round(n / totalGeneral * 100) : 0;
+      return `<span><span style="display:inline-block;width:10px;height:10px;background:${color};border-radius:2px;margin-right:3px"></span>${nombre} ${n} (${p}%)</span>`;
+    }).join('');
 
   const isDark = document.body.classList.contains('dark');
   const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
@@ -1294,19 +1331,25 @@ function logRenderHistChart(historial, acc) {
     type: 'bar',
     data: {
       labels,
-      datasets: [
-        { label: 'Pagados',    data: historial.map(w => w.paid),      backgroundColor: '#10b981', stack: 'a' },
-        { label: 'Otros',      data: historial.map(w => w.other),     backgroundColor: '#f59e0b', stack: 'a' },
-        { label: 'Cancelados', data: historial.map(w => w.cancelled), backgroundColor: '#ef4444', stack: 'a' },
-      ]
+      datasets: series.map(([key, nombre, color]) => ({
+        label: nombre, data: dias.map(x => x[key] || 0), backgroundColor: color, stack: 'a',
+      }))
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
-        x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } },
+        x: { stacked: true, grid: { display: false }, ticks: { color: tickColor, font: { size: 9 }, maxRotation: 60, minRotation: 60, autoSkip: true, maxTicksLimit: 14 } },
         y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 }, precision: 0 } }
       },
-      plugins: { legend: { display: false }, tooltip: { mode: 'index' } }
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          callbacks: {
+            footer: items => 'Envíos totales: ' + items.reduce((s, i) => s + i.parsed.y, 0),
+          }
+        }
+      }
     }
   });
 }

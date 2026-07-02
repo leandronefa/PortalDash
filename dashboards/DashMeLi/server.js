@@ -684,7 +684,7 @@ async function fetchItemsDetail(account, ids) {
   const CONC = 10;
   for (let i = 0; i < batches.length; i += CONC) {
     const rs = await Promise.allSettled(batches.slice(i, i + CONC).map(b =>
-      mlFetch(account, `/items?ids=${b.join(',')}&attributes=id,status,seller_custom_field,variations`)));
+      mlFetch(account, `/items?ids=${b.join(',')}&attributes=id,status,seller_custom_field,variations,attributes`)));
     for (const r of rs) {
       if (r.status !== 'fulfilled') continue;
       for (const it of r.value) if (it.body?.id) out.push(it.body);
@@ -714,8 +714,15 @@ async function buildPublicaciones() {
     JOIN v_cgd_codigosbarraTodos v ON v.artprove = s.artprove
     WHERE LEN(ISNULL(v.codbar, '')) >= 8`);
 
+  // Indexado también sin ceros a la izquierda (EAN-13 vs UPC-12 etc.)
   const codbarToArt = new Map();
-  for (const r of barras.recordset) codbarToArt.set(String(r.codbar).trim(), r.artprove);
+  for (const r of barras.recordset) {
+    const c = String(r.codbar).trim();
+    codbarToArt.set(c, r.artprove);
+    const sinCeros = c.replace(/^0+/, '');
+    if (sinCeros && sinCeros !== c) codbarToArt.set(sinCeros, r.artprove);
+  }
+  const lookupArt = code => codbarToArt.get(code) || codbarToArt.get(code.replace(/^0+/, ''));
 
   const byArt = {};
   const addPub = (art, mla, status, account) => {
@@ -735,7 +742,7 @@ async function buildPublicaciones() {
       catalog[account].set(item.id, item.status);
       const arts = new Set();
       for (const code of itemBarcodes(item)) {
-        const art = codbarToArt.get(code);
+        const art = lookupArt(code);
         if (art) arts.add(art);
       }
       for (const art of arts) addPub(art, item.id, item.status, account);

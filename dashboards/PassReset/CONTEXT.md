@@ -3,7 +3,7 @@
 > Dashboard de monitoreo y rotación automática de contraseñas locales de Windows.
 > Carpeta: `C:\apps\dashboards\PassReset\`
 > Puerto: **3009** · Servicio: `dashpassreset.exe` (Dash-PassReset)
-> Última sesión: **2026-06-26** — dark mode implementado y desplegado. Agente: pendiente.
+> Última sesión: **2026-06-29** — ResetDesde diferido, sync contraseña a TABLEROS en cada reset, correo QlikView.
 
 ---
 
@@ -56,25 +56,35 @@ El **dashboard** solo lee (SPs `Get*`). Los **agentes** (Node.js, uno por servid
 | SP | Propósito |
 |---|---|
 | `sp_PassReset_AgentUpsertUsuario` | Registra o actualiza un usuario. Lo llama el agente al arrancar. |
-| `sp_PassReset_AgentGetPendientes` | Devuelve usuarios de un servidor cuya contraseña venció (`DATEDIFF >= MaxDias`). |
-| `sp_PassReset_AgentReportarCambio` | Actualiza `UltimoCambio` e inserta en el log. Luego llama a `sp_PassReset_EnviarCorreo`. |
-| `sp_PassReset_EnviarCorreo` | Envía correo via Database Mail (lee el profile default de `msdb`). |
+| `sp_PassReset_AgentGetPendientes` | Devuelve usuarios pendientes: `CorreoDestino <> ''`, `ResetDesde IS NULL OR GETDATE() >= ResetDesde`, y vencidos o nunca cambiados. |
+| `sp_PassReset_AgentReportarCambio` | Actualiza `UltimoCambio`, inserta en el log, y sincroniza `Pass` en `TABLEROS.dbo.EncargadosSucursal` y `EncargadosSucursalObjetivos` (todos los registros del usuario). Luego llama a `sp_PassReset_EnviarCorreo`. |
+| `sp_PassReset_EnviarCorreo` | Envía correo via Database Mail. Profile: `SELECT TOP 1 ... ORDER BY p.profile_id ASC`. Asunto: `QlikView - Contraseña actualizada — <Servidor>`. |
+| `sp_PassReset_ForzarReset` | Pone `UltimoCambio=NULL` y `ResetDesde=NULL` (override manual). Falla si el usuario no tiene correo asignado. |
 
 Estados calculados:
+- `PROGRAMADA` — tiene correo asignado pero `ResetDesde` es en el futuro (diferimiento hasta medianoche)
 - `VENCIDA` — `UltimoCambio IS NULL` o `DATEDIFF >= MaxDias`
 - `PROXIMA` — `DiasRestantes <= 5`
 - `OK` — todo en regla
+
+**Columna `ResetDesde`** (`DATETIME NULL` en `tbl_PassReset_Usuarios`):
+- `NULL` — sin restricción, se procesa normalmente
+- Fecha futura — el agente ignora al usuario hasta que `GETDATE() >= ResetDesde`
+- Se setea automáticamente a **mañana 00:00** cuando `sp_PassReset_SetCorreo` asigna correo por primera vez (correo anterior era `''`)
+- El botón **🔑 Reset** la limpia (pone `NULL`) para forzar ejecución inmediata
 
 ---
 
 ## API — `server.cjs` (Express, puerto 3009)
 
-| Endpoint | Parámetros query | Descripción |
+| Endpoint | Parámetros query / body | Descripción |
 |---|---|---|
 | `GET /api/servidores` | — | Lista de servidores para el filtro |
 | `GET /api/resumen` | `servidor` | Métricas de las tarjetas KPI |
 | `GET /api/usuarios` | `servidor`, `todos=1` | Lista de usuarios con estado |
 | `GET /api/log` | `servidor`, `idUsuario`, `limite` | Historial de operaciones |
+| `PUT /api/usuarios/:id/correo` | body `{ correo }` | Asigna/actualiza correo de un usuario |
+| `POST /api/usuarios/:id/forzar-reset` | — | Fuerza reset en el próximo ciclo del agente |
 
 Todas las rutas no-API devuelven `dist/index.html` (SPA fallback).
 
@@ -88,7 +98,7 @@ Pool SQL: singleton `mssql`, se abre al iniciar el proceso. Si el SQL falla al a
 |---|---|
 | `src/App.tsx` | Shell: header (con toggle dark mode), filtro de servidor, tarjetas KPI, tabs |
 | `src/hooks/useTheme.ts` | Hook de dark mode: lee/escribe `localStorage`, aplica `data-theme` a `<html>` |
-| `src/components/UserTable.tsx` | Tabla de usuarios con estado, días restantes, barra visual |
+| `src/components/UserTable.tsx` | Tabla de usuarios con estado, días restantes, barra visual, edición de correo y botón 🔑 Reset |
 | `src/components/LogTable.tsx` | Historial de cambios |
 | `src/components/StatusBadge.tsx` | Badge VENCIDA / PRÓXIMA / VIGENTE |
 | `src/components/DiasBar.tsx` | Barra de progreso de días |
@@ -162,7 +172,7 @@ PassReset\
 │   ├── 01_Database.sql     ← Tablas (idempotente, crea si no existen)
 │   └── 02_StoredProcedures.sql ← SPs lectura y escritura (idempotente)
 ├── docs\superpowers\       ← Specs y planes de implementación (SDD)
-└── agent\                  ← (PENDIENTE) Agente por servidor
+└── agent\                  ← ver sucursal-user-visualizer\agent\ (agente compartido)
 ```
 
 ---
@@ -185,17 +195,16 @@ MAIL_RECIPIENT=admin@empresa.com
 
 ## Agente por servidor
 
-**Estado: PENDIENTE — próxima tarea a implementar.**
+**Estado: OPERATIVO** — el agente está integrado en `sucursal-user-visualizer\agent\`.
+Ver `sucursal-user-visualizer\CONTEXT.md` para instalación completa.
 
-El agente es un proceso Node.js independiente que corre en cada servidor monitoreado como servicio de Windows. Carpeta prevista: `PassReset\agent\`.
-
-Responsabilidades:
-1. Al arrancar: `sp_PassReset_AgentUpsertUsuario` — se registra en `db_Cegid`.
-2. Cada N minutos (configurable): `sp_PassReset_AgentGetPendientes(@Servidor)`.
-3. Para cada usuario pendiente: `net user <usuario> <password>` → `sp_PassReset_AgentReportarCambio`.
+El agente corre en cada servidor monitoreado (PM2 + tarea programada). Responsabilidades:
+1. Al arrancar: `sp_PassReset_AgentUpsertUsuario` — registra usuarios locales (excluyendo `Administrador`, `SYSTEM`, etc. vía `PASSRESET_EXCLUDE_USERS`).
+2. Cada 5 min: `sp_PassReset_AgentGetPendientes(@Servidor)` — usuarios vencidos o con `UltimoCambio=NULL` y cuyo `ResetDesde` ya pasó (o es NULL).
+3. Para cada pendiente: `net user <usuario> <password>` → `sp_PassReset_AgentReportarCambio`.
 4. El SP llama a `sp_PassReset_EnviarCorreo` automáticamente post-commit.
 
-Referencia de diseño: `sucursal-user-visualizer\agent\install-agent.ps1` (patrón de instalación) y el plan en `docs\superpowers\plans\2026-06-26-passreset-agent.md` (aunque ese plan fue para el agente de SERVERAPP, usar como guía).
+Archivos de deploy: `sucursal-user-visualizer\agent-deploy\` (copiar al servidor destino como `C:\agent\`).
 
 ---
 
@@ -207,3 +216,7 @@ Referencia de diseño: `sucursal-user-visualizer\agent\install-agent.ps1` (patr�
 - **Database Mail**: `sp_PassReset_EnviarCorreo` lee el profile default de `msdb`. Si no hay profile → `OK_MAIL_ERROR` en el log (no rompe el cambio de contraseña). Fix aplicado: la SP busca la columna `name` (no `profile_name`) en `sysmail_profile`.
 - **Puerto 3009**: no compartido con ningún otro servicio actualmente.
 - **Dark mode**: el atributo `data-theme` vive en `<html>`. Si algo no cambia de color en dark mode, verificar que el selector en `styles.css` usa `var(--...)` y no un valor hex hardcodeado. El header es una excepción intencional.
+- **ResetDesde**: solo se setea al asignar correo por **primera vez** (correo anterior = `''`). Cambiar el correo de uno ya asignado no modifica `ResetDesde`. El botón 🔑 Reset siempre limpia `ResetDesde` independientemente del estado.
+- **Sin correo = sin reset**: `sp_PassReset_AgentGetPendientes` excluye usuarios con `CorreoDestino = ''`. Sin correo no hay reset automático ni manual.
+- **Sync TABLEROS**: `sp_PassReset_AgentReportarCambio` actualiza `TABLEROS.dbo.EncargadosSucursal` y `TABLEROS.dbo.EncargadosSucursalObjetivos` con la nueva contraseña en cada reset exitoso. Usuarios que no existen en esas tablas simplemente no tienen filas afectadas (sin error).
+- **Database Mail profile**: se obtiene con `ORDER BY p.profile_id ASC` (no por `is_default`). Si no hay ningún profile → error que queda en el log como `OK_MAIL_ERROR`.

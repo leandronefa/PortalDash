@@ -1,0 +1,14 @@
+{
+  "name": "validacioncobranzas",
+  "version": "1.0.0",
+  "description": "Validación de Cobranzas — 1167 vs Libro Mayor",
+  "type": "commonjs",
+  "main": "server.cjs",
+  "scripts": { "start": "node server.cjs" },
+  "dependencies": {
+    "express": "^5.2.1",
+    "mssql": "^12.5.5",
+    "multer": "^2.1.1",
+    "xlsx": "^0.18.5"
+  }
+}

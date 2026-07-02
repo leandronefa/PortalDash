@@ -1,0 +1,21 @@
+{
+  "name": "conciliacionpunitorios",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.cjs",
+  "scripts": {
+    "generar": "node generar.cjs",
+    "start": "node server.cjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mssql": "^12.5.5",
+    "multer": "^2.1.1",
+    "xlsx": "^0.18.5"
+  }
+}

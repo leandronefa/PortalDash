@@ -1,4 +1,4 @@
-export type Estado = 'VENCIDA' | 'PROXIMA' | 'OK';
+export type Estado = 'VENCIDA' | 'PROXIMA' | 'OK' | 'PROGRAMADA';
 
 export interface Usuario {
   Id: number;
@@ -12,6 +12,7 @@ export interface Usuario {
   DiasTranscurridos: number | null;
   DiasRestantes: number | null;
   FechaProximoCambio: string | null;
+  ResetDesde: string | null;
   Estado: Estado;
 }
 

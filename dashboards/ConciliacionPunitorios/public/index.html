@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conciliación Punitorios</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="data.js"></script>
+  <style>
+    /* MODAL CARGA */
+    .modal-overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.7);
+      z-index:1000; align-items:center; justify-content:center;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:var(--bg2); border:1px solid var(--border); border-radius:14px;
+      padding:28px 32px; width:480px; max-width:95vw;
+    }
+    .modal-box h2 { font-size:15px; font-weight:700; margin-bottom:20px; }
+    .modal-field { margin-bottom:16px; }
+    .modal-field label { display:block; font-size:11px; text-transform:uppercase;
+      letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
+    .modal-field input[type=month], .modal-field input[type=file] {
+      width:100%; background:var(--bg3); border:1px solid var(--border);
+      border-radius:7px; color:var(--text); padding:8px 12px; font-size:13px;
+    }
+    .modal-field input[type=file] { cursor:pointer; }
+    .modal-actions { display:flex; gap:10px; margin-top:22px; }
+    .btn-primary {
+      flex:1; padding:9px; background:var(--blue); border:none; border-radius:8px;
+      color:#fff; font-size:13px; font-weight:600; cursor:pointer;
+    }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-secondary {
+      padding:9px 18px; background:var(--bg3); border:1px solid var(--border);
+      border-radius:8px; color:var(--text); font-size:13px; cursor:pointer;
+    }
+    .modal-log {
+      margin-top:14px; background:var(--bg); border:1px solid var(--border);
+      border-radius:8px; padding:10px 12px; font-size:11px; color:var(--muted);
+      font-family:monospace; white-space:pre-wrap; max-height:160px; overflow-y:auto;
+      display:none;
+    }
+    .modal-log.visible { display:block; }
+    /* SELECTOR DE PERÍODO en header */
+    .periodo-selector {
+      display:flex; align-items:center; gap:8px; margin-top:6px;
+    }
+    .periodo-select {
+      background:var(--bg3); border:1px solid var(--border); border-radius:6px;
+      color:var(--text); font-size:12px; padding:3px 8px; cursor:pointer;
+    }
+    .btn-cargar-periodo {
+      background:var(--blue); border:none; border-radius:6px;
+      color:#fff; font-size:11px; font-weight:600; padding:4px 10px; cursor:pointer;
+    }
+    .btn-cargar-periodo:hover { opacity:.85; }
+  </style>
+  <style>
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a; --border: #2e3250;
+      --text: #e2e8f0; --muted: #8892b0;
+      --blue: #4f8ef7; --green: #2dd4a0; --red: #f97066; --yellow: #fbbf24; --purple: #a78bfa;
+      --font: 'Segoe UI', system-ui, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+
+    /* HEADER */
+    .header {
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center; gap: 14px;
+    }
+    .header-icon { font-size: 24px; }
+    .header h1 { font-size: 17px; font-weight: 700; }
+    .header p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .header-right { margin-left: auto; text-align: right; }
+    .periodo-badge {
+      display: inline-block; background: var(--blue);
+      color: #fff; font-size: 12px; font-weight: 700;
+      padding: 3px 12px; border-radius: 20px; margin-bottom: 4px;
+    }
+    .ts-badge { font-size: 11px; color: var(--muted); }
+
+    /* LAYOUT PRINCIPAL: sidebar + contenido */
+    .app-body {
+      display: flex; height: calc(100vh - var(--header-h, 90px));
+    }
+
+    /* SIDEBAR */
+    .tabs-bar {
+      width: 210px; min-width: 210px;
+      background: var(--bg2); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow-y: auto; overflow-x: hidden;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+      padding: 6px 0 0;
+      transition: width .2s, min-width .2s;
+    }
+    .tabs-bar.collapsed { width: 44px; min-width: 44px; }
+
+    /* Botón toggle colapsar */
+    .sidebar-toggle {
+      display: flex; align-items: center; justify-content: flex-end;
+      padding: 4px 10px 8px; background: none; border: none;
+      color: var(--muted); cursor: pointer; font-size: 13px;
+      transition: color .15s;
+    }
+    .sidebar-toggle:hover { color: var(--text); }
+    .tabs-bar.collapsed .sidebar-toggle { justify-content: center; transform: scaleX(-1); }
+
+    .tab {
+      padding: 9px 12px 9px 14px; cursor: pointer; font-size: 12px; font-weight: 500;
+      color: var(--muted); border-left: 3px solid transparent;
+      white-space: nowrap; overflow: hidden;
+      transition: color .15s, background .15s, border-color .15s;
+      display: flex; align-items: center; gap: 8px;
+      border-radius: 0 6px 6px 0; margin: 1px 6px 1px 0;
+    }
+    .tab:hover { color: var(--text); background: var(--bg3); }
+    .tab.active { color: var(--text); border-left-color: var(--blue); background: var(--bg3); }
+    .tab .tab-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .tab .tab-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+    .tab .tab-count {
+      font-size: 10px; color: var(--muted); background: var(--bg);
+      padding: 1px 5px; border-radius: 10px; flex-shrink: 0;
+    }
+    /* En modo colapsado ocultar texto y contador */
+    .tabs-bar.collapsed .tab-label,
+    .tabs-bar.collapsed .tab-count,
+    .tabs-bar.collapsed .tab-section { display: none; }
+    .tabs-bar.collapsed .tab { justify-content: center; padding: 9px; margin-right: 0; border-radius: 0; }
+
+    /* Separador de sección en sidebar */
+    .tab-section {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--muted); padding: 12px 14px 4px;
+    }
+
+    /* Tab mapeo al fondo */
+    .tab-mapeo {
+      margin-top: auto; color: var(--muted);
+      border-top: 1px solid var(--border);
+      border-left: 3px solid transparent !important;
+      border-radius: 0; margin-left: 0; margin-right: 0; padding: 10px 14px;
+    }
+    .tab-mapeo:hover { color: var(--blue); background: var(--bg3); }
+    .tab-mapeo.active { color: var(--blue); background: var(--bg3); border-left-color: var(--blue) !important; }
+
+    /* CONTENIDO principal */
+    .main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 22px 28px; }
+
+    /* CARDS */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+    .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 7px; }
+    .card-value { font-size: 20px; font-weight: 700; }
+    .card-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .c-blue  { border-top: 3px solid var(--blue); }
+    .c-green { border-top: 3px solid var(--green); }
+    .c-red   { border-top: 3px solid var(--red); }
+    .c-yellow{ border-top: 3px solid var(--yellow); }
+    .c-purple{ border-top: 3px solid var(--purple); }
+
+    /* CHARTS */
+    .charts-row { display: grid; grid-template-columns: 1fr 300px; gap: 14px; margin-bottom: 20px; }
+    .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    .chart-card h3 { font-size: 11px; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .05em; }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* COLS 1400 */
+    .cols-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; margin-bottom: 20px; }
+    .col-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .col-card .col-name { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+    .col-card .col-val  { font-size: 15px; font-weight: 700; color: var(--blue); }
+    .col-card .col-sub  { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* TABLA */
+    .table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .table-toolbar { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .table-toolbar h3 { font-size: 13px; font-weight: 600; flex: 1; }
+    .filter-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 12px; transition: all .15s; }
+    .filter-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .filter-btn.active         { background: var(--blue);   border-color: var(--blue);   color: #fff; }
+    .filter-btn.active-green   { background: var(--green);  border-color: var(--green);  color: #000; }
+    .filter-btn.active-red     { background: var(--red);    border-color: var(--red);    color: #fff; }
+    .filter-btn.active-yellow  { background: var(--yellow); border-color: var(--yellow); color: #000; }
+    .filter-btn.active-purple  { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .search-input { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: 12px; width: 180px; outline: none; }
+    .search-input:focus { border-color: var(--blue); }
+
+    .table-wrap { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead tr { background: var(--bg3); position: sticky; top: 0; z-index: 1; }
+    th { padding: 9px 11px; text-align: left; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-size: 11px; white-space: nowrap; cursor: pointer; user-select: none; }
+    th:hover { color: var(--text); }
+    th.sort-asc::after  { content: ' ↑'; color: var(--blue); }
+    th.sort-desc::after { content: ' ↓'; color: var(--blue); }
+    td { padding: 8px 11px; border-top: 1px solid var(--border); white-space: nowrap; }
+    tr:hover td { background: var(--bg3); }
+
+    .badge-estado { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .CONCILIADO { background: rgba(45,212,160,.15); color: var(--green); border: 1px solid rgba(45,212,160,.3); }
+    .DIFERENCIA  { background: rgba(249,112,102,.15); color: var(--red);   border: 1px solid rgba(249,112,102,.3); }
+    .SIN_MAYOR   { background: rgba(251,191,36,.15);  color: var(--yellow);border: 1px solid rgba(251,191,36,.3); }
+    .SOLO_MAYOR  { background: rgba(167,139,250,.15); color: var(--purple);border: 1px solid rgba(167,139,250,.3); }
+
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .neg { color: var(--red); } .pos { color: var(--green); } .zero { color: var(--muted); }
+
+    .motivo-cell { max-width: 340px; }
+    .motivo { display: inline-block; font-size: 11px; line-height: 1.4; padding: 2px 7px; border-radius: 4px; white-space: normal; }
+    .motivo-DIFERENCIA { background: rgba(249,112,102,.1); color: #fca5a5; border: 1px solid rgba(249,112,102,.2); }
+    .motivo-SIN_MAYOR  { background: rgba(251,191,36,.1);  color: #fcd34d; border: 1px solid rgba(251,191,36,.2); }
+    .motivo-SOLO_MAYOR { background: rgba(167,139,250,.1); color: #c4b5fd; border: 1px solid rgba(167,139,250,.2); }
+
+    /* Filas clickables en la tabla */
+    tr.row-clickable { cursor: pointer; }
+    tr.row-clickable td { transition: background .1s; }
+    tr.row-clickable:hover td { background: rgba(251,191,36,.07) !important; }
+    tr.row-clickable td:first-child::after { content: ' 🔍'; font-size: 10px; opacity: .5; }
+
+    /* Modal detalle 1400 */
+    .det-modal-box {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+      padding: 28px 30px; width: 780px; max-width: 96vw; max-height: 90vh;
+      overflow-y: auto;
+    }
+    .det-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+    .det-id { font-size: 22px; font-weight: 700; }
+    .det-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
+    .det-close:hover { color: var(--text); }
+    .det-nombre { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+    .det-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .det-motivo-box { font-size: 12px; padding: 9px 13px; border-radius: 7px; margin-bottom: 18px; line-height: 1.5; }
+    .det-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+    .det-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .det-table th { padding: 8px 10px; text-align: right; color: var(--muted); font-weight: 600; font-size: 11px; background: var(--bg3); white-space: nowrap; }
+    .det-table th:first-child, .det-table th:nth-child(2) { text-align: left; }
+    .det-table td { padding: 7px 10px; border-top: 1px solid var(--border); text-align: right; white-space: nowrap; }
+    .det-table td:first-child, .det-table td:nth-child(2) { text-align: left; }
+    .det-table tr:hover td { background: var(--bg3); }
+    .det-table tfoot td { border-top: 2px solid var(--border); font-weight: 700; color: var(--blue); }
+
+    .pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+    .pager button { padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 12px; }
+    .pager button:disabled { opacity: .4; cursor: default; }
+
+    /* Vista TODOS */
+    .todos-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    .todos-charts .chart-wrap { height: 260px; }
+
+    .loading { text-align: center; padding: 60px; color: var(--muted); font-size: 16px; }
+    .error-msg { text-align: center; padding: 40px; color: var(--red); }
+
+    /* Mapeo */
+    .mapeo-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;
+    }
+    .mapeo-row:hover { border-color: var(--blue); }
+    .mapeo-label { flex: 1; font-size: 13px; }
+    .mapeo-count { font-size: 11px; color: var(--muted); background: var(--bg3); padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+    .mapeo-arrow { color: var(--muted); font-size: 14px; }
+    .mapeo-select {
+      padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg3); color: var(--text); font-size: 12px;
+      outline: none; min-width: 200px; cursor: pointer;
+    }
+    .mapeo-select:focus { border-color: var(--blue); }
+    .mapeo-select.asignado { border-color: rgba(45,212,160,.5); color: var(--green); }
+    .mapeo-cuenta-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;
+    }
+    .mapeo-cuenta-titulo {
+      font-size: 13px; font-weight: 600; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mapeo-cuenta-movs { font-size: 11px; color: var(--muted); }
+    .mapeo-asignados { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; min-height: 26px; }
+    .mapeo-chip {
+      background: rgba(79,142,247,.15); border: 1px solid rgba(79,142,247,.3);
+      color: var(--blue); font-size: 11px; padding: 2px 9px; border-radius: 12px;
+    }
+    .mapeo-sin-asignar { font-size: 11px; color: var(--muted); font-style: italic; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📊</div>
+  <div>
+    <h1>Conciliación Punitorios</h1>
+    <p>Cartera: PROPIA &nbsp;·&nbsp; Estado: CONFIRMADO &nbsp;·&nbsp; Comparado contra Libro Mayor contable</p>
+  </div>
+  <div class="header-right">
+    <div class="periodo-badge" id="hdr-periodo">—</div>
+    <div class="ts-badge" id="hdr-ts">Cargando…</div>
+    <div class="periodo-selector">
+      <select class="periodo-select" id="sel-periodo" onchange="cambiarPeriodo(this.value)">
+        <option value="">Cargando períodos…</option>
+      </select>
+      <button class="btn-cargar-periodo" onclick="abrirModalCarga()">+ Cargar período</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: cargar nuevo período -->
+<div class="modal-overlay" id="modal-carga">
+  <div class="modal-box">
+    <h2>📥 Cargar nuevo período</h2>
+    <div class="modal-field">
+      <label>Mes / Año</label>
+      <input type="month" id="modal-mes" />
+    </div>
+    <div class="modal-field">
+      <label>Archivo 1400 (.xlsx)</label>
+      <input type="file" id="modal-file1400" accept=".xlsx" />
+    </div>
+    <div class="modal-field">
+      <label>Libro Mayor (.xlsx)</label>
+      <input type="file" id="modal-filemayor" accept=".xlsx" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="btn-procesar" onclick="procesarPeriodo()">Procesar</button>
+      <button class="btn-secondary" onclick="cerrarModalCarga()">Cancelar</button>
+    </div>
+    <div class="modal-log" id="modal-log"></div>
+  </div>
+</div>
+
+<!-- Modal: detalle completo del 1400 para un IdPrestamo -->
+<div class="modal-overlay" id="modal-detalle">
+  <div class="det-modal-box">
+    <div class="det-header">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px">IdPrestamo</div>
+        <div class="det-id" id="det-id"></div>
+      </div>
+      <button class="det-close" onclick="cerrarDetalle()" title="Cerrar">✕</button>
+    </div>
+    <div class="det-nombre" id="det-nombre"></div>
+    <div class="det-meta">
+      <span class="badge-estado" id="det-estado-badge"></span>
+      <span style="font-size:12px;color:var(--muted)" id="det-registros"></span>
+    </div>
+    <div class="det-motivo-box" id="det-motivo-box"></div>
+    <div class="det-section-title">Registros en Archivo 1400</div>
+    <div style="overflow-x:auto">
+      <table class="det-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Medio de Pago</th>
+            <th>AA Punitorios</th>
+            <th>AS Gastos</th>
+            <th>AT IVA Gas.</th>
+            <th>AU Sellado</th>
+            <th>AV Seg.Vto</th>
+            <th>AW IVA Seg.</th>
+            <th>Total fila</th>
+          </tr>
+        </thead>
+        <tbody id="det-tbody"></tbody>
+        <tfoot id="det-tfoot"></tfoot>
+      </table>
+    </div>
+    <div style="text-align:right;margin-top:18px">
+      <button onclick="cerrarDetalle()"
+        style="padding:8px 24px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;cursor:pointer">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="app-body">
+<div class="tabs-bar" id="tabs-bar"></div>
+
+<div class="main">
+  <div id="loading" class="loading">⏳ Cargando datos…</div>
+  <div id="content" style="display:none">
+    <!-- Vista de un medio de pago -->
+    <div id="vista-medio">
+      <div class="cards-grid" id="cards-resumen"></div>
+      <div class="cols-grid"  id="cols-detalle"></div>
+      <div class="charts-row">
+        <div class="chart-card"><h3>Totales por columna (AA – AW)</h3><div class="chart-wrap"><canvas id="chartBarras"></canvas></div></div>
+        <div class="chart-card"><h3>Estado de conciliación</h3><div class="chart-wrap"><canvas id="chartPie"></canvas></div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3 id="tabla-titulo">Detalle por IdPrestamo</h3>
+          <input class="search-input" type="text" id="buscar" placeholder="IdPrestamo o nombre…">
+          <button class="filter-btn active" data-f="TODOS">Todos</button>
+          <button class="filter-btn" data-f="CONCILIADO">Conciliado</button>
+          <button class="filter-btn" data-f="DIFERENCIA">Diferencia</button>
+          <button class="filter-btn" data-f="SIN_MAYOR">Sin Mayor</button>
+          <button class="filter-btn" data-f="SOLO_MAYOR">Solo Mayor</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr id="tabla-thead"></tr></thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <span id="pager-info"></span>
+          <button id="btn-prev">‹ Ant.</button>
+          <button id="btn-next">Sig. ›</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vista MAPEO -->
+    <div id="vista-mapeo" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+        <!-- Panel izquierdo: medios del 1400 -->
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:14px">
+            Medios de pago — Archivo 1400
+          </div>
+          <div id="mapeo-lista-1400"></div>
+        </div>
+
+        <!-- Panel derecho: cuentas del mayor -->
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:14px">
+            Cuentas — Libro Mayor
+          </div>
+          <div id="mapeo-lista-mayor"></div>
+        </div>
+      </div>
+
+      <!-- Footer acciones -->
+      <div style="display:flex;align-items:center;gap:14px;margin-top:22px;padding-top:18px;border-top:1px solid var(--border)">
+        <button id="btn-guardar-mapeo" onclick="guardarMapeo()"
+          style="padding:8px 22px;background:var(--blue);border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:600;cursor:pointer">
+          Guardar mapeo
+        </button>
+        <span id="mapeo-msg" style="font-size:12px;color:var(--muted)"></span>
+        <span style="margin-left:auto;font-size:11px;color:var(--muted)">
+          Después de guardar, ejecutá: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:11px">node generar.cjs [periodo]</code>
+        </span>
+      </div>
+    </div>
+
+    <!-- Vista TODOS -->
+    <div id="vista-todos" style="display:none">
+      <div class="cards-grid" id="todos-cards"></div>
+      <div class="todos-charts">
+        <div class="chart-card"><h3>Total 1400 por Medio de Pago</h3><div class="chart-wrap"><canvas id="chartTodosBar"></canvas></div></div>
+        <div class="chart-card"><h3>Conciliación por Medio de Pago</h3><div class="chart-wrap"><canvas id="chartTodosStack"></canvas></div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Todos los medios de pago</h3>
+          <input class="search-input" type="text" id="buscar-todos" placeholder="IdPrestamo o nombre…">
+          <button class="filter-btn active" data-ft="TODOS">Todos</button>
+          <button class="filter-btn" data-ft="CONCILIADO">Conciliado</button>
+          <button class="filter-btn" data-ft="DIFERENCIA">Diferencia</button>
+          <button class="filter-btn" data-ft="SIN_MAYOR">Sin Mayor</button>
+          <button class="filter-btn" data-ft="SOLO_MAYOR">Solo Mayor</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-sortt="medioPago">Medio de Pago</th>
+                <th data-sortt="idPrestamo">IdPrestamo</th>
+                <th data-sortt="nombre">Nombre</th>
+                <th data-sortt="total1400" class="num">Total 1400</th>
+                <th data-sortt="totalMayor" class="num">Total Mayor</th>
+                <th data-sortt="diferencia" class="num">Diferencia</th>
+                <th data-sortt="estado">Estado</th>
+                <th>Motivo</th>
+              </tr>
+            </thead>
+            <tbody id="todos-body"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <span id="todos-pager-info"></span>
+          <button id="todos-btn-prev">‹ Ant.</button>
+          <button id="todos-btn-next">Sig. ›</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = (n, d=2) => n == null ? '—' : Number(n).toLocaleString('es-AR', {minimumFractionDigits:d, maximumFractionDigits:d});
+const fmtK = n => Math.abs(n) >= 1e6 ? fmt(n/1e6)+'M' : Math.abs(n) >= 1e3 ? fmt(n/1e3,1)+'K' : fmt(n,0);
+const clsN = n => n > 0.05 ? 'pos' : n < -0.05 ? 'neg' : 'zero';
+
+let DATA = null;
+let medioActivo = null; // null = TODOS, string = label del medio
+
+// Estado tabla medio
+let mFilas=[], mSortKey='diferencia', mSortDir=-1, mFiltro='TODOS', mBusqueda='', mPag=0;
+// Estado tabla todos
+let tFilas=[], tSortKey='diferencia', tSortDir=-1, tFiltro='TODOS', tBusqueda='', tPag=0;
+const POR_PAG = 100;
+
+let charts = {};
+
+// -----------------------------------------------
+// Colores por estado de conciliación
+// -----------------------------------------------
+const COLORES = {
+  CONCILIADO: { bg:'rgba(45,212,160,.7)',  border:'#2dd4a0' },
+  DIFERENCIA: { bg:'rgba(249,112,102,.7)', border:'#f97066' },
+  SIN_MAYOR:  { bg:'rgba(251,191,36,.7)',  border:'#fbbf24' },
+  SOLO_MAYOR: { bg:'rgba(167,139,250,.7)', border:'#a78bfa' },
+};
+const COLORES_MEDIOS = ['#4f8ef7','#2dd4a0','#f97066','#fbbf24','#a78bfa','#fb923c','#34d399','#f472b6','#60a5fa','#a3e635','#e879f9','#22d3ee'];
+
+// -----------------------------------------------
+// Iniciar
+// -----------------------------------------------
+function cargar() {
+  try {
+    if (!window.CONCILIACION_DATA) throw new Error('data.js no encontrado — ejecutá: node generar.cjs');
+    DATA = window.CONCILIACION_DATA;
+    document.getElementById('hdr-periodo').textContent = DATA.periodoLabel || DATA.periodo;
+    document.getElementById('hdr-ts').textContent = 'Generado: ' + DATA.generadoEn;
+    // Cargar lista de períodos y marcar el activo
+    cargarListaPeriodos(DATA.periodo);
+    construirTabs();
+    const primero = DATA.mediosPago.find(m => m.tieneMayor) || DATA.mediosPago[0];
+    seleccionarTab(primero ? primero.label : null);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').innerHTML = '<div class="error-msg">❌ ' + e.message + '</div>';
+    cargarListaPeriodos(null);
+  }
+}
+
+// -----------------------------------------------
+// Tabs
+// -----------------------------------------------
+// -----------------------------------------------
+// Grupos por cuenta del Mayor
+// -----------------------------------------------
+let GRUPOS = [];
+let sidebarCollapsed = false;
+
+function buildGrupos() {
+  // Los datos ya vienen agrupados por cuenta del mayor desde generar.cjs
+  return DATA.mediosPago
+    .filter(m => m.tieneMayor)
+    .sort((a, b) => (b.resumen.tot1400?.total || 0) - (a.resumen.tot1400?.total || 0));
+}
+
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  document.getElementById('tabs-bar').classList.toggle('collapsed', sidebarCollapsed);
+}
+
+function construirTabs() {
+  GRUPOS = buildGrupos();
+  const bar = document.getElementById('tabs-bar');
+  // Preservar estado colapsado
+  const wasCollapsed = bar.classList.contains('collapsed');
+  bar.innerHTML = '';
+  if (wasCollapsed) bar.classList.add('collapsed');
+
+  // Botón toggle
+  const btn = document.createElement('button');
+  btn.className = 'sidebar-toggle';
+  btn.title = 'Contraer/expandir';
+  btn.innerHTML = '◀';
+  btn.addEventListener('click', toggleSidebar);
+  bar.appendChild(btn);
+
+  // Tab "Todos"
+  const tabTodos = document.createElement('div');
+  tabTodos.className = 'tab';
+  tabTodos.dataset.grupo = '__TODOS__';
+  tabTodos.innerHTML = '<span class="tab-dot" style="background:var(--blue)"></span><span class="tab-label">Todos</span>';
+  tabTodos.addEventListener('click', () => seleccionarTab(null));
+  bar.appendChild(tabTodos);
+
+  // Separador
+  const sec = document.createElement('div');
+  sec.className = 'tab-section';
+  sec.textContent = 'Libro Mayor';
+  bar.appendChild(sec);
+
+  // Un tab por cuenta del mayor
+  GRUPOS.forEach(g => {
+    const e = g.resumen.estados;
+    const total = e.conciliado + e.diferencia + e.sinMayor + e.soloMayor;
+    const pct = total > 0 ? Math.round(e.conciliado / total * 100) : 0;
+    const color = pct >= 95 ? 'var(--green)' : pct >= 70 ? 'var(--yellow)' : 'var(--red)';
+
+    const tab = document.createElement('div');
+    tab.className = 'tab';
+    tab.dataset.grupo = g.label;
+    tab.title = g.label + ' — ' + g.medios1400.join(', ');
+    tab.innerHTML = `<span class="tab-dot" style="background:${color}"></span>
+      <span class="tab-label">${g.label}</span>
+      <span class="tab-count">${fmtK(g.resumen.idsUnicos1400)}</span>`;
+    tab.addEventListener('click', () => seleccionarTab(g.label));
+    bar.appendChild(tab);
+  });
+
+  // Tab Mapeo al fondo
+  const tabMapeo = document.createElement('div');
+  tabMapeo.className = 'tab tab-mapeo';
+  tabMapeo.id = 'tab-mapeo-btn';
+  tabMapeo.innerHTML = '<span style="font-size:13px;flex-shrink:0">⚙</span><span class="tab-label"> Mapeo</span>';
+  tabMapeo.addEventListener('click', abrirMapeo);
+  bar.appendChild(tabMapeo);
+}
+
+function seleccionarTab(label) {
+  medioActivo = label;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active',
+      label === null ? t.dataset.grupo === '__TODOS__' : t.dataset.grupo === label
+    );
+  });
+  document.getElementById('vista-mapeo').style.display = 'none';
+  if (label === null) {
+    document.getElementById('vista-medio').style.display = 'none';
+    document.getElementById('vista-todos').style.display = 'block';
+    renderVistaTodos();
+  } else {
+    document.getElementById('vista-medio').style.display = 'block';
+    document.getElementById('vista-todos').style.display = 'none';
+    const g = GRUPOS.find(x => x.label === label);
+    if (g) renderVistaMedio(g);
+  }
+}
+
+// -----------------------------------------------
+// Vista: un Medio de Pago
+// -----------------------------------------------
+function renderVistaMedio(m) {
+  const r = m.resumen;
+  const e = r.estados;
+
+  // Cards
+  document.getElementById('cards-resumen').innerHTML = `
+    <div class="card c-blue">
+      <div class="card-label">Registros 1400</div>
+      <div class="card-value">${r.registros1400.toLocaleString('es-AR')}</div>
+      <div class="card-sub">${r.idsUnicos1400.toLocaleString('es-AR')} préstamos únicos</div>
+    </div>
+    <div class="card c-purple">
+      <div class="card-label">Movimientos Mayor</div>
+      <div class="card-value">${r.movimientosMayor.toLocaleString('es-AR')}</div>
+      <div class="card-sub">${r.tieneMayor ? (m.medios1400 ? m.medios1400.join(', ') : r.cuentaMayor) : 'Sin mayor disponible'}</div>
+    </div>
+    <div class="card c-blue">
+      <div class="card-label">Total 1400 (AA–AW)</div>
+      <div class="card-value">$${fmtK(r.tot1400.total)}</div>
+      <div class="card-sub">${fmt(r.tot1400.total)}</div>
+    </div>
+    <div class="card c-purple">
+      <div class="card-label">Mayor — Debe</div>
+      <div class="card-value">${r.tieneMayor ? '$'+fmtK(r.totalDebeGlobal) : '—'}</div>
+      <div class="card-sub">${r.tieneMayor ? 'Haber: $'+fmtK(r.totalHaberGlobal) : 'Sin mayor'}</div>
+    </div>
+    <div class="card ${e.diferencia===0&&e.sinMayor===0?'c-green':'c-yellow'}">
+      <div class="card-label">Conciliados</div>
+      <div class="card-value" style="color:var(--green)">${e.conciliado.toLocaleString('es-AR')}</div>
+      <div class="card-sub">de ${(e.conciliado+e.diferencia+e.sinMayor).toLocaleString('es-AR')} en 1400</div>
+    </div>
+    <div class="card c-red">
+      <div class="card-label">Con Diferencia</div>
+      <div class="card-value" style="color:var(--red)">${e.diferencia.toLocaleString('es-AR')}</div>
+      <div class="card-sub">${e.sinMayor} sin registro en mayor</div>
+    </div>`;
+
+  // Columnas
+  const cols = [
+    ['AA – Punitorios', 'punitorio'], ['AS – CUC Gastos', 'cucGastos'],
+    ['AT – IVA Gastos', 'cucGastosIVA'], ['AU – Sellado', 'cucSellado'],
+    ['AV – Seg. Vto', 'cargoSegVto'], ['AW – IVA Seg.', 'cargoSegVtoIVA'],
+  ];
+  document.getElementById('cols-detalle').innerHTML = cols.map(([label, key]) => `
+    <div class="col-card">
+      <div class="col-name">${label}</div>
+      <div class="col-val">$${fmtK(r.tot1400[key])}</div>
+      <div class="col-sub">${fmt(r.tot1400[key])}</div>
+    </div>`).join('');
+
+  // Chart barras
+  destroyChart('bar');
+  charts.bar = new Chart(document.getElementById('chartBarras').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: cols.map(([l]) => l.split('–')[0].trim()),
+      datasets: [{ label: '1400', data: cols.map(([,k]) => r.tot1400[k]), backgroundColor: 'rgba(79,142,247,.7)' }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{labels:{color:'#e2e8f0'}} },
+      scales:{ x:{ticks:{color:'#8892b0'},grid:{color:'#2e3250'}},
+               y:{ticks:{color:'#8892b0',callback:v=>'$'+fmtK(v)},grid:{color:'#2e3250'}} } }
+  });
+
+  // Chart pie
+  destroyChart('pie');
+  charts.pie = new Chart(document.getElementById('chartPie').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Conciliado','Diferencia','Sin Mayor','Solo Mayor'],
+      datasets: [{ data: [e.conciliado, e.diferencia, e.sinMayor, e.soloMayor],
+        backgroundColor: Object.values(COLORES).map(c=>c.bg),
+        borderColor: Object.values(COLORES).map(c=>c.border), borderWidth: 1 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom',labels:{color:'#e2e8f0',padding:10,font:{size:11}}} } }
+  });
+
+  // Tabla
+  document.getElementById('tabla-titulo').textContent = 'Detalle — ' + m.label;
+  mFilas = m.filas;
+  mFiltro = 'TODOS'; mBusqueda = ''; mPag = 0;
+  document.getElementById('buscar').value = '';
+  document.querySelectorAll('.filter-btn[data-f]').forEach(b => {
+    b.className = 'filter-btn' + (b.dataset.f === 'TODOS' ? ' active' : '');
+  });
+  renderThead();
+  aplicarFiltrosMedio();
+}
+
+function renderThead() {
+  document.getElementById('tabla-thead').innerHTML = `
+    <th data-sort="idPrestamo">IdPrestamo</th>
+    <th data-sort="nombre">Nombre</th>
+    <th data-sort="registros" class="num">Reg.</th>
+    <th data-sort="punitorio" class="num">AA Punitorios</th>
+    <th data-sort="cucGastos" class="num">AS Gastos</th>
+    <th data-sort="cucGastosIVA" class="num">AT IVA Gas.</th>
+    <th data-sort="cucSellado" class="num">AU Sellado</th>
+    <th data-sort="cargoSegVto" class="num">AV Seg.Vto</th>
+    <th data-sort="cargoSegVtoIVA" class="num">AW IVA Seg.</th>
+    <th data-sort="total1400" class="num">Total 1400</th>
+    <th data-sort="mayorDebe" class="num">Mayor Debe</th>
+    <th data-sort="mayorHaber" class="num">Mayor Haber</th>
+    <th data-sort="totalMayor" class="num">Total Mayor</th>
+    <th data-sort="diferencia" class="num">Diferencia</th>
+    <th data-sort="estado">Estado</th>
+    <th>Motivo</th>`;
+  document.querySelectorAll('th[data-sort]').forEach(th =>
+    th.addEventListener('click', () => {
+      if (mSortKey === th.dataset.sort) mSortDir *= -1;
+      else { mSortKey = th.dataset.sort; mSortDir = th.dataset.sort === 'diferencia' ? -1 : 1; }
+      renderTablaMedio();
+    })
+  );
+}
+
+function aplicarFiltrosMedio() {
+  const q = mBusqueda.toLowerCase();
+  const f = mFilas.filter(r => {
+    if (mFiltro !== 'TODOS' && r.estado !== mFiltro) return false;
+    if (q && !r.idPrestamo.includes(q) && !r.nombre.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  f.sort((a, b) => {
+    const av = a[mSortKey], bv = b[mSortKey];
+    return typeof av === 'number' ? mSortDir*(av-bv) : mSortDir*String(av).localeCompare(String(bv));
+  });
+  return f;
+}
+
+// Referencia a la página actual del grid para el popup
+let mPagFilas = [];
+
+function renderTablaMedio() {
+  const filtradas = aplicarFiltrosMedio();
+  const ini = mPag * POR_PAG;
+  mPagFilas = filtradas.slice(ini, ini + POR_PAG);
+  document.getElementById('tabla-body').innerHTML = mPagFilas.map((f, localIdx) => {
+    const dc = clsN(f.diferencia);
+    const clickable = f.estado === 'SIN_MAYOR';
+    return `<tr ${clickable ? `class="row-clickable" data-local-idx="${localIdx}"` : ''}>
+      <td>${f.idPrestamo}</td><td>${f.nombre}</td>
+      <td class="num">${f.registros||'—'}</td>
+      <td class="num">${f.punitorio?fmt(f.punitorio):'—'}</td>
+      <td class="num">${f.cucGastos?fmt(f.cucGastos):'—'}</td>
+      <td class="num">${f.cucGastosIVA?fmt(f.cucGastosIVA):'—'}</td>
+      <td class="num">${f.cucSellado?fmt(f.cucSellado):'—'}</td>
+      <td class="num">${f.cargoSegVto?fmt(f.cargoSegVto):'—'}</td>
+      <td class="num">${f.cargoSegVtoIVA?fmt(f.cargoSegVtoIVA):'—'}</td>
+      <td class="num">${fmt(f.total1400)}</td>
+      <td class="num">${f.mayorDebe?fmt(f.mayorDebe):'—'}</td>
+      <td class="num">${f.mayorHaber?fmt(f.mayorHaber):'—'}</td>
+      <td class="num">${f.totalMayor?fmt(f.totalMayor):'—'}</td>
+      <td class="num ${dc}">${fmt(f.diferencia)}</td>
+      <td><span class="badge-estado ${f.estado}">${f.estado.replace('_',' ')}</span></td>
+      <td class="motivo-cell">${f.motivo?`<span class="motivo motivo-${f.estado}">${f.motivo}</span>`:''}</td>
+    </tr>`;
+  }).join('');
+  const tot = filtradas.length, fin = Math.min(ini+POR_PAG, tot);
+  document.getElementById('pager-info').textContent = `${ini+1}–${fin} de ${tot.toLocaleString('es-AR')}`;
+  document.getElementById('btn-prev').disabled = mPag === 0;
+  document.getElementById('btn-next').disabled = fin >= tot;
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.classList.toggle('sort-asc',  mSortKey===th.dataset.sort && mSortDir===1);
+    th.classList.toggle('sort-desc', mSortKey===th.dataset.sort && mSortDir===-1);
+  });
+}
+
+// -----------------------------------------------
+// Vista: TODOS los medios
+// -----------------------------------------------
+function renderVistaTodos() {
+  // Cards agregadas
+  let totReg=0, totIds=0, totConc=0, totDif=0, totSM=0, totSL=0, totImporte=0;
+  DATA.mediosPago.forEach(m => {
+    const e = m.resumen.estados;
+    totReg  += m.resumen.registros1400;
+    totIds  += m.resumen.idsUnicos1400;
+    totConc += e.conciliado; totDif += e.diferencia;
+    totSM   += e.sinMayor;   totSL  += e.soloMayor;
+    totImporte += m.resumen.tot1400.total;
+  });
+  const mediosConMayor = DATA.mediosPago.filter(m => m.tieneMayor).length;
+
+  document.getElementById('todos-cards').innerHTML = `
+    <div class="card c-blue">
+      <div class="card-label">Total registros 1400</div>
+      <div class="card-value">${totReg.toLocaleString('es-AR')}</div>
+      <div class="card-sub">${totIds.toLocaleString('es-AR')} préstamos únicos</div>
+    </div>
+    <div class="card c-purple">
+      <div class="card-label">Medios de pago</div>
+      <div class="card-value">${DATA.mediosPago.length}</div>
+      <div class="card-sub">${mediosConMayor} con mayor contable</div>
+    </div>
+    <div class="card c-blue">
+      <div class="card-label">Total importes 1400</div>
+      <div class="card-value">$${fmtK(totImporte)}</div>
+      <div class="card-sub">${fmt(totImporte)}</div>
+    </div>
+    <div class="card c-green">
+      <div class="card-label">Conciliados</div>
+      <div class="card-value" style="color:var(--green)">${totConc.toLocaleString('es-AR')}</div>
+      <div class="card-sub">${Math.round(totConc/(totConc+totDif+totSM||1)*100)}% del total en 1400</div>
+    </div>
+    <div class="card c-red">
+      <div class="card-label">Con diferencia</div>
+      <div class="card-value" style="color:var(--red)">${totDif.toLocaleString('es-AR')}</div>
+      <div class="card-sub">${totSM} sin mayor</div>
+    </div>`;
+
+  // Chart: total 1400 por medio
+  const mediosCon1400 = DATA.mediosPago.filter(m => m.resumen.idsUnicos1400 > 0);
+  destroyChart('todosBar');
+  charts.todosBar = new Chart(document.getElementById('chartTodosBar').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: mediosCon1400.map(m => m.label.replace('TARJETA CREDITO ','TC ').replace('TRANSFERENCIA ','TRANSF. ')),
+      datasets: [{ label: 'Total 1400', data: mediosCon1400.map(m => m.resumen.tot1400.total),
+        backgroundColor: mediosCon1400.map((_, i) => COLORES_MEDIOS[i % COLORES_MEDIOS.length]) }]
+    },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{color:'#8892b0',callback:v=>'$'+fmtK(v)},grid:{color:'#2e3250'}},
+               y:{ticks:{color:'#8892b0',font:{size:10}},grid:{color:'#2e3250'}} } }
+  });
+
+  // Chart: stacked conciliación por medio
+  destroyChart('todosStack');
+  charts.todosStack = new Chart(document.getElementById('chartTodosStack').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: mediosCon1400.map(m => m.label.replace('TARJETA CREDITO ','TC ').replace('TRANSFERENCIA ','TRANSF. ')),
+      datasets: [
+        { label:'Conciliado', data: mediosCon1400.map(m=>m.resumen.estados.conciliado), backgroundColor: COLORES.CONCILIADO.bg, borderColor: COLORES.CONCILIADO.border, borderWidth:1 },
+        { label:'Diferencia',  data: mediosCon1400.map(m=>m.resumen.estados.diferencia),  backgroundColor: COLORES.DIFERENCIA.bg,  borderColor: COLORES.DIFERENCIA.border,  borderWidth:1 },
+        { label:'Sin Mayor',  data: mediosCon1400.map(m=>m.resumen.estados.sinMayor),  backgroundColor: COLORES.SIN_MAYOR.bg,  borderColor: COLORES.SIN_MAYOR.border,  borderWidth:1 },
+        { label:'Solo Mayor', data: mediosCon1400.map(m=>m.resumen.estados.soloMayor), backgroundColor: COLORES.SOLO_MAYOR.bg, borderColor: COLORES.SOLO_MAYOR.border, borderWidth:1 },
+      ]
+    },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{
+      x:{stacked:true,ticks:{color:'#8892b0'},grid:{color:'#2e3250'}},
+      y:{stacked:true,ticks:{color:'#8892b0',font:{size:10}},grid:{color:'#2e3250'}}},
+      plugins:{legend:{labels:{color:'#e2e8f0',font:{size:11}}}} }
+  });
+
+  // Tabla todos
+  tFilas = DATA.mediosPago.flatMap(m => m.filas.map(f => ({ ...f, medioPago: m.label })));
+  tFiltro='TODOS'; tBusqueda=''; tPag=0;
+  document.getElementById('buscar-todos').value = '';
+  document.querySelectorAll('.filter-btn[data-ft]').forEach(b => {
+    b.className = 'filter-btn' + (b.dataset.ft === 'TODOS' ? ' active' : '');
+  });
+  renderTablaTodos();
+}
+
+function renderTablaTodos() {
+  const q = tBusqueda.toLowerCase();
+  const filtradas = tFilas.filter(r => {
+    if (tFiltro !== 'TODOS' && r.estado !== tFiltro) return false;
+    if (q && !r.idPrestamo.includes(q) && !r.nombre.toLowerCase().includes(q) && !r.medioPago.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => {
+    const av = a[tSortKey], bv = b[tSortKey];
+    return typeof av === 'number' ? tSortDir*(av-bv) : tSortDir*String(av).localeCompare(String(bv));
+  });
+  const ini = tPag * POR_PAG;
+  const pag = filtradas.slice(ini, ini + POR_PAG);
+  document.getElementById('todos-body').innerHTML = pag.map(f => {
+    const dc = clsN(f.diferencia);
+    return `<tr>
+      <td style="font-size:11px;color:var(--muted)">${f.medioPago}</td>
+      <td>${f.idPrestamo}</td><td>${f.nombre}</td>
+      <td class="num">${fmt(f.total1400)}</td>
+      <td class="num">${f.totalMayor?fmt(f.totalMayor):'—'}</td>
+      <td class="num ${dc}">${fmt(f.diferencia)}</td>
+      <td><span class="badge-estado ${f.estado}">${f.estado.replace('_',' ')}</span></td>
+      <td class="motivo-cell">${f.motivo?`<span class="motivo motivo-${f.estado}">${f.motivo}</span>`:''}</td>
+    </tr>`;
+  }).join('');
+  const tot = filtradas.length, fin = Math.min(ini+POR_PAG, tot);
+  document.getElementById('todos-pager-info').textContent = `${ini+1}–${fin} de ${tot.toLocaleString('es-AR')}`;
+  document.getElementById('todos-btn-prev').disabled = tPag === 0;
+  document.getElementById('todos-btn-next').disabled = fin >= tot;
+}
+
+// -----------------------------------------------
+// Eventos
+// -----------------------------------------------
+function destroyChart(key) { if (charts[key]) { charts[key].destroy(); charts[key] = null; } }
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Filtros por estado — vista medio
+  document.querySelectorAll('.filter-btn[data-f]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      mFiltro = btn.dataset.f; mPag = 0;
+      const map = {TODOS:'active',CONCILIADO:'active-green',DIFERENCIA:'active-red',SIN_MAYOR:'active-yellow',SOLO_MAYOR:'active-purple'};
+      document.querySelectorAll('.filter-btn[data-f]').forEach(b => b.className = 'filter-btn');
+      btn.className = 'filter-btn ' + (map[mFiltro]||'active');
+      renderTablaMedio();
+    })
+  );
+  document.getElementById('buscar').addEventListener('input', e => { mBusqueda = e.target.value.trim(); mPag=0; renderTablaMedio(); });
+  document.getElementById('btn-prev').addEventListener('click', () => { mPag--; renderTablaMedio(); });
+  document.getElementById('btn-next').addEventListener('click', () => { mPag++; renderTablaMedio(); });
+
+  // Click en filas SIN_MAYOR → popup detalle 1400
+  document.getElementById('tabla-body').addEventListener('click', e => {
+    const tr = e.target.closest('tr.row-clickable[data-local-idx]');
+    if (!tr) return;
+    const fila = mPagFilas[parseInt(tr.dataset.localIdx)];
+    if (fila) abrirDetalle1400(fila);
+  });
+
+  // Filtros — vista todos
+  document.querySelectorAll('.filter-btn[data-ft]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      tFiltro = btn.dataset.ft; tPag = 0;
+      const map = {TODOS:'active',CONCILIADO:'active-green',DIFERENCIA:'active-red',SIN_MAYOR:'active-yellow',SOLO_MAYOR:'active-purple'};
+      document.querySelectorAll('.filter-btn[data-ft]').forEach(b => b.className = 'filter-btn');
+      btn.className = 'filter-btn ' + (map[tFiltro]||'active');
+      renderTablaTodos();
+    })
+  );
+  document.querySelectorAll('th[data-sortt]').forEach(th =>
+    th.addEventListener('click', () => {
+      if (tSortKey === th.dataset.sortt) tSortDir *= -1;
+      else { tSortKey = th.dataset.sortt; tSortDir = th.dataset.sortt==='diferencia'?-1:1; }
+      renderTablaTodos();
+    })
+  );
+  document.getElementById('buscar-todos').addEventListener('input', e => { tBusqueda=e.target.value.trim(); tPag=0; renderTablaTodos(); });
+  document.getElementById('todos-btn-prev').addEventListener('click', () => { tPag--; renderTablaTodos(); });
+  document.getElementById('todos-btn-next').addEventListener('click', () => { tPag++; renderTablaTodos(); });
+});
+
+// -----------------------------------------------
+// Selector de período y carga de archivos
+// -----------------------------------------------
+const MESES_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                     'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function labelPeriodo(p) {
+  return MESES_LABEL[parseInt(p.slice(4,6))-1] + ' ' + p.slice(0,4);
+}
+
+async function cargarListaPeriodos(periodoActivo) {
+  try {
+    const periodos = await fetch('/api/periodos').then(r => r.json());
+    const sel = document.getElementById('sel-periodo');
+    sel.innerHTML = periodos.map(p =>
+      `<option value="${p}" ${p === periodoActivo ? 'selected' : ''}>${labelPeriodo(p)}</option>`
+    ).join('') || '<option value="">Sin períodos</option>';
+  } catch(e) { /* silencioso */ }
+}
+
+function cambiarPeriodo(periodo) {
+  if (!periodo) return;
+  const log = document.getElementById('modal-log');
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+  // Cargar el script del período dinámicamente
+  const old = document.getElementById('script-data-periodo');
+  if (old) old.remove();
+  const s = document.createElement('script');
+  s.id = 'script-data-periodo';
+  s.src = `data-${periodo}.js?t=${Date.now()}`;
+  s.onload = () => {
+    DATA = window.CONCILIACION_DATA;
+    construirTabs();
+    const primero = DATA.mediosPago.find(m => m.tieneMayor) || DATA.mediosPago[0];
+    seleccionarTab(primero ? primero.label : null);
+    document.getElementById('hdr-periodo').textContent = DATA.periodoLabel || periodo;
+    document.getElementById('hdr-ts').textContent = 'Generado: ' + (DATA.generadoEn || '');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  };
+  s.onerror = () => {
+    document.getElementById('loading').textContent = '❌ No se pudo cargar data-' + periodo + '.js';
+  };
+  document.head.appendChild(s);
+}
+
+function abrirModalCarga() {
+  // Poner el mes actual como sugerencia
+  const hoy = new Date();
+  const yy = hoy.getFullYear();
+  const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+  document.getElementById('modal-mes').value = `${yy}-${mm}`;
+  document.getElementById('modal-log').className = 'modal-log';
+  document.getElementById('modal-log').textContent = '';
+  document.getElementById('btn-procesar').disabled = false;
+  document.getElementById('btn-procesar').textContent = 'Procesar';
+  document.getElementById('modal-carga').classList.add('open');
+}
+
+function cerrarModalCarga() {
+  document.getElementById('modal-carga').classList.remove('open');
+}
+
+async function procesarPeriodo() {
+  const mesVal = document.getElementById('modal-mes').value;  // "2025-07"
+  const file1400 = document.getElementById('modal-file1400').files[0];
+  const fileMayor = document.getElementById('modal-filemayor').files[0];
+  const logEl = document.getElementById('modal-log');
+
+  if (!mesVal)    return (logEl.className='modal-log visible', logEl.textContent='❌ Seleccioná el mes/año.');
+  if (!file1400)  return (logEl.className='modal-log visible', logEl.textContent='❌ Falta el archivo 1400.');
+  if (!fileMayor) return (logEl.className='modal-log visible', logEl.textContent='❌ Falta el Libro Mayor.');
+
+  const periodo = mesVal.replace('-', '');  // "202507"
+  const btn = document.getElementById('btn-procesar');
+  btn.disabled = true;
+  btn.textContent = 'Procesando…';
+  logEl.className = 'modal-log visible';
+  logEl.textContent = `Subiendo archivos para ${labelPeriodo(periodo)}…`;
+
+  const fd = new FormData();
+  fd.append('periodo', periodo);
+  fd.append('archivo1400', file1400);
+  fd.append('archivoMayor', fileMayor);
+
+  try {
+    const res  = await fetch('/api/procesar', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      logEl.textContent = `✅ ${labelPeriodo(periodo)} procesado correctamente.\n\n` + (data.log || '');
+      btn.textContent = '✅ Listo';
+      // Actualizar selector y cargar el nuevo período
+      await cargarListaPeriodos(periodo);
+      setTimeout(() => {
+        cerrarModalCarga();
+        cambiarPeriodo(periodo);
+      }, 1500);
+    } else {
+      logEl.textContent = '❌ Error:\n' + (data.error || 'desconocido');
+      btn.disabled = false;
+      btn.textContent = 'Reintentar';
+    }
+  } catch(e) {
+    logEl.textContent = '❌ Error de red: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Reintentar';
+  }
+}
+
+// -----------------------------------------------
+// Tab Mapeo
+// -----------------------------------------------
+let mapeoActual = {};   // { [medio1400]: descripcionCuentaMayor | '' }
+
+function abrirMapeo() {
+  // Desactivar todos los tabs de datos
+  document.querySelectorAll('.tab:not(.tab-mapeo)').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-mapeo-btn').classList.add('active');
+  document.getElementById('vista-medio').style.display = 'none';
+  document.getElementById('vista-todos').style.display = 'none';
+  document.getElementById('vista-mapeo').style.display = 'block';
+  medioActivo = '__MAPEO__';
+  cargarMapeo();
+}
+
+async function cargarMapeo() {
+  try {
+    const res = await fetch('/api/mapeo');
+    mapeoActual = await res.json();
+    renderMapeo();
+  } catch(e) {
+    document.getElementById('mapeo-msg').textContent = '❌ Error cargando mapeo: ' + e.message;
+  }
+}
+
+function renderMapeo() {
+  const medios1400  = DATA.metaMedios1400  || [];
+  const cuentasMayor = DATA.metaCuentasMayor || [];
+
+  // Panel izquierdo: un row por cada medio del 1400
+  document.getElementById('mapeo-lista-1400').innerHTML = medios1400.map(m => {
+    const asignado = mapeoActual[m.label] || '';
+    const clsSelect = asignado ? 'mapeo-select asignado' : 'mapeo-select';
+    const opts = `<option value="">— Sin asignar —</option>` +
+      cuentasMayor.map(c =>
+        `<option value="${c.descripcion}" ${asignado === c.descripcion ? 'selected' : ''}>${c.descripcion}</option>`
+      ).join('');
+    return `
+      <div class="mapeo-row">
+        <div class="mapeo-label">${m.label}</div>
+        <div class="mapeo-count">${m.registros.toLocaleString('es-AR')} reg.</div>
+        <div class="mapeo-arrow">→</div>
+        <select class="${clsSelect}" data-medio="${m.label}" onchange="onMapeoChange(this)">
+          ${opts}
+        </select>
+      </div>`;
+  }).join('');
+
+  actualizarPanelMayor();
+}
+
+function onMapeoChange(sel) {
+  const medio = sel.dataset.medio;
+  const cuenta = sel.value;
+  if (cuenta) {
+    mapeoActual[medio] = cuenta;
+    sel.className = 'mapeo-select asignado';
+  } else {
+    delete mapeoActual[medio];
+    sel.className = 'mapeo-select';
+  }
+  actualizarPanelMayor();
+  document.getElementById('mapeo-msg').textContent = '';
+}
+
+function actualizarPanelMayor() {
+  const cuentasMayor = DATA.metaCuentasMayor || [];
+
+  // Invertir el mapeo para saber qué medios van a cada cuenta
+  const mediosPorCuenta = {};
+  cuentasMayor.forEach(c => { mediosPorCuenta[c.descripcion] = []; });
+  Object.entries(mapeoActual).forEach(([medio, cuenta]) => {
+    if (mediosPorCuenta[cuenta]) mediosPorCuenta[cuenta].push(medio);
+  });
+
+  document.getElementById('mapeo-lista-mayor').innerHTML = cuentasMayor.map(c => {
+    const asignados = mediosPorCuenta[c.descripcion] || [];
+    const chipsHTML = asignados.length
+      ? asignados.map(mp => `<span class="mapeo-chip">${mp}</span>`).join('')
+      : `<span class="mapeo-sin-asignar">Ningún medio asignado</span>`;
+    return `
+      <div class="mapeo-cuenta-card">
+        <div class="mapeo-cuenta-titulo">
+          <span>${c.descripcion}</span>
+          <span class="mapeo-count">${c.movimientos.toLocaleString('es-AR')} movs</span>
+        </div>
+        <div class="mapeo-asignados" id="mayor-chips-${c.descripcion.replace(/\s/g,'_')}">${chipsHTML}</div>
+      </div>`;
+  }).join('');
+}
+
+async function guardarMapeo() {
+  const btn = document.getElementById('btn-guardar-mapeo');
+  const msg = document.getElementById('mapeo-msg');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  msg.style.color = 'var(--muted)';
+  msg.textContent = '';
+  try {
+    // 1. Guardar mapeo
+    const res = await fetch('/api/mapeo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mapeoActual)
+    });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error || 'Error al guardar');
+
+    // 2. Recalcular
+    msg.textContent = '⏳ Recalculando datos…';
+    const periodo = DATA.periodo;
+    const r2 = await fetch(`/api/recalcular/${periodo}`, { method: 'POST' });
+    const d2 = await r2.json();
+    if (!d2.ok) throw new Error(d2.error || 'Error al recalcular');
+
+    msg.style.color = 'var(--green)';
+    msg.textContent = '✅ Mapeo guardado y datos actualizados.';
+    // 3. Recargar el dashboard con los nuevos datos
+    setTimeout(() => cambiarPeriodo(periodo), 1200);
+  } catch(e) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = '❌ Error: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Guardar mapeo';
+  }
+}
+
+// -----------------------------------------------
+// Popup detalle 1400 (click en fila SIN_MAYOR)
+// -----------------------------------------------
+function abrirDetalle1400(fila) {
+  document.getElementById('det-id').textContent      = fila.idPrestamo;
+  document.getElementById('det-nombre').textContent  = fila.nombre || '—';
+  document.getElementById('det-registros').textContent =
+    fila.registros + ' registro' + (fila.registros !== 1 ? 's' : '') + ' en archivo 1400';
+
+  const badge = document.getElementById('det-estado-badge');
+  badge.textContent  = fila.estado.replace('_', ' ');
+  badge.className    = 'badge-estado ' + fila.estado;
+
+  const mBox = document.getElementById('det-motivo-box');
+  if (fila.motivo) {
+    mBox.style.display = 'block';
+    mBox.className     = 'det-motivo-box motivo-' + fila.estado;
+    mBox.textContent   = fila.motivo;
+  } else {
+    mBox.style.display = 'none';
+  }
+
+  const rows = fila.rawFilas || [];
+  let totAA=0, totAS=0, totAT=0, totAU=0, totAV=0, totAW=0;
+  document.getElementById('det-tbody').innerHTML = rows.map((r, i) => {
+    // r = [medioPago, aa, as, at, au, av, aw]
+    const [mp, aa, as_, at, au, av, aw] = r;
+    const tot = aa + as_ + at + au + av + aw;
+    totAA+=aa; totAS+=as_; totAT+=at; totAU+=au; totAV+=av; totAW+=aw;
+    const n = v => v ? fmt(v) : '<span style="color:var(--muted)">—</span>';
+    return `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td>${mp || '<em style="color:var(--muted)">—</em>'}</td>
+      <td>${n(aa)}</td><td>${n(as_)}</td><td>${n(at)}</td>
+      <td>${n(au)}</td><td>${n(av)}</td><td>${n(aw)}</td>
+      <td style="font-weight:600">${fmt(tot)}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="9" style="padding:14px;text-align:center;color:var(--muted)">Sin datos disponibles</td></tr>`;
+
+  // Pie con totales si hay más de 1 fila
+  const tfoot = document.getElementById('det-tfoot');
+  if (rows.length > 1) {
+    const totTotal = totAA + totAS + totAT + totAU + totAV + totAW;
+    const n = v => v ? fmt(v) : '—';
+    tfoot.innerHTML = `<tr>
+      <td colspan="2" style="text-align:left">Total</td>
+      <td>${n(totAA)}</td><td>${n(totAS)}</td><td>${n(totAT)}</td>
+      <td>${n(totAU)}</td><td>${n(totAV)}</td><td>${n(totAW)}</td>
+      <td>${fmt(totTotal)}</td>
+    </tr>`;
+  } else {
+    tfoot.innerHTML = '';
+  }
+
+  document.getElementById('modal-detalle').classList.add('open');
+}
+
+function cerrarDetalle() {
+  document.getElementById('modal-detalle').classList.remove('open');
+}
+
+// Cerrar con ESC o click en el overlay
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarDetalle(); });
+document.getElementById('modal-detalle').addEventListener('click', e => {
+  if (e.target === e.currentTarget) cerrarDetalle();
+});
+
+// Ajustar altura del sidebar al alto real del header
+const hdrEl = document.querySelector('.header');
+if (hdrEl) {
+  const setH = () => document.documentElement.style.setProperty('--header-h', hdrEl.offsetHeight + 'px');
+  setH();
+  new ResizeObserver(setH).observe(hdrEl);
+}
+
+cargar();
+</script>
+</div><!-- /.app-body -->
+</body>
+</html>

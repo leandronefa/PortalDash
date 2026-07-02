@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Validación Cobranzas</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:        #0f1117;
+  --bg2:       #1a1d27;
+  --bg3:       #22253a;
+  --border:    #2e3250;
+  --text:      #e2e4f0;
+  --muted:     #8890b5;
+  --accent:    #6c8eff;
+  --green:     #3ecf6a;
+  --yellow:    #f5c842;
+  --orange:    #f08030;
+  --red:       #f05050;
+  --green-bg:  rgba(62,207,106,.12);
+  --yellow-bg: rgba(245,200,66,.12);
+  --orange-bg: rgba(240,128,48,.12);
+  --red-bg:    rgba(240,80,80,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;font-size:14px;min-height:100vh}
+a{color:var(--accent)}
+
+/* Topbar */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;flex-wrap:wrap}
+.app-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap}
+.app-title span{color:var(--accent)}
+.periodo-sel{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#5577ee}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg3)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.topbar-info{color:var(--muted);font-size:12px;margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.topbar-fecha{color:var(--accent);font-size:11px;font-weight:600}
+
+/* Tabs */
+.tabs-bar{display:flex;gap:2px;padding:16px 24px 0;background:var(--bg)}
+.tab-btn{background:transparent;border:none;color:var(--muted);font-size:14px;font-weight:600;padding:9px 20px;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover:not(.active){color:var(--text)}
+
+/* Main */
+.main{padding:0 24px 32px}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Cards */
+.cards-row{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0 16px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 20px;flex:1;min-width:130px}
+.card-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.card-value{font-size:20px;font-weight:700;color:#fff}
+.card-value.pos{color:var(--green)}
+.card-value.neg{color:var(--red)}
+.card-value.warn{color:var(--yellow)}
+
+/* Badges filtro */
+.badges-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.badge{border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;border:2px solid transparent}
+.badge-all    {background:var(--bg3);color:var(--text);border-color:var(--border)}
+.badge-ok     {background:var(--green-bg);color:var(--green)}
+.badge-revisar{background:var(--yellow-bg);color:var(--yellow)}
+.badge-sinsap {background:var(--orange-bg);color:var(--orange)}
+.badge-sinbc  {background:var(--red-bg);color:var(--red)}
+.badge.active {border-color:currentColor}
+.filter-label {font-size:12px;color:var(--muted);margin-right:4px}
+
+/* Inner tabs (Por Medio de Pago) */
+.inner-tabs-bar{display:flex;gap:2px;margin:16px 0 0;border-bottom:1px solid var(--border)}
+.inner-tab-btn{background:transparent;border:none;color:var(--muted);font-size:13px;font-weight:600;padding:7px 16px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
+.inner-tab-btn.active{color:var(--orange);border-bottom-color:var(--orange)}
+.inner-tab-btn:hover:not(.active){color:var(--text)}
+
+/* Chart */
+.chart-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px}
+.chart-title{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px}
+.chart-canvas{max-height:220px}
+
+/* Table */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.table-hdr{padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.table-hdr-title{font-size:13px;font-weight:600;color:var(--muted)}
+.search-inp{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;font-size:12px;width:200px}
+.search-inp::placeholder{color:var(--muted)}
+.total-rows{font-size:12px;color:var(--muted)}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg3);color:var(--muted);font-weight:600;padding:10px 12px;text-align:right;cursor:pointer;white-space:nowrap;user-select:none;border-bottom:1px solid var(--border)}
+th:first-child,th.left{text-align:left}
+th:hover{color:var(--text)}
+th .sort-arr{margin-left:4px;opacity:.5}
+th.sorted .sort-arr{opacity:1;color:var(--accent)}
+td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--border)}
+td:first-child,td.left{text-align:left}
+tr.data-row:hover td{background:var(--bg3)}
+tr.data-row{cursor:pointer}
+tr.expanded-row td{background:var(--bg3);padding:0}
+
+/* Expanded sub-table */
+.expand-inner{padding:12px 16px 14px 40px}
+.expand-title{font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600}
+.sub-table{font-size:12px;border-collapse:collapse;width:100%;max-width:760px}
+.sub-table th{background:var(--bg2);color:var(--muted);font-size:11px;padding:6px 10px;text-align:right;border-bottom:1px solid var(--border);font-weight:600;cursor:default}
+.sub-table th.left{text-align:left}
+.sub-table td{padding:5px 10px;border-bottom:1px solid var(--border);text-align:right;color:var(--text)}
+.sub-table td.left{text-align:left}
+.sub-table tr:last-child td{border-bottom:none}
+
+/* Estado badges */
+.badge-status{border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.bs-OK      {background:var(--green-bg);color:var(--green)}
+.bs-REVISAR {background:var(--yellow-bg);color:var(--yellow)}
+.bs-SIN_SAP {background:var(--orange-bg);color:var(--orange)}
+.bs-SIN_BC  {background:var(--red-bg);color:var(--red)}
+/* Compatibilidad con períodos viejos */
+.bs-CONCILIADO{background:var(--green-bg);color:var(--green)}
+.bs-DIFERENCIA{background:var(--yellow-bg);color:var(--yellow)}
+.bs-SIN_MAYOR {background:var(--orange-bg);color:var(--orange)}
+.bs-SOLO_MAYOR{background:var(--red-bg);color:var(--red)}
+
+/* Fuente chip */
+.chip-fuente{border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.chip-1167{color:var(--accent);border-color:var(--accent)}
+.chip-1400{color:var(--orange);border-color:var(--orange)}
+
+/* Misc */
+.empty-state{padding:40px;text-align:center;color:var(--muted)}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;justify-content:center;align-items:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:20px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600}
+.field input{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.field-hint{font-size:11px;color:var(--muted);margin-top:3px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.log-box{background:var(--bg);border-radius:6px;padding:10px;font-size:11px;font-family:monospace;color:var(--green);max-height:150px;overflow-y:auto;margin-top:12px;white-space:pre-wrap;display:none}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="app-title">Validación <span>Cobranzas</span></div>
+  <select class="periodo-sel" id="periodSel" onchange="cambiarPeriodo(this.value)"></select>
+  <button class="btn btn-ghost btn-sm" onclick="recalcular()">↺ Recalcular</button>
+  <button class="btn btn-primary btn-sm" onclick="openModal()">+ Cargar período</button>
+  <div class="topbar-info">
+    <span id="genAt"></span>
+    <span class="topbar-fecha" id="fechaOp"></span>
+  </div>
+</div>
+
+<div class="tabs-bar">
+  <button class="tab-btn active" id="tab-propia"      onclick="setTab('propia')">Cartera Propia</button>
+  <button class="tab-btn"        id="tab-noVendible"  onclick="setTab('noVendible')">Cartera No Vendible</button>
+  <button class="tab-btn"        id="tab-diferencias" onclick="setTab('diferencias')">Diferencias de Caja</button>
+  <button class="tab-btn"        id="tab-mediopago"   onclick="setTab('mediopago')">Por Medio de Pago</button>
+</div>
+
+<div class="main">
+  <div id="tab-content-propia"      class="tab-content active"></div>
+  <div id="tab-content-noVendible"  class="tab-content"></div>
+  <div id="tab-content-diferencias" class="tab-content"></div>
+  <div id="tab-content-mediopago"   class="tab-content"></div>
+  <div class="empty-state" id="emptyState" style="display:none">No hay datos cargados para este período.</div>
+</div>
+
+<!-- Modal upload -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">Cargar nuevo período</div>
+    <div class="field">
+      <label>Período (YYYYMM)</label>
+      <input type="text" id="m-periodo" placeholder="ej: 202603" maxlength="6">
+    </div>
+    <div class="field">
+      <label>Archivo 1167 — Be Clever Movimientos (.xlsx)</label>
+      <input type="file" id="m-file1167" accept=".xlsx">
+    </div>
+    <div class="field">
+      <label>Archivo 1400 — Be Clever Auxiliar (.xlsx)</label>
+      <input type="file" id="m-file1400" accept=".xlsx">
+    </div>
+    <div class="field">
+      <label>Libro Mayor SAP (.xlsx)</label>
+      <input type="file" id="m-fileMayor" accept=".xlsx">
+    </div>
+    <div class="field">
+      <label>Fecha de operación (DD/MM/AAAA) <span style="color:var(--muted);font-weight:400">— opcional</span></label>
+      <input type="text" id="m-fecha" placeholder="auto-detectada desde SAP" maxlength="10">
+      <div class="field-hint">Si se deja vacío, se detecta automáticamente del Libro Mayor.</div>
+    </div>
+    <div class="log-box" id="logBox"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btnProcesar" onclick="procesar()">Procesar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// Estado global
+// ════════════════════════════════════════════════════════════
+let DATA       = null;
+let periodoAct = null;
+let tabAct     = 'propia';
+
+const MODULOS_TABS = ['propia','noVendible','diferencias'];
+
+const filterState = {};
+const sortState   = {};
+const expandState = {};
+const searchState = {};
+MODULOS_TABS.forEach(k => {
+  filterState[k] = 'ALL';
+  sortState[k]   = { col: 'diferencia', asc: false };
+  expandState[k] = new Set();
+  searchState[k] = '';
+});
+
+// ════════════════════════════════════════════════════════════
+// Adaptador backward-compat: DATA.carteras → DATA.modulos
+// ════════════════════════════════════════════════════════════
+function getModulos() {
+  if (!DATA) return null;
+  if (DATA.modulos) return DATA.modulos;
+  // Período viejo con DATA.carteras: adaptar al nuevo formato
+  if (DATA.carteras) {
+    const adaptFila = f => ({
+      id: f.id, centroCosto: f.centroCosto, nombre: f.nombre,
+      bc:  f.neto      ?? 0,
+      sap: f.mayorDebe ?? 0,
+      diferencia: f.diferencia ?? 0,
+      estado: f.estado === 'CONCILIADO' ? 'OK'
+            : f.estado === 'DIFERENCIA'  ? 'REVISAR'
+            : f.estado === 'SIN_MAYOR'   ? 'SIN_SAP'
+            : f.estado === 'SOLO_MAYOR'  ? 'SIN_BC'
+            : f.estado,
+      detalleMedio: (f.detalleMedio || []).map(m => ({
+        medio: m.medio, bc: m.neto ?? 0, sap: m.mayorMedio ?? 0,
+        diferencia: (m.neto ?? 0) - (m.mayorMedio ?? 0), estado: 'OK', fuente: '1167'
+      })),
+    });
+    const adaptMod = cart => ({
+      resumen: {
+        totalBC:         cart.resumen?.totalNeto    ?? 0,
+        totalSAP:        cart.resumen?.totalMayor   ?? 0,
+        totalDiferencia: cart.resumen?.totalDiferencia ?? 0,
+      },
+      estados: {
+        ok:      cart.estados?.conciliado ?? 0,
+        revisar: cart.estados?.diferencia ?? 0,
+        sinSAP:  cart.estados?.sinMayor   ?? 0,
+        sinBC:   cart.estados?.soloMayor  ?? 0,
+      },
+      filas: (cart.filas || []).map(adaptFila),
+    });
+    return {
+      propia:      adaptMod(DATA.carteras.propia      || {}),
+      noVendible:  adaptMod(DATA.carteras.noVendible  || {}),
+      diferencias: { resumen: { totalBC:0,totalSAP:0,totalDiferencia:0 }, estados:{ok:0,revisar:0,sinSAP:0,sinBC:0}, filas:[] },
+    };
+  }
+  return null;
+}
+
+// ════════════════════════════════════════════════════════════
+// Init
+// ════════════════════════════════════════════════════════════
+async function init() {
+  const periodos = await fetch('/api/periodos').then(r => r.json()).catch(() => []);
+  const sel = document.getElementById('periodSel');
+  sel.innerHTML = '';
+  if (!periodos.length) {
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = 'Sin períodos';
+    sel.appendChild(o);
+    document.getElementById('emptyState').style.display = '';
+    return;
+  }
+  periodos.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p.substring(0,4)+'/'+p.substring(4,6);
+    sel.appendChild(o);
+  });
+  await cargarPeriodo(periodos[0]);
+}
+
+async function cargarPeriodo(periodo) {
+  const old = document.getElementById('dataScript');
+  if (old) old.remove();
+  const sc  = document.createElement('script');
+  sc.id     = 'dataScript';
+  sc.src    = `data-${periodo}.js?t=${Date.now()}`;
+  sc.onload = () => {
+    DATA       = window.COBRANZAS_DATA;
+    periodoAct = periodo;
+    document.getElementById('genAt').textContent   = DATA.generadoEn ? 'Generado: '+DATA.generadoEn : '';
+    document.getElementById('fechaOp').textContent = DATA.fechaDetectada ? 'Fecha op: '+DATA.fechaDetectada : '';
+    renderAll();
+    document.getElementById('emptyState').style.display = 'none';
+  };
+  sc.onerror = () => {
+    document.getElementById('emptyState').style.display = '';
+    DATA = null;
+  };
+  document.head.appendChild(sc);
+}
+
+function cambiarPeriodo(p) { if (p) cargarPeriodo(p); }
+
+function renderAll() {
+  MODULOS_TABS.forEach(renderTab);
+  renderTabMedioPago();
+}
+
+// ════════════════════════════════════════════════════════════
+// Tabs
+// ════════════════════════════════════════════════════════════
+function setTab(tab) {
+  tabAct = tab;
+  ['propia','noVendible','diferencias','mediopago'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    const el = document.getElementById('tab-content-'+t);
+    el.classList.toggle('active', t===tab);
+  });
+  if (tab === 'mediopago') renderTabMedioPago();
+}
+
+// ════════════════════════════════════════════════════════════
+// Formato
+// ════════════════════════════════════════════════════════════
+const ARS = new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:0,maximumFractionDigits:0});
+function fmt(n) { return (n===undefined||n===null) ? '—' : ARS.format(n); }
+function fmtDif(n) {
+  if (!n && n!==0) return '—';
+  if (Math.abs(n) < 0.05) return '<span style="color:var(--green)">$0</span>';
+  const abs = ARS.format(Math.abs(n));
+  return n >= 0
+    ? `<span style="color:var(--green)">+${abs}</span>`
+    : `<span style="color:var(--red)">-${ARS.format(Math.abs(n))}</span>`;
+}
+function estadoBadge(e) {
+  const MAP = { OK:'✅ OK', REVISAR:'⚠ REVISAR', SIN_SAP:'— Sin SAP', SIN_BC:'— Sin BC',
+                CONCILIADO:'✅ OK', DIFERENCIA:'⚠ REVISAR', SIN_MAYOR:'— Sin SAP', SOLO_MAYOR:'— Sin BC' };
+  const cls = e.startsWith('SIN_') ? 'bs-'+e : 'bs-'+e;
+  return `<span class="badge-status ${cls}">${MAP[e]||e}</span>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// Render tab módulo
+// ════════════════════════════════════════════════════════════
+function renderTab(tabKey) {
+  const el   = document.getElementById('tab-content-'+tabKey);
+  const mods = getModulos();
+  if (!mods || !mods[tabKey]) { el.innerHTML = ''; return; }
+  const mod = mods[tabKey];
+
+  el.innerHTML =
+    renderCards(mod.resumen, mod.estados) +
+    renderBadges(mod.estados, tabKey) +
+    renderChart(mod.filas, tabKey) +
+    renderTable(mod.filas, tabKey);
+
+  mountChart(mod.filas, tabKey);
+  attachTableEvents(tabKey);
+}
+
+// ── Cards ─────────────────────────────────────────────────
+function renderCards(r, e) {
+  const difClass = Math.abs(r.totalDiferencia||0) < 1 ? 'pos'
+                 : r.totalDiferencia > 0 ? 'warn' : 'neg';
+  return `<div class="cards-row">
+    <div class="card"><div class="card-label">Be Clever Total</div><div class="card-value">${fmt(r.totalBC)}</div></div>
+    <div class="card"><div class="card-label">SAP Total</div><div class="card-value">${fmt(r.totalSAP)}</div></div>
+    <div class="card"><div class="card-label">Diferencia</div><div class="card-value ${difClass}">${fmt(r.totalDiferencia)}</div></div>
+    <div class="card"><div class="card-label">✅ OK</div><div class="card-value pos">${e.ok}</div></div>
+    <div class="card"><div class="card-label">⚠ Revisar</div><div class="card-value ${e.revisar>0?'warn':''}">${e.revisar}</div></div>
+  </div>`;
+}
+
+// ── Badges filtro ─────────────────────────────────────────
+function renderBadges(e, tabKey) {
+  const cur = filterState[tabKey];
+  const tot = e.ok + e.revisar + e.sinSAP + e.sinBC;
+  return `<div class="badges-row">
+    <span class="filter-label">Filtrar:</span>
+    <span class="badge badge-all     ${cur==='ALL'    ?'active':''}" onclick="setFilter('${tabKey}','ALL')">Todos (${tot})</span>
+    <span class="badge badge-ok      ${cur==='OK'     ?'active':''}" onclick="setFilter('${tabKey}','OK')">✅ OK (${e.ok})</span>
+    <span class="badge badge-revisar ${cur==='REVISAR'?'active':''}" onclick="setFilter('${tabKey}','REVISAR')">⚠ Revisar (${e.revisar})</span>
+    <span class="badge badge-sinsap  ${cur==='SIN_SAP'?'active':''}" onclick="setFilter('${tabKey}','SIN_SAP')">— Sin SAP (${e.sinSAP})</span>
+    <span class="badge badge-sinbc   ${cur==='SIN_BC' ?'active':''}" onclick="setFilter('${tabKey}','SIN_BC')">— Sin BC (${e.sinBC})</span>
+  </div>`;
+}
+
+function setFilter(tabKey, estado) { filterState[tabKey] = estado; renderTab(tabKey); }
+
+// ── Chart ─────────────────────────────────────────────────
+const chartInst = {};
+function renderChart(filas, tabKey) {
+  return `<div class="chart-wrap">
+    <div class="chart-title">Be Clever vs SAP por sucursal (top 20 por diferencia)</div>
+    <canvas id="chart-${tabKey}" class="chart-canvas"></canvas>
+  </div>`;
+}
+function mountChart(filas, tabKey) {
+  if (chartInst[tabKey]) chartInst[tabKey].destroy();
+  const top = [...filas]
+    .filter(f => f.bc > 0 || f.sap > 0)
+    .sort((a,b) => Math.abs(b.diferencia) - Math.abs(a.diferencia))
+    .slice(0, 20);
+  const ctx = document.getElementById('chart-'+tabKey);
+  if (!ctx) return;
+  chartInst[tabKey] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(f => 'S'+String(f.id).padStart(3,'0')),
+      datasets: [
+        { label:'Be Clever', data: top.map(f=>f.bc),  backgroundColor:'rgba(108,142,255,.7)' },
+        { label:'SAP',       data: top.map(f=>f.sap), backgroundColor:'rgba(62,207,106,.5)'  },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ labels:{ color:'#8890b5', font:{size:11} } } },
+      scales:{
+        x:{ ticks:{ color:'#8890b5', font:{size:10}, maxRotation:45 }, grid:{ color:'rgba(46,50,80,.4)' } },
+        y:{ ticks:{ color:'#8890b5', font:{size:10}, callback: v=>'$'+new Intl.NumberFormat('es-AR',{notation:'compact'}).format(v) }, grid:{ color:'rgba(46,50,80,.4)' } }
+      }
+    }
+  });
+}
+
+// ── Table ─────────────────────────────────────────────────
+const COLS = [
+  { key:'id',         label:'Suc',        left:true,  fmt: f => `<b>${String(f.id).padStart(3,'0')}</b>` },
+  { key:'nombre',     label:'Nombre',     left:true,  fmt: f => f.nombre||'—' },
+  { key:'bc',         label:'Be Clever',             fmt: f => fmt(f.bc) },
+  { key:'sap',        label:'SAP',                   fmt: f => fmt(f.sap) },
+  { key:'diferencia', label:'Diferencia',            fmt: f => fmtDif(f.diferencia) },
+  { key:'estado',     label:'Estado',                fmt: f => estadoBadge(f.estado) },
+];
+
+function renderTable(filas, tabKey) {
+  const { col, asc } = sortState[tabKey];
+  const filtro = filterState[tabKey];
+  const busq   = searchState[tabKey];
+
+  let rows = [...filas];
+  if (filtro !== 'ALL') rows = rows.filter(r => r.estado === filtro);
+  if (busq) rows = rows.filter(r =>
+    (r.nombre||'').toLowerCase().includes(busq) || String(r.id).includes(busq)
+  );
+  rows.sort((a,b) => {
+    const av = a[col]??0, bv = b[col]??0;
+    return typeof av==='string'
+      ? (asc?1:-1)*av.localeCompare(bv)
+      : (asc?1:-1)*(Math.abs(bv)-Math.abs(av));
+  });
+
+  const ths = COLS.map(c => {
+    const sorted = c.key===col;
+    const arr = sorted?(asc?'▲':'▼'):'↕';
+    return `<th class="${sorted?'sorted':''} ${c.left?'left':''}" onclick="sortBy('${tabKey}','${c.key}')">${c.label} <span class="sort-arr">${arr}</span></th>`;
+  }).join('');
+
+  const tds = rows.map(f => {
+    const exp = expandState[tabKey].has(f.id);
+    const cells = COLS.map((c,i) => `<td class="${c.left?'left':''}">${c.fmt(f)}</td>`).join('');
+    let expandedTr = '';
+    if (exp && f.detalleMedio && f.detalleMedio.length) {
+      const subRows = f.detalleMedio.map(m => `
+        <tr>
+          <td class="left"><b>${m.medio}</b></td>
+          <td>${fmt(m.bc)}</td>
+          <td>${fmt(m.sap)}</td>
+          <td>${fmtDif(m.diferencia)}</td>
+          <td>${estadoBadge(m.estado)}</td>
+          <td>${m.fuente ? `<span class="chip-fuente chip-${(m.fuente||'').toLowerCase()}">${m.fuente}</span>` : '—'}</td>
+        </tr>`).join('');
+      expandedTr = `<tr class="expanded-row"><td colspan="${COLS.length}">
+        <div class="expand-inner">
+          <div class="expand-title">Detalle por Medio de Pago</div>
+          <table class="sub-table">
+            <tr>
+              <th class="left">Medio</th>
+              <th>Be Clever</th><th>SAP</th><th>Diferencia</th><th>Estado</th><th>Fuente</th>
+            </tr>
+            ${subRows}
+          </table>
+        </div>
+      </td></tr>`;
+    }
+    return `<tr class="data-row" data-id="${f.id}" data-tab="${tabKey}">${cells}</tr>${expandedTr}`;
+  }).join('');
+
+  return `<div class="table-wrap">
+    <div class="table-hdr">
+      <span class="table-hdr-title">Sucursales</span>
+      <input class="search-inp" placeholder="Buscar sucursal..." value="${busq}"
+        oninput="setSearch('${tabKey}',this.value)">
+      <span class="total-rows">${rows.length} registros</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>${ths}</tr></thead>
+        <tbody>${tds||'<tr><td colspan="6" class="empty-state">Sin resultados</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function attachTableEvents(tabKey) {
+  document.querySelectorAll(`tr.data-row[data-tab="${tabKey}"]`).forEach(tr => {
+    tr.addEventListener('click', () => toggleExpand(tabKey, parseInt(tr.dataset.id)));
+  });
+}
+function toggleExpand(tabKey, id) {
+  const s = expandState[tabKey];
+  s.has(id) ? s.delete(id) : s.add(id);
+  renderTab(tabKey);
+}
+function sortBy(tabKey, col) {
+  const s = sortState[tabKey];
+  s.col===col ? (s.asc=!s.asc) : (s.col=col, s.asc=false);
+  renderTab(tabKey);
+}
+function setSearch(tabKey, val) { searchState[tabKey]=val.toLowerCase(); renderTab(tabKey); }
+
+// ════════════════════════════════════════════════════════════
+// Tab: Por Medio de Pago
+// ════════════════════════════════════════════════════════════
+let tabMedioCartera = 'propia';
+const expandStateMedio = {};
+const sortStateMedio   = {};
+const searchStateMedio = {};
+MODULOS_TABS.forEach(k => {
+  expandStateMedio[k] = new Set();
+  sortStateMedio[k]   = { col: 'bc', asc: false };
+  searchStateMedio[k] = '';
+});
+const chartMedioInst = {};
+
+function buildMedioPagoData(carteraKey) {
+  const mods = getModulos();
+  if (!mods || !mods[carteraKey]) return [];
+  const medioMap = new Map();
+  for (const suc of mods[carteraKey].filas) {
+    for (const dm of (suc.detalleMedio || [])) {
+      if (!medioMap.has(dm.medio))
+        medioMap.set(dm.medio, { medio:dm.medio, bc:0, sap:0, diferencia:0, sucursales:[] });
+      const m = medioMap.get(dm.medio);
+      m.bc  += dm.bc  || 0;
+      m.sap += dm.sap || 0;
+      m.diferencia += dm.diferencia || 0;
+      m.sucursales.push({
+        id:suc.id, nombre:suc.nombre,
+        bc:dm.bc||0, sap:dm.sap||0, diferencia:dm.diferencia||0,
+        estado:dm.estado, fuente:dm.fuente,
+      });
+    }
+  }
+  return [...medioMap.values()].sort((a,b)=>b.bc-a.bc);
+}
+
+function renderTabMedioPago() {
+  const el = document.getElementById('tab-content-mediopago');
+  const mods = getModulos();
+  if (!mods) { el.innerHTML=''; return; }
+
+  const cartera = tabMedioCartera;
+  const medios  = buildMedioPagoData(cartera);
+  const { col, asc } = sortStateMedio[cartera];
+  const busq = searchStateMedio[cartera];
+
+  const innerTabs = `<div class="inner-tabs-bar">
+    ${MODULOS_TABS.map(k => {
+      const labels = { propia:'Cartera Propia', noVendible:'Cartera No Vendible', diferencias:'Diferencias de Caja' };
+      return `<button class="inner-tab-btn ${cartera===k?'active':''}" onclick="setTabMedioCartera('${k}')">${labels[k]}</button>`;
+    }).join('')}
+  </div>`;
+
+  const totalBC  = medios.reduce((s,m)=>s+m.bc,  0);
+  const totalSAP = medios.reduce((s,m)=>s+m.sap, 0);
+  const totalDif = medios.reduce((s,m)=>s+m.diferencia, 0);
+
+  const cards = `<div class="cards-row">
+    <div class="card"><div class="card-label">Be Clever Total</div><div class="card-value">${fmt(totalBC)}</div></div>
+    <div class="card"><div class="card-label">SAP Total</div><div class="card-value">${fmt(totalSAP)}</div></div>
+    <div class="card"><div class="card-label">Diferencia</div><div class="card-value ${Math.abs(totalDif)<1?'pos':'warn'}">${fmt(totalDif)}</div></div>
+    <div class="card"><div class="card-label">Medios de Pago</div><div class="card-value">${medios.length}</div></div>
+  </div>`;
+
+  const chartHtml = `<div class="chart-wrap">
+    <div class="chart-title">Be Clever vs SAP por Medio de Pago</div>
+    <canvas id="chart-medio-${cartera}" class="chart-canvas"></canvas>
+  </div>`;
+
+  const COLS_M = [
+    { key:'medio',      label:'Medio de Pago', left:true, nosort:false },
+    { key:'bc',         label:'Be Clever',     left:false, nosort:false },
+    { key:'sap',        label:'SAP',           left:false, nosort:false },
+    { key:'diferencia', label:'Diferencia',    left:false, nosort:false },
+    { key:'_suc',       label:'Sucursales',    left:false, nosort:true  },
+  ];
+
+  const ths = COLS_M.map(c => {
+    if (c.nosort) return `<th>Sucursales</th>`;
+    const sorted = c.key===col;
+    const arr = sorted?(asc?'▲':'▼'):'↕';
+    return `<th class="${sorted?'sorted':''} ${c.left?'left':''}" onclick="sortByMedio('${cartera}','${c.key}')">${c.label} <span class="sort-arr">${arr}</span></th>`;
+  }).join('');
+
+  let rows = [...medios];
+  if (busq) rows = rows.filter(m=>m.medio.toLowerCase().includes(busq));
+  rows.sort((a,b)=>{
+    const av=a[col]??0, bv=b[col]??0;
+    return typeof av==='string'?(asc?1:-1)*av.localeCompare(bv):(asc?1:-1)*(bv-av);
+  });
+
+  const tds = rows.map(m => {
+    const exp = expandStateMedio[cartera].has(m.medio);
+    const cells = `
+      <td class="left"><b>${m.medio}</b></td>
+      <td>${fmt(m.bc)}</td>
+      <td>${fmt(m.sap)}</td>
+      <td>${fmtDif(m.diferencia)}</td>
+      <td>${m.sucursales.length}</td>`;
+    let expandedTr = '';
+    if (exp && m.sucursales.length) {
+      const sucOrd = [...m.sucursales].sort((a,b)=>Math.abs(b.diferencia)-Math.abs(a.diferencia));
+      const subRows = sucOrd.map(s=>`
+        <tr>
+          <td><b>${String(s.id).padStart(3,'0')}</b></td>
+          <td class="left">${s.nombre||'—'}</td>
+          <td>${fmt(s.bc)}</td>
+          <td>${fmt(s.sap)}</td>
+          <td>${fmtDif(s.diferencia)}</td>
+          <td>${estadoBadge(s.estado)}</td>
+          <td>${s.fuente?`<span class="chip-fuente chip-${(s.fuente||'').toLowerCase()}">${s.fuente}</span>`:'—'}</td>
+        </tr>`).join('');
+      expandedTr = `<tr class="expanded-row"><td colspan="5">
+        <div class="expand-inner">
+          <div class="expand-title">Detalle por Sucursal</div>
+          <table class="sub-table">
+            <tr>
+              <th>Suc</th><th class="left">Nombre</th>
+              <th>Be Clever</th><th>SAP</th><th>Diferencia</th><th>Estado</th><th>Fuente</th>
+            </tr>
+            ${subRows}
+          </table>
+        </div>
+      </td></tr>`;
+    }
+    return `<tr class="data-row" data-medio="${encodeURIComponent(m.medio)}" data-cartera="${cartera}">${cells}</tr>${expandedTr}`;
+  }).join('');
+
+  const tabla = `<div class="table-wrap">
+    <div class="table-hdr">
+      <span class="table-hdr-title">Medios de Pago</span>
+      <input class="search-inp" placeholder="Buscar medio..." value="${busq}"
+        oninput="setSearchMedio('${cartera}',this.value)">
+      <span class="total-rows">${rows.length} medios</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>${ths}</tr></thead>
+        <tbody>${tds||'<tr><td colspan="5" class="empty-state">Sin resultados</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>`;
+
+  el.innerHTML = innerTabs + cards + chartHtml + tabla;
+
+  mountChartMedio(medios, cartera);
+  document.querySelectorAll(`tr.data-row[data-cartera="${cartera}"]`).forEach(tr => {
+    tr.addEventListener('click', () => toggleExpandMedio(cartera, decodeURIComponent(tr.dataset.medio)));
+  });
+}
+
+function mountChartMedio(medios, cartera) {
+  const key = `medio-${cartera}`;
+  if (chartMedioInst[key]) chartMedioInst[key].destroy();
+  const top = [...medios].sort((a,b)=>b.bc-a.bc).slice(0,15);
+  const ctx = document.getElementById('chart-medio-'+cartera);
+  if (!ctx) return;
+  chartMedioInst[key] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(m=>m.medio.length>22?m.medio.substring(0,22)+'…':m.medio),
+      datasets: [
+        { label:'Be Clever', data:top.map(m=>m.bc),  backgroundColor:'rgba(108,142,255,.7)' },
+        { label:'SAP',       data:top.map(m=>m.sap), backgroundColor:'rgba(62,207,106,.5)'  },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ labels:{ color:'#8890b5', font:{size:11} } } },
+      scales:{
+        x:{ ticks:{ color:'#8890b5', font:{size:10}, maxRotation:45 }, grid:{ color:'rgba(46,50,80,.4)' } },
+        y:{ ticks:{ color:'#8890b5', font:{size:10}, callback:v=>'$'+new Intl.NumberFormat('es-AR',{notation:'compact'}).format(v) }, grid:{ color:'rgba(46,50,80,.4)' } }
+      }
+    }
+  });
+}
+
+function setTabMedioCartera(c) { tabMedioCartera=c; renderTabMedioPago(); }
+function toggleExpandMedio(cartera, medio) {
+  const s = expandStateMedio[cartera];
+  s.has(medio)?s.delete(medio):s.add(medio);
+  renderTabMedioPago();
+}
+function sortByMedio(cartera, col) {
+  const s = sortStateMedio[cartera];
+  s.col===col?(s.asc=!s.asc):(s.col=col,s.asc=false);
+  renderTabMedioPago();
+}
+function setSearchMedio(cartera, val) { searchStateMedio[cartera]=val.toLowerCase(); renderTabMedioPago(); }
+
+// ════════════════════════════════════════════════════════════
+// Modal
+// ════════════════════════════════════════════════════════════
+function openModal()  { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function procesar() {
+  const periodo = document.getElementById('m-periodo').value.trim();
+  const f1167   = document.getElementById('m-file1167').files[0];
+  const f1400   = document.getElementById('m-file1400').files[0];
+  const fMayor  = document.getElementById('m-fileMayor').files[0];
+  const fecha   = document.getElementById('m-fecha').value.trim();
+
+  if (!periodo || !/^\d{6}$/.test(periodo)) return alert('Ingresá el período en formato YYYYMM');
+  if (!f1167)  return alert('Seleccioná el archivo 1167');
+  if (!f1400)  return alert('Seleccioná el archivo 1400');
+  if (!fMayor) return alert('Seleccioná el Libro Mayor SAP');
+  if (fecha && !/^\d{2}\/\d{2}\/\d{4}$/.test(fecha)) return alert('La fecha debe tener formato DD/MM/AAAA');
+
+  const form = new FormData();
+  form.append('periodo',     periodo);
+  form.append('archivo1167', f1167);
+  form.append('archivo1400', f1400);
+  form.append('archivoMayor',fMayor);
+  if (fecha) form.append('fecha', fecha);
+
+  const log  = document.getElementById('logBox');
+  const btnP = document.getElementById('btnProcesar');
+  log.style.display=''; log.textContent='Procesando...';
+  btnP.disabled = true;
+
+  try {
+    const r = await fetch('/api/procesar', { method:'POST', body:form });
+    const j = await r.json();
+    if (!r.ok) { log.textContent='❌ Error: '+(j.error||r.statusText); return; }
+    log.textContent = '✓ Procesado OK\n\n'+j.log;
+
+    const periodos = await fetch('/api/periodos').then(r=>r.json()).catch(()=>[]);
+    const sel = document.getElementById('periodSel');
+    sel.innerHTML = '';
+    periodos.forEach(p => {
+      const o=document.createElement('option');
+      o.value=p; o.textContent=p.substring(0,4)+'/'+p.substring(4,6);
+      sel.appendChild(o);
+    });
+    sel.value = periodo;
+    await cargarPeriodo(periodo);
+  } catch(e) {
+    log.textContent = '❌ '+e.message;
+  } finally {
+    btnP.disabled = false;
+  }
+}
+
+async function recalcular() {
+  if (!periodoAct) return;
+  const r = await fetch('/api/recalcular/'+periodoAct, { method:'POST' });
+  const j = await r.json();
+  if (!r.ok) return alert('Error: '+(j.error||''));
+  await cargarPeriodo(periodoAct);
+}
+
+// ════════════════════════════════════════════════════════════
+// Bootstrap
+// ════════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>

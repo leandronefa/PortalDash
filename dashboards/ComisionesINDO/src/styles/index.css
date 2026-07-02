@@ -1,0 +1,150 @@
+/* ────────────────────────────────────────────────────────────────
+   COMISIONES INDO — Design System
+   Palette: INDO blue + grays + semaphore greens/yellows/reds
+   ──────────────────────────────────────────────────────────────── */
+
+:root {
+  --color-primary:   #1a56db;
+  --color-primary-d: #1040b0;
+  --color-bg:        #f3f4f6;
+  --color-surface:   #ffffff;
+  --color-border:    #d1d5db;
+  --color-text:      #111827;
+  --color-muted:     #6b7280;
+  --color-danger:    #dc2626;
+  --color-success:   #16a34a;
+  --color-warn:      #ca8a04;
+
+  --sidebar-w: 220px;
+  --header-h:  56px;
+  --radius:    8px;
+  --shadow:    0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+  --transition: 150ms ease;
+
+  /* semaphore */
+  --sem-green:  #dcfce7;
+  --sem-green-t:#15803d;
+  --sem-yellow: #fef9c3;
+  --sem-yellow-t:#854d0e;
+  --sem-red:    #fee2e2;
+  --sem-red-t:  #b91c1c;
+
+  /* misc */
+  --color-row-hover: #f8fafc;
+  --badge-a-bg: #dbeafe; --badge-a-t: #1d4ed8;
+  --badge-b-bg: #fef3c7; --badge-b-t: #92400e;
+  --badge-c-bg: #f1f5f9; --badge-c-t: #475569;
+  --badge-d-bg: #dcfce7; --badge-d-t: #166534;
+  --badge-e-bg: #fff7ed; --badge-e-t: #c2410c;
+}
+
+/* ── Dark mode variables ───────────────────────────────────────── */
+/* Aplicado por media query (preferencia del sistema) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-primary:   #3b82f6;
+    --color-primary-d: #2563eb;
+    --color-bg:        #0f172a;
+    --color-surface:   #1e293b;
+    --color-border:    #334155;
+    --color-text:      #f1f5f9;
+    --color-muted:     #94a3b8;
+    --color-danger:    #f87171;
+    --color-success:   #4ade80;
+    --color-warn:      #fde047;
+    --shadow:          0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+    --sem-green:   #14532d; --sem-green-t:  #4ade80;
+    --sem-yellow:  #713f12; --sem-yellow-t: #fde047;
+    --sem-red:     #7f1d1d; --sem-red-t:    #fca5a5;
+    --color-row-hover: #263040;
+    --badge-a-bg: #1e3a8a; --badge-a-t: #93c5fd;
+    --badge-b-bg: #713f12; --badge-b-t: #fef08a;
+    --badge-c-bg: #334155; --badge-c-t: #94a3b8;
+    --badge-d-bg: #14532d; --badge-d-t: #86efac;
+    --badge-e-bg: #431407; --badge-e-t: #f97316;
+  }
+}
+
+/* Forzar modo claro (override del media query — mayor especificidad) */
+html[data-theme="light"] {
+  color-scheme: light;
+  --color-primary:   #1a56db;
+  --color-primary-d: #1040b0;
+  --color-bg:        #f3f4f6;
+  --color-surface:   #ffffff;
+  --color-border:    #d1d5db;
+  --color-text:      #111827;
+  --color-muted:     #6b7280;
+  --color-danger:    #dc2626;
+  --color-success:   #16a34a;
+  --color-warn:      #ca8a04;
+  --shadow:          0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+  --sem-green:  #dcfce7; --sem-green-t: #15803d;
+  --sem-yellow: #fef9c3; --sem-yellow-t:#854d0e;
+  --sem-red:    #fee2e2; --sem-red-t:   #b91c1c;
+  --color-row-hover: #f8fafc;
+  --badge-a-bg: #dbeafe; --badge-a-t: #1d4ed8;
+  --badge-b-bg: #fef3c7; --badge-b-t: #92400e;
+  --badge-c-bg: #f1f5f9; --badge-c-t: #475569;
+  --badge-d-bg: #dcfce7; --badge-d-t: #166534;
+  --badge-e-bg: #fff7ed; --badge-e-t: #c2410c;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-primary:   #3b82f6;
+  --color-primary-d: #2563eb;
+  --color-bg:        #0f172a;
+  --color-surface:   #1e293b;
+  --color-border:    #334155;
+  --color-text:      #f1f5f9;
+  --color-muted:     #94a3b8;
+  --color-danger:    #f87171;
+  --color-success:   #4ade80;
+  --color-warn:      #fde047;
+  --shadow:          0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+  --sem-green:   #14532d; --sem-green-t:  #4ade80;
+  --sem-yellow:  #713f12; --sem-yellow-t: #fde047;
+  --sem-red:     #7f1d1d; --sem-red-t:    #fca5a5;
+  --color-row-hover: #263040;
+  --badge-a-bg: #1e3a8a; --badge-a-t: #93c5fd;
+  --badge-b-bg: #713f12; --badge-b-t: #fef08a;
+  --badge-c-bg: #334155; --badge-c-t: #94a3b8;
+  --badge-d-bg: #14532d; --badge-d-t: #86efac;
+  --badge-e-bg: #431407; --badge-e-t: #f97316;
+}
+
+/* Inputs/selects explícitos en dark (Firefox no hereda color-scheme automáticamente) */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+@media (prefers-color-scheme: dark) {
+  input, select, textarea {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-border);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }

@@ -6,6 +6,7 @@ import DiasBar from './DiasBar'
 interface Props {
   usuarios: Usuario[]
   onUpdateCorreo: (id: number, correo: string) => Promise<void>
+  onForzarReset: (id: number, usuario: string) => Promise<void>
 }
 
 function CorreoCell({
@@ -107,8 +108,9 @@ function CorreoCell({
   )
 }
 
-export default function UserTable({ usuarios, onUpdateCorreo }: Props) {
-  const [filtro, setFiltro] = useState('')
+export default function UserTable({ usuarios, onUpdateCorreo, onForzarReset }: Props) {
+  const [filtro, setFiltro]           = useState('')
+  const [resettingId, setResettingId] = useState<number | null>(null)
 
   const lista = filtro
     ? usuarios.filter(u =>
@@ -157,12 +159,20 @@ export default function UserTable({ usuarios, onUpdateCorreo }: Props) {
               <th>Próximo cambio</th>
               <th>Vigencia restante</th>
               <th>Correo</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {lista.map(u => (
               <tr key={u.Id} style={{ opacity: u.Activo ? 1 : 0.5 }}>
-                <td><StatusBadge estado={u.Estado} /></td>
+                <td>
+                  <StatusBadge estado={u.Estado} />
+                  {u.Estado === 'PROGRAMADA' && u.ResetDesde && (
+                    <div style={{ fontSize: '0.7rem', color: '#1565c0', marginTop: 2 }}>
+                      desde {u.ResetDesde.slice(0, 10)}
+                    </div>
+                  )}
+                </td>
                 <td>
                   <strong className="monospace">{u.Servidor}</strong>
                   {!u.Activo && (
@@ -190,6 +200,35 @@ export default function UserTable({ usuarios, onUpdateCorreo }: Props) {
                 </td>
                 <td>
                   <CorreoCell usuario={u} onUpdateCorreo={onUpdateCorreo} />
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <button
+                    onClick={async () => {
+                      if (!u.CorreoDestino) return
+                      if (!confirm(`¿Forzar reset de contraseña para "${u.UsuarioWindows}" en ${u.Servidor}?\n\nEl agente lo ejecutará en el próximo ciclo (≤5 min) y enviará el correo a ${u.CorreoDestino}.`)) return
+                      setResettingId(u.Id)
+                      try {
+                        await onForzarReset(u.Id, u.UsuarioWindows)
+                      } finally {
+                        setResettingId(null)
+                      }
+                    }}
+                    disabled={!u.CorreoDestino || resettingId === u.Id}
+                    title={u.CorreoDestino ? `Forzar reset → correo a ${u.CorreoDestino}` : 'Sin correo — asigná uno primero'}
+                    style={{
+                      background: u.CorreoDestino ? '#7b2d2d' : 'transparent',
+                      color: u.CorreoDestino ? '#ffaaaa' : '#666',
+                      border: `1px solid ${u.CorreoDestino ? '#c0392b' : '#444'}`,
+                      borderRadius: 4,
+                      padding: '3px 8px',
+                      cursor: u.CorreoDestino ? 'pointer' : 'not-allowed',
+                      fontSize: '0.75rem',
+                      whiteSpace: 'nowrap',
+                      opacity: resettingId === u.Id ? 0.5 : 1,
+                    }}
+                  >
+                    {resettingId === u.Id ? '…' : '🔑 Reset'}
+                  </button>
                 </td>
               </tr>
             ))}

@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Conector SQL Server para ejecutar el Stored Procedure corporativo -->
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <!-- Conector SQL Server via ODBC (evita SNI nativo de SqlClient roto por Windows Updates) -->
+    <PackageReference Include="System.Data.Odbc" Version="9.0.0" />
 
     <!-- Permite ejecutar la app como Servicio de Windows -->
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0" />

@@ -9,6 +9,7 @@ portal-src/.vs/
 
 # Secretos de producción (contienen contraseñas reales)
 portal-src/appsettings.Production.json
+dashboards/**/ml-config.json
 
 # Node.js
 dashboards/**/node_modules/
@@ -25,6 +26,23 @@ dashboards/**/*.log
 *.csv
 *.msi
 dashboards/**/nssm.exe
+
+# Datos de negocio (exports Excel / SAP / datasets generados) — pesados y con datos reales
+*.xlsx
+*.xls
+dashboards/ConciliacionPunitorios/public/data*.js
+dashboards/ConciliacionPunitorios/archivos/
+dashboards/ValidacionCobranzas/archivos/
+dashboards/EstadoResultado/sap-inbox/
+dashboards/EstadoResultado/SAPResultProcesado/
+dashboards/EstadoResultado/data-cache/
+
+# Scripts temporales de exploración
+dashboards/ComisionesINDO/tmp*.cjs
+
+# Config local de Claude Code
+.claude/
+**/.claude/
 
 # Miscelánea
 *.user

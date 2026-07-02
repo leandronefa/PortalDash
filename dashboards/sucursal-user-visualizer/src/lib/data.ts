@@ -162,6 +162,7 @@ export interface GraphLink {
 export function getGraphData(data: DataRow[]) {
   const nodes = new Map<string, GraphNode>();
   const links: GraphLink[] = [];
+  const linkKeys = new Set<string>();
 
   const supervisors = ['eelizondo', 'jrusnak', 'hmoran', 'lejarque', 'bjorda', 'gastong', 'evidable', 'jrossini'];
 
@@ -171,13 +172,19 @@ export function getGraphData(data: DataRow[]) {
       nodes.set(branchId, { id: branchId, label: row.sucursal, type: 'sucursal', group: 1 });
     }
 
-    const userId = `user_${row.usuario}`;
+    const isSupervisor = supervisors.includes(row.usuario.toLowerCase());
+    // Supervisores: id normalizado y etiqueta en mayúsculas para unificar variantes (lejarque / LEjarque)
+    const userId = isSupervisor ? `user_${row.usuario.toLowerCase()}` : `user_${row.usuario}`;
     if (!nodes.has(userId)) {
-      const isSupervisor = supervisors.includes(row.usuario.toLowerCase());
-      nodes.set(userId, { id: userId, label: row.usuario, type: isSupervisor ? 'supervisor' : 'usuario', group: isSupervisor ? 3 : 2 });
+      const label = isSupervisor ? row.usuario.toUpperCase() : row.usuario;
+      nodes.set(userId, { id: userId, label, type: isSupervisor ? 'supervisor' : 'usuario', group: isSupervisor ? 3 : 2 });
     }
 
-    links.push({ source: branchId, target: userId });
+    const linkKey = `${branchId}→${userId}`;
+    if (!linkKeys.has(linkKey)) {
+      linkKeys.add(linkKey);
+      links.push({ source: branchId, target: userId });
+    }
   });
 
   return {

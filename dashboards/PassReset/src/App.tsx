@@ -236,6 +236,11 @@ export default function App() {
                     push('Correo actualizado', 'success')
                     await cargarDatos()
                   }}
+                  onForzarReset={async (id, usuario) => {
+                    await api.forzarReset(id)
+                    push(`Reset solicitado para "${usuario}" — el agente lo ejecutará en el próximo ciclo`, 'warn')
+                    await cargarDatos()
+                  }}
                 />
             }
           </div>

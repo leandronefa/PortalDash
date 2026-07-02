@@ -107,6 +107,21 @@ app.put('/api/usuarios/:id/correo', async (req, res) => {
   }
 });
 
+// POST /api/usuarios/:id/forzar-reset — marca el usuario como pendiente para el próximo ciclo del agente
+app.post('/api/usuarios/:id/forzar-reset', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const p = await getPool();
+    await p.request()
+      .input('Id', sql.Int, id)
+      .execute('sp_PassReset_ForzarReset');
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Fallback SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));

@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Writable } from 'stream';
+import { readFileSync, readdirSync, mkdirSync, renameSync, existsSync } from 'fs';
 import * as ftp from 'basic-ftp';
 import sql from 'mssql';
 import 'dotenv/config';
@@ -215,13 +216,13 @@ async function queryTesiFromSQL(fuente) {
 
 // ── Guardar CSV del FTP en SQL Server ────────────────────────────────────────
 // Elimina los registros del mismo dia+fuente antes de insertar (idempotente).
-async function saveFTPDataToSQL(csvString, fuente) {
+async function saveFTPDataToSQL(csvString, fuente, fechaDescarga = null) {
   const lines = csvString.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) { console.log(`[SQL] ${fuente}: CSV vacío, nada que guardar`); return 0; }
 
   const rawHeaders = lines[0].split(';').map(h => h.trim());
   const dataRows = lines.slice(1);
-  const fechaDescarga = new Date().toISOString().slice(0, 10);
+  if (!fechaDescarga) fechaDescarga = new Date().toISOString().slice(0, 10);
 
   const get = (obj, ...keys) => { for (const k of keys) if (obj[k] != null && obj[k] !== '') return obj[k]; return ''; };
 
@@ -639,6 +640,69 @@ function msUntilNextRefresh() {
   if (next <= now) next.setDate(next.getDate() + 1);
   return next.getTime() - now.getTime();
 }
+
+// ── Helper: parsear fuente+fecha del nombre de archivo local ─────────────────
+function parseFuenteFecha(filename) {
+  const base = filename.replace(/\.csv$/i, '');
+  const isTesi   = /^tesi/i.test(base);
+  const isPueblo = /^pueblo/i.test(base);
+  if (!isTesi && !isPueblo) return null;
+  const fuente = isTesi ? 'Tesi' : 'Pueblo';
+  let m = base.match(/_(\d{4})(\d{2})(\d{2})_/);
+  if (m) return { fuente, fecha: `${m[1]}-${m[2]}-${m[3]}` };
+  m = base.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return { fuente, fecha: `${m[1]}-${m[2]}-${m[3]}` };
+  return null;
+}
+
+// ── API: importar CSVs locales del directorio raíz → Procesados/ ─────────────
+app.post('/api/local/import', async (_req, res) => {
+  const procesadosDir = path.join(__dirname, 'Procesados');
+  if (!existsSync(procesadosDir)) mkdirSync(procesadosDir);
+
+  const csvFiles = readdirSync(__dirname)
+    .filter(f => /\.csv$/i.test(f) && !/^cruce_/i.test(f))
+    .sort();
+
+  const summary = { total: csvFiles.length, inserted: 0, skipped: 0, moved: [], errors: [] };
+
+  for (const filename of csvFiles) {
+    const meta = parseFuenteFecha(filename);
+    if (!meta) {
+      summary.skipped++;
+      summary.errors.push(`${filename}: nombre no reconocido (esperado tesi-*.csv / pueblo-*.csv)`);
+      continue;
+    }
+    try {
+      const csvText = readFileSync(path.join(__dirname, filename), 'utf8');
+      const n = await saveFTPDataToSQL(csvText, meta.fuente, meta.fecha);
+      summary.inserted += n;
+      renameSync(path.join(__dirname, filename), path.join(procesadosDir, filename));
+      summary.moved.push(filename);
+      const key = meta.fuente === 'Tesi' ? 'tesi' : 'pueblo';
+      delete cache[key];
+      lastUpdated[key] = new Date().toISOString();
+      console.log(`[local/import] ${filename} → ${meta.fuente} ${meta.fecha} → ${n} filas → Procesados/`);
+    } catch (err) {
+      console.error(`[local/import] ERROR en ${filename}:`, err.message);
+      summary.errors.push(`${filename}: ${err.message}`);
+    }
+  }
+
+  // Relanzar cruce si se insertó algo
+  if (summary.inserted > 0) {
+    try {
+      const cruceRows = await performAndSaveCruce();
+      summary.cruce = { ok: true, rows: cruceRows };
+      console.log(`[local/import] Cruce actualizado: ${cruceRows} filas`);
+    } catch (err) {
+      console.error('[local/import] cruce ERROR:', err.message);
+      summary.cruce = { ok: false, error: err.message };
+    }
+  }
+
+  res.json({ ok: true, summary });
+});
 
 // ── Static files (production build) — debe ir después de todas las rutas API ──
 app.use(express.static(path.join(__dirname, 'dist')));

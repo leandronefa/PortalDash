@@ -19,7 +19,8 @@ C:\apps\
     ├── ConciliacionPunitorios\      Node/Express  → servicio "dashconciliacionpunitorios.exe", puerto 3006
     ├── ValidacionCobranzas\         Node/Express  → servicio "dashvalidacioncobranzas.exe", puerto 3007
     ├── EstadoResultado\             Node/Express  → servicio "dashestadoresultado.exe",     puerto 3008
-    └── PassReset\                   Node/Express  → servicio "dashpassreset.exe",           puerto 3009
+    ├── PassReset\                   Node/Express  → servicio "dashpassreset.exe",           puerto 3009
+    └── DashMeLi\                    Node/Express  → servicio "dashmeli.exe",                puerto 3010
 ```
 
 > `\\10.0.0.118\apps` es el recurso compartido que apunta a `C:\apps`. En el server SIEMPRE usar la ruta **local `C:\apps\...`** (los servicios no deben referenciar rutas UNC).
@@ -35,6 +36,7 @@ C:\apps\
 | `dashvalidacioncobranzas.exe` | Dash-ValidacionCobranzas | ValidacionCobranzas / **3007** | `server.cjs` |
 | `dashestadoresultado.exe` | Dash-EstadoResultado | EstadoResultado / **3008** | `server.js` |
 | `dashpassreset.exe` | Dash-PassReset | PassReset / **3009** | `server.cjs` |
+| `dashmeli.exe` | Dash-MeLi | DashMeLi / **3010** | `server.js` |
 
 ⚠️ **node-windows registra los servicios con sufijo `.exe`** en el Name real. `Get-Service Dash-*` **no** los encuentra. Usar:
 ```powershell
@@ -49,7 +51,7 @@ Restart-Service dashpromociones.exe
 ```powershell
 # Estado de todo
 Get-Service DashboardPortal, dash* | Format-Table Name, Status
-Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009 | Format-Table LocalPort, OwningProcess
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010 | Format-Table LocalPort, OwningProcess
 
 # Reiniciar / detener (nombre real con .exe)
 Restart-Service dashcomisiones.exe

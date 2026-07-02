@@ -38,5 +38,11 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-  }
+  },
+
+  forzarReset: async (id: number): Promise<void> => {
+    const res  = await fetch(`/api/usuarios/${id}/forzar-reset`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  },
 };

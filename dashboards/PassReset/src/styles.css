@@ -122,7 +122,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-body); c
 .panel-header h2 { font-size: 1rem; font-weight: 600; color: var(--accent); }
 .panel-header .spacer { flex: 1; }
 
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 280px); }
 table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
 thead th {
   background: var(--bg-thead);
@@ -135,6 +135,9 @@ thead th {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: .4px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 tbody tr { border-bottom: 1px solid var(--border-light); transition: background .1s; }
 tbody tr:last-child { border-bottom: none; }
@@ -150,10 +153,11 @@ tbody td { padding: 10px 14px; color: var(--text-primary); vertical-align: middl
   font-weight: 600;
   letter-spacing: .3px;
 }
-.badge-vencida  { background: #fde8ea; color: #c0392b; }
-.badge-proxima  { background: #fff3cd; color: #856404; }
-.badge-ok       { background: #d1f0e0; color: #155724; }
-.badge-auto     { background: #e8eaf6; color: #3949ab; }
+.badge-vencida    { background: #fde8ea; color: #c0392b; }
+.badge-proxima    { background: #fff3cd; color: #856404; }
+.badge-ok         { background: #d1f0e0; color: #155724; }
+.badge-programada { background: #e3f0ff; color: #1565c0; }
+.badge-auto       { background: #e8eaf6; color: #3949ab; }
 .badge-manual   { background: #fff8e1; color: #f57f17; }
 .badge-error    { background: #fde8ea; color: #c0392b; }
 .badge-mail-err { background: #fff3cd; color: #856404; }

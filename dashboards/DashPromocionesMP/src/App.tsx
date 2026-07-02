@@ -20,6 +20,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [dataStatus, setDataStatus] = useState<{ ventas: string | null; tesi: string | null; pueblo: string | null }>({ ventas: null, tesi: null, pueblo: null });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ moved: string[]; inserted: number; errors: string[] } | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'detalle' | 'graficos' | 'cruce'>('dashboard');
   const [selectedMP, setSelectedMP] = useState<string>('All');
   const [selectedSuc, setSelectedSuc] = useState<string>('All');
@@ -130,6 +132,34 @@ function App() {
     };
     loadData();
   }, []);
+
+  const handleLocalImport = async () => {
+    if (isImporting || isRefreshing) return;
+    setIsImporting(true);
+    setImportResult(null);
+    try {
+      const res = await fetch('/api/local/import', { method: 'POST' });
+      const data = await res.json();
+      setImportResult(data.summary);
+      if (data.summary.moved.length > 0) {
+        // Hay datos nuevos: rehacer cruce y recargar datos del dashboard
+        await fetch('/api/save-cruce', { method: 'POST' });
+        const [vRes, tRes, pRes] = await Promise.all([
+          fetch('/api/ventas'), fetch('/api/tesi'), fetch('/api/pueblo'),
+        ]);
+        const [vCSV, tCSV, pCSV] = await Promise.all([vRes.text(), tRes.text(), pRes.text()]);
+        const [pV, pT, pP] = await Promise.all([parseVentas(vCSV), parseTesi(tCSV), parseTesi(pCSV)]);
+        setVentas(pV);
+        setTesi([...pT, ...pP]);
+        const s = await fetch('/api/status').then(r => r.json());
+        setDataStatus(s.lastUpdated);
+      }
+    } catch {
+      setImportResult({ moved: [], inserted: 0, errors: ['Error de red al importar'] });
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const handleManualRefresh = async () => {
     if (isRefreshing) return;
@@ -408,6 +438,19 @@ function App() {
             )}
           </div>
           <button
+            onClick={handleLocalImport}
+            disabled={isImporting || isRefreshing || loading}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              isImporting
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 cursor-wait'
+                : 'bg-violet-500/10 border-violet-500/30 text-violet-400 hover:bg-violet-500/20'
+            } disabled:opacity-60`}
+            title="Importa los CSV de la carpeta raíz y los mueve a Procesados/"
+          >
+            <span className={isImporting ? 'animate-spin inline-block' : ''}>⬆</span>
+            {isImporting ? 'Importando…' : 'Importar archivos'}
+          </button>
+          <button
             onClick={handleManualRefresh}
             disabled={isRefreshing || loading}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
@@ -526,6 +569,23 @@ function App() {
 
       <div className="grid grid-cols-12 gap-4 flex-1 items-start">
         {loading && <div className="col-span-12 text-center text-zinc-500 py-8">Cargando datos...</div>}
+        {importResult && (
+          <div className={`col-span-12 rounded-lg px-4 py-3 text-xs border flex items-start gap-3 ${
+            importResult.errors.length > 0
+              ? 'bg-amber-950 border-amber-700 text-amber-300'
+              : 'bg-emerald-950 border-emerald-700 text-emerald-300'
+          }`}>
+            <span className="mt-0.5">
+              {importResult.moved.length > 0
+                ? `✔ ${importResult.moved.length} archivo(s) importado(s) → ${importResult.inserted} filas. Movidos a Procesados/.`
+                : importResult.total === 0
+                  ? 'No se encontraron archivos CSV en el directorio.'
+                  : 'No se procesó ningún archivo.'}
+              {importResult.errors.length > 0 && ` Errores: ${importResult.errors.join(' | ')}`}
+            </span>
+            <button onClick={() => setImportResult(null)} className="ml-auto text-zinc-400 hover:text-zinc-200">✕</button>
+          </div>
+        )}
         {error && (
           <div className="col-span-12 bg-red-950 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
             <strong>Error:</strong> {error}

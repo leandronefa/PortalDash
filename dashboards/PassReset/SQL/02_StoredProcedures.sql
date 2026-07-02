@@ -37,6 +37,7 @@ BEGIN
         u.UltimoCambio,
         u.Activo,
         CONVERT(VARCHAR(20), u.FechaCreacion, 120) AS FechaCreacion,
+        CONVERT(VARCHAR(20), u.ResetDesde,    120) AS ResetDesde,
 
         -- Días transcurridos desde el último cambio reportado por el agente
         CASE WHEN u.UltimoCambio IS NULL THEN NULL
@@ -53,11 +54,12 @@ BEGIN
              ELSE DATEADD(DAY, u.MaxDias, u.UltimoCambio)
         END AS FechaProximoCambio,
 
-        -- Estado calculado
+        -- Estado calculado (PROGRAMADA = tiene correo pero reset diferido hasta ResetDesde)
         CASE
-            WHEN u.UltimoCambio IS NULL                                                  THEN 'VENCIDA'
-            WHEN DATEDIFF(DAY, u.UltimoCambio, GETDATE()) >= u.MaxDias                  THEN 'VENCIDA'
-            WHEN u.MaxDias - DATEDIFF(DAY, u.UltimoCambio, GETDATE()) <= 5              THEN 'PROXIMA'
+            WHEN u.ResetDesde IS NOT NULL AND GETDATE() < u.ResetDesde              THEN 'PROGRAMADA'
+            WHEN u.UltimoCambio IS NULL                                              THEN 'VENCIDA'
+            WHEN DATEDIFF(DAY, u.UltimoCambio, GETDATE()) >= u.MaxDias              THEN 'VENCIDA'
+            WHEN u.MaxDias - DATEDIFF(DAY, u.UltimoCambio, GETDATE()) <= 5         THEN 'PROXIMA'
             ELSE 'OK'
         END AS Estado
 
@@ -65,14 +67,13 @@ BEGIN
     WHERE (@SoloActivos = 0 OR u.Activo = 1)
       AND (@Servidor IS NULL OR u.Servidor = @Servidor)
     ORDER BY
-        -- Vencidas primero
         CASE
+            WHEN u.ResetDesde IS NOT NULL AND GETDATE() < u.ResetDesde THEN 4
             WHEN u.UltimoCambio IS NULL THEN 1
             WHEN DATEDIFF(DAY, u.UltimoCambio, GETDATE()) >= u.MaxDias THEN 1
             WHEN u.MaxDias - DATEDIFF(DAY, u.UltimoCambio, GETDATE()) <= 5 THEN 2
             ELSE 3
         END,
-        -- Por servidor, luego por días restantes
         u.Servidor,
         CASE WHEN u.UltimoCambio IS NULL THEN 0
              ELSE u.MaxDias - DATEDIFF(DAY, u.UltimoCambio, GETDATE())
@@ -252,6 +253,15 @@ BEGIN
             SET UltimoCambio = GETDATE(),
                 FechaModif   = GETDATE()
             WHERE Id = @IdUsuario;
+
+            -- Sincronizar contraseña en TABLEROS (ambas tablas, todos los registros del usuario)
+            UPDATE TABLEROS.dbo.EncargadosSucursal
+            SET Pass = @PasswordGenerada
+            WHERE Usuario = @UsuarioWindows;
+
+            UPDATE TABLEROS.dbo.EncargadosSucursalObjetivos
+            SET Pass = @PasswordGenerada
+            WHERE Usuario = @UsuarioWindows;
         END
 
         INSERT INTO dbo.tbl_PassReset_Log
@@ -320,6 +330,7 @@ BEGIN
     WHERE Servidor = @Servidor
       AND Activo = 1
       AND CorreoDestino <> ''          -- solo usuarios con correo asignado
+      AND (ResetDesde IS NULL OR GETDATE() >= ResetDesde)  -- respetar diferimiento
       AND (
           UltimoCambio IS NULL
           OR DATEDIFF(DAY, UltimoCambio, GETDATE()) >= MaxDias
@@ -352,16 +363,11 @@ BEGIN
     DECLARE @body     NVARCHAR(MAX);
     DECLARE @fechaStr NVARCHAR(20);
 
-    -- Leer profile default de Database Mail (columna 'name' en sysmail_profile)
+    -- Leer primer profile de Database Mail ordenado por profile_id
     SELECT TOP 1 @profile = p.name
     FROM msdb.dbo.sysmail_principalprofile pp
     JOIN msdb.dbo.sysmail_profile p ON p.profile_id = pp.profile_id
-    WHERE pp.is_default = 1;
-
-    -- Fallback: primer profile disponible si no hay default marcado
-    IF @profile IS NULL
-        SELECT TOP 1 @profile = name
-        FROM msdb.dbo.sysmail_profile;
+    ORDER BY p.profile_id ASC;
 
     IF @profile IS NULL
     BEGIN
@@ -371,10 +377,10 @@ BEGIN
 
     SET @fechaStr = CONVERT(VARCHAR(10), @FechaProximoCambio, 103); -- dd/mm/yyyy
 
-    SET @subject = N'Contraseña actualizada — ' + @Servidor;
+    SET @subject = N'QlikView - Contraseña actualizada — ' + @Servidor;
 
     SET @body =
-        N'Se actualizó automáticamente la contraseña de tu cuenta Windows.' + CHAR(13) + CHAR(10) +
+        N'Se actualizó automáticamente la contraseña de acceso a QlikView.' + CHAR(13) + CHAR(10) +
         CHAR(13) + CHAR(10) +
         N'  Servidor         : ' + @Servidor         + CHAR(13) + CHAR(10) +
         N'  Usuario          : ' + @UsuarioWindows   + CHAR(13) + CHAR(10) +
@@ -407,11 +413,59 @@ CREATE PROCEDURE dbo.sp_PassReset_SetCorreo
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    DECLARE @CorreoAnterior NVARCHAR(255);
+    SELECT @CorreoAnterior = CorreoDestino FROM dbo.tbl_PassReset_Usuarios WHERE Id = @Id;
+
     UPDATE dbo.tbl_PassReset_Usuarios
     SET CorreoDestino = @CorreoDestino,
+        -- Primera asignación de correo: diferir el reset hasta mañana a las 00:00
+        ResetDesde    = CASE
+                            WHEN (@CorreoAnterior = '' OR @CorreoAnterior IS NULL) AND @CorreoDestino <> ''
+                            THEN DATEADD(DAY, 1, CAST(CAST(GETDATE() AS DATE) AS DATETIME))
+                            ELSE ResetDesde
+                        END,
         FechaModif    = GETDATE()
     WHERE Id = @Id;
+
     SELECT @@ROWCOUNT AS Updated;
+END
+GO
+
+-- =============================================================================
+--  sp_PassReset_ForzarReset
+--  La web app llama a este SP para forzar un reset en el próximo ciclo del agente.
+--  Pone UltimoCambio = NULL para que sp_PassReset_AgentGetPendientes lo incluya.
+--  Falla si el usuario no tiene correo asignado (el agente necesita correo para enviar).
+-- =============================================================================
+IF OBJECT_ID('dbo.sp_PassReset_ForzarReset', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_PassReset_ForzarReset;
+GO
+
+CREATE PROCEDURE dbo.sp_PassReset_ForzarReset
+    @Id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Correo NVARCHAR(255);
+    SELECT @Correo = CorreoDestino
+    FROM dbo.tbl_PassReset_Usuarios
+    WHERE Id = @Id AND Activo = 1;
+
+    IF @Correo IS NULL
+        RAISERROR('Usuario no encontrado o inactivo.', 16, 1);
+    ELSE IF @Correo = ''
+        RAISERROR('El usuario no tiene correo asignado. Asigná un correo primero.', 16, 1);
+    ELSE
+    BEGIN
+        UPDATE dbo.tbl_PassReset_Usuarios
+        SET UltimoCambio = NULL,
+            ResetDesde   = NULL,   -- override manual: ignorar diferimiento
+            FechaModif   = GETDATE()
+        WHERE Id = @Id;
+        SELECT 1 AS Ok;
+    END
 END
 GO
 

@@ -1,7 +1,7 @@
 using System.Data;
+using System.Data.Odbc;
 using System.Globalization;
 using DashboardPortal.Models;
-using Microsoft.Data.SqlClient;
 
 namespace DashboardPortal.Services;
 
@@ -11,108 +11,95 @@ public interface ICorporateAuthService
 }
 
 /// <summary>
-/// Valida usuarios corporativos EXCLUSIVAMENTE a traves del Stored Procedure configurado.
-/// Nunca consulta tablas directamente. Usa parametros (sin concatenacion = sin inyeccion SQL).
+/// Valida usuarios corporativos via ODBC (evita Microsoft.Data.SqlClient SNI que falla
+/// tras Windows Security Updates en este servidor). Usa parametros para evitar inyeccion SQL.
 /// </summary>
 public class CorporateAuthService(IConfiguration config, ILogger<CorporateAuthService> logger) : ICorporateAuthService
 {
     public async Task<AuthResult> ValidateAsync(string username, string password)
     {
-        var connString = config.GetConnectionString("CorporateSqlServer");
-        if (string.IsNullOrWhiteSpace(connString))
+        var sqlConnStr = config.GetConnectionString("CorporateSqlServer");
+        if (string.IsNullOrWhiteSpace(sqlConnStr))
         {
             logger.LogError("ConnectionStrings:CorporateSqlServer no esta configurada.");
             return AuthResult.Fail("La conexion al servidor corporativo no esta configurada.");
         }
 
-        var sp = config["CorporateAuth:StoredProcedure"] ?? "db_Cegid.dbo.SP_VALIDAR_INICIO_SESION_APPS";
-        var userParam = EnsureAt(config["CorporateAuth:UserParam"] ?? "@USUARIO");
-        var pwdParam = EnsureAt(config["CorporateAuth:PasswordParam"] ?? "@PSW");
-        var successColumn = config["CorporateAuth:SuccessColumn"];
-        var successValues = config.GetSection("CorporateAuth:SuccessValues").Get<string[]>() ?? [];
-        var displayNameCols = config.GetSection("CorporateAuth:DisplayNameColumns").Get<string[]>() ?? [];
-        var treatAnyRowAsSuccess = config.GetValue<bool?>("CorporateAuth:TreatAnyRowAsSuccess") ?? true;
-        var commandTimeout = config.GetValue<int?>("CorporateAuth:CommandTimeoutSeconds") ?? 20;
+        var odbcConnStr = BuildOdbcConnectionString(sqlConnStr);
+
+        var spConfig    = config["CorporateAuth:StoredProcedure"] ?? "SP_VALIDAR_INICIO_SESION_APPS";
+        var successCol  = config["CorporateAuth:SuccessColumn"];
+        var successVals = config.GetSection("CorporateAuth:SuccessValues").Get<string[]>() ?? [];
+        var displayCols = config.GetSection("CorporateAuth:DisplayNameColumns").Get<string[]>() ?? [];
+        var anyRowOk    = config.GetValue<bool?>("CorporateAuth:TreatAnyRowAsSuccess") ?? true;
+        var timeout     = config.GetValue<int?>("CorporateAuth:CommandTimeoutSeconds") ?? 20;
+
+        // ODBC usa solo el nombre del SP (sin prefijo de base de datos)
+        var spName = spConfig.Split('.').Last();
 
         try
         {
-            await using var conn = new SqlConnection(connString);
-            await using var cmd = new SqlCommand(sp, conn)
-            {
-                CommandType = CommandType.StoredProcedure,
-                CommandTimeout = commandTimeout
-            };
+            await using var conn = new OdbcConnection(odbcConnStr);
+            await using var cmd  = conn.CreateCommand();
 
-            cmd.Parameters.Add(new SqlParameter(userParam, SqlDbType.NVarChar, 200) { Value = username });
-            cmd.Parameters.Add(new SqlParameter(pwdParam, SqlDbType.NVarChar, 200) { Value = password });
+            // Sintaxis ODBC para llamar a un stored procedure con 2 parametros posicionales
+            cmd.CommandText    = $"{{CALL dbo.{spName}(?,?)}}";
+            cmd.CommandTimeout = timeout;
 
-            var returnParam = new SqlParameter("@__RETURN_VALUE", SqlDbType.Int) { Direction = ParameterDirection.ReturnValue };
-            cmd.Parameters.Add(returnParam);
+            cmd.Parameters.Add(new OdbcParameter { OdbcType = OdbcType.NVarChar, Size = 200, Value = username });
+            cmd.Parameters.Add(new OdbcParameter { OdbcType = OdbcType.NVarChar, Size = 200, Value = password });
 
             await conn.OpenAsync();
 
-            bool hasRow = false;
-            bool? explicitSuccess = null;
-            string? displayName = null;
+            bool   hasRow        = false;
+            bool?  explicitOk    = null;
+            string? displayName  = null;
 
             await using (var reader = await cmd.ExecuteReaderAsync())
             {
                 if (await reader.ReadAsync())
                 {
                     hasRow = true;
-
                     var cols = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
                     for (int i = 0; i < reader.FieldCount; i++)
                     {
-                        var name = reader.GetName(i);
-                        var raw = reader.IsDBNull(i) ? null : Convert.ToString(reader.GetValue(i), CultureInfo.InvariantCulture);
-                        cols[name] = raw;
+                        var colName = reader.GetName(i);
+                        var raw     = reader.IsDBNull(i) ? null : Convert.ToString(reader.GetValue(i), CultureInfo.InvariantCulture);
+                        cols[colName] = raw;
                     }
 
-                    logger.LogDebug("SP {sp} devolvio columnas: {cols}", sp, string.Join(", ", cols.Keys));
+                    logger.LogDebug("SP {sp} devolvio columnas: {cols}", spName, string.Join(", ", cols.Keys));
 
-                    if (!string.IsNullOrWhiteSpace(successColumn) && cols.TryGetValue(successColumn, out var sv))
-                    {
-                        explicitSuccess = IsTruthy(sv, successValues);
-                    }
-                    else if (string.IsNullOrWhiteSpace(successColumn))
+                    if (!string.IsNullOrWhiteSpace(successCol) && cols.TryGetValue(successCol, out var sv))
+                        explicitOk = IsTruthy(sv, successVals);
+                    else if (string.IsNullOrWhiteSpace(successCol))
                     {
                         var candidate = cols.Keys.FirstOrDefault(LooksLikeSuccessColumn);
                         if (candidate is not null)
-                            explicitSuccess = IsTruthy(cols[candidate], successValues);
+                            explicitOk = IsTruthy(cols[candidate], successVals);
                     }
 
-                    displayName = displayNameCols
+                    displayName = displayCols
                         .Select(c => cols.TryGetValue(c, out var dn) ? dn : null)
                         .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
                 }
 
-                // Drenar el resto para garantizar que el parametro de retorno quede poblado.
                 while (await reader.ReadAsync()) { }
-                while (await reader.NextResultAsync())
-                {
-                    while (await reader.ReadAsync()) { }
-                }
+                while (await reader.NextResultAsync()) { while (await reader.ReadAsync()) { } }
             }
 
-            bool success;
-            if (explicitSuccess.HasValue)
-                success = explicitSuccess.Value;
-            else if (hasRow && treatAnyRowAsSuccess)
-                success = true;
-            else if (!hasRow)
-                success = returnParam.Value is int rv && rv == 1; // fallback conservador
-            else
-                success = false;
+            bool success = explicitOk.HasValue ? explicitOk.Value
+                         : hasRow && anyRowOk  ? true
+                         : false;
 
             if (success)
                 return AuthResult.Ok(username, string.IsNullOrWhiteSpace(displayName) ? null : displayName!.Trim(), false);
 
             return AuthResult.Fail("Usuario o contrasena incorrectos.");
         }
-        catch (SqlException ex)
+        catch (OdbcException ex)
         {
-            logger.LogError(ex, "Error de SQL Server al validar al usuario {user}.", username);
+            logger.LogError(ex, "Error de ODBC al validar al usuario {user}.", username);
             return AuthResult.Fail("No se pudo validar el usuario contra el servidor corporativo. Intente nuevamente mas tarde.");
         }
         catch (Exception ex)
@@ -122,7 +109,25 @@ public class CorporateAuthService(IConfiguration config, ILogger<CorporateAuthSe
         }
     }
 
-    private static string EnsureAt(string p) => p.StartsWith('@') ? p : "@" + p;
+    /// <summary>
+    /// Convierte una connection string de SQL Server al formato ODBC {SQL Server}.
+    /// Extrae Server, Database, User Id y Password.
+    /// </summary>
+    private static string BuildOdbcConnectionString(string sqlConnStr)
+    {
+        var kv = sqlConnStr
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('=', 2))
+            .Where(p => p.Length == 2)
+            .ToDictionary(p => p[0].Trim(), p => p[1].Trim(), StringComparer.OrdinalIgnoreCase);
+
+        var server = kv.GetValueOrDefault("Server") ?? kv.GetValueOrDefault("Data Source") ?? "";
+        var db     = kv.GetValueOrDefault("Database") ?? kv.GetValueOrDefault("Initial Catalog") ?? "";
+        var uid    = kv.GetValueOrDefault("User Id") ?? kv.GetValueOrDefault("UID") ?? "";
+        var pwd    = kv.GetValueOrDefault("Password") ?? kv.GetValueOrDefault("PWD") ?? "";
+
+        return $"Driver={{SQL Server}};Server={server};Database={db};UID={uid};PWD={pwd};";
+    }
 
     private static bool IsTruthy(string? value, string[] truthyValues)
     {

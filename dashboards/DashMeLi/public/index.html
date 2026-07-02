@@ -1,0 +1,2501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tablero Stock Depósito 198 / 199</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:        #f0f2f5;
+      --surface:   #ffffff;
+      --surface2:  #f5f7fa;
+      --border:    #f3f3f3;
+      --border2:   #e2e8f0;
+      --text:      #222222;
+      --text2:     #555555;
+      --text3:     #999999;
+      --text4:     #bbbbbb;
+      --header-bg: #1a1a2e;
+      --shadow:    rgba(0,0,0,.08);
+      --shadow2:   rgba(0,0,0,.3);
+      --row-hover: #fafbff;
+      --row-green: #f0fdf4;
+      --row-green-hover: #dcfce7;
+      --row-red:   #fef2f2;
+      --row-red-hover: #fee2e2;
+      --row-yellow:#fffbeb;
+      --chip-bg:   #eff6ff;
+      --chip-border: #bfdbfe;
+      --chip-color: #1e40af;
+      --chip-strong: #1d4ed8;
+      --chip-btn-hover: #dbeafe;
+      --kpi-value: #1a1a2e;
+      --retiro-bg: #fef2f2;
+      --retiro-border: #dc2626;
+      --retiro-text: #7f1d1d;
+      --retiro-title: #dc2626;
+      --cfg-btn-bg: #eef2ff;
+      --cfg-btn-border: #c7d2fe;
+      --cfg-btn-color: #4361ee;
+      --cfg-btn-hover: #e0e7ff;
+      --modal-overlay: rgba(0,0,0,.45);
+      --modal-bg: #ffffff;
+      --input-border: #d1d5db;
+      --input-bg: #ffffff;
+      --select-bg: #ffffff;
+      --select-color: #1a1a2e;
+      --th-bg: #f5f7fa;
+      --th-hover: #eef0f5;
+      --ebitda-stat-bg: #ffffff;
+      --tfoot-bg: #f5f7fa;
+      --tfoot-ret-bg: #fef2f2;
+      --tfoot-ret-border: #fca5a5;
+    }
+
+    body.dark {
+      --bg:        #0f1117;
+      --surface:   #1e2130;
+      --surface2:  #252838;
+      --border:    #2d3148;
+      --border2:   #3a3f5c;
+      --text:      #e2e8f0;
+      --text2:     #a0aec0;
+      --text3:     #718096;
+      --text4:     #4a5568;
+      --header-bg: #0d0f1a;
+      --shadow:    rgba(0,0,0,.3);
+      --shadow2:   rgba(0,0,0,.6);
+      --row-hover: #252a3d;
+      --row-green: #052e16;
+      --row-green-hover: #14532d;
+      --row-red:   #2d0a0a;
+      --row-red-hover: #450a0a;
+      --row-yellow:#1c1500;
+      --chip-bg:   #1e2a4a;
+      --chip-border: #2d4a8a;
+      --chip-color: #93c5fd;
+      --chip-strong: #60a5fa;
+      --chip-btn-hover: #1e3a6e;
+      --kpi-value: #e2e8f0;
+      --retiro-bg: #2d0a0a;
+      --retiro-border: #ef4444;
+      --retiro-text: #fca5a5;
+      --retiro-title: #f87171;
+      --cfg-btn-bg: #1e2a4a;
+      --cfg-btn-border: #2d4a8a;
+      --cfg-btn-color: #93c5fd;
+      --cfg-btn-hover: #1a3566;
+      --modal-overlay: rgba(0,0,0,.7);
+      --modal-bg: #1e2130;
+      --input-border: #3a3f5c;
+      --input-bg: #252838;
+      --select-bg: #252838;
+      --select-color: #e2e8f0;
+      --th-bg: #252838;
+      --th-hover: #2d3148;
+      --ebitda-stat-bg: #1e2130;
+      --tfoot-bg: #252838;
+      --tfoot-ret-bg: #2d0a0a;
+      --tfoot-ret-border: #7f1d1d;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; transition: background .2s, color .2s; }
+
+    header {
+      background: var(--header-bg);
+      color: #fff;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px var(--shadow2);
+    }
+    header h1 { font-size: 1.15rem; font-weight: 600; white-space: nowrap; }
+    .tabs-bar { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 6px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    .tab-btn.active { background: #4361ee; }
+    .tab-btn.danger.active { background: #dc2626; }
+
+    .dark-toggle {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 5px 9px;
+      line-height: 1;
+      transition: background .2s;
+    }
+    .dark-toggle:hover { background: rgba(255,255,255,0.2); }
+
+    /* KPIs */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 18px 28px 0;
+    }
+    .kpi { background: var(--surface); border-radius: 10px; padding: 16px 20px; box-shadow: 0 1px 4px var(--shadow); }
+    .kpi .label { font-size: 0.7rem; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+    .kpi .value { font-size: 1.55rem; font-weight: 700; margin-top: 4px; color: var(--kpi-value); }
+    .kpi .sub { font-size: 0.72rem; color: var(--text4); margin-top: 2px; }
+    .kpi.kpi-green .value { color: #15803d; }
+    .kpi.kpi-red .value { color: #b91c1c; }
+    .kpi.kpi-blue .value { color: #1d4ed8; }
+
+    /* Tabs content */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Sección genérica */
+    .section { padding: 16px 28px; }
+    .section-title {
+      font-size: 0.88rem;
+      color: #555;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Charts grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 0 28px;
+    }
+    @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .card { background: var(--surface); border-radius: 10px; padding: 18px 22px; box-shadow: 0 1px 4px var(--shadow); }
+    .card h2 { font-size: 0.82rem; color: var(--text2); font-weight: 600; margin-bottom: 14px; }
+    .card.wide { grid-column: 1 / -1; }
+    canvas { max-height: 260px; }
+
+    /* EBITDA summary bar */
+    .ebitda-summary {
+      display: flex;
+      gap: 12px;
+      padding: 16px 28px 0;
+      flex-wrap: wrap;
+    }
+    .ebitda-stat {
+      background: var(--ebitda-stat-bg);
+      border-radius: 10px;
+      padding: 14px 22px;
+      box-shadow: 0 1px 4px var(--shadow);
+      min-width: 180px;
+    }
+    .ebitda-stat .label { font-size: 0.7rem; color: var(--text3); text-transform: uppercase; }
+    .ebitda-stat .value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+    .ebitda-stat.positive .value { color: #15803d; }
+    .ebitda-stat.negative .value { color: #b91c1c; }
+    .ebitda-stat.neutral .value { color: #1a1a2e; }
+
+    /* Filtros */
+    .filters {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 12px 28px 0;
+    }
+    .filters select, .filters input {
+      padding: 6px 10px;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      font-size: 0.82rem;
+      background: var(--input-bg);
+      color: var(--text);
+    }
+    .filters label { font-size: 0.8rem; color: var(--text2); }
+    .row-count { font-size: 0.75rem; color: #aaa; margin-left: auto; }
+
+    /* Badges dep */
+    .badge-dep { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+    .dep-198 { background: #dbeafe; color: #1d4ed8; }
+    .dep-199 { background: #dcfce7; color: #15803d; }
+
+    /* Tabla */
+    .table-wrap { overflow-x: auto; max-height: 500px; overflow-y: auto; border-radius: 10px; background: var(--surface); box-shadow: 0 1px 4px var(--shadow); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    thead { position: sticky; top: 0; z-index: 2; }
+    th {
+      background: var(--th-bg);
+      text-align: left;
+      padding: 9px 10px;
+      color: var(--text2);
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    th:hover { background: var(--th-hover); }
+    th.sort-asc::after { content: ' ↑'; }
+    th.sort-desc::after { content: ' ↓'; }
+    td { padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; color: var(--text); }
+    tr:hover td { background: var(--row-hover); }
+    tr.row-green td { background: var(--row-green); }
+    tr.row-green:hover td { background: var(--row-green-hover); }
+    tr.row-red td { background: var(--row-red); }
+    tr.row-red:hover td { background: var(--row-red-hover); }
+    tr.row-yellow td { background: var(--row-yellow); }
+    .num { text-align: right; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+    .badge-ok   { background: #dcfce7; color: #15803d; }
+    .badge-warn { background: #fef9c3; color: #854d0e; }
+    .badge-bad  { background: #fee2e2; color: #b91c1c; }
+    .badge-zero { background: #f3f4f6; color: #6b7280; }
+    .badge-new  { background: #ede9fe; color: #6d28d9; }
+
+    /* Paginación */
+    .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 10px 28px 20px; }
+    .pager button { padding: 5px 12px; border: 1px solid var(--input-border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 0.8rem; }
+    .pager button:disabled { opacity: .4; cursor: default; }
+    .pager span { font-size: 0.8rem; color: #888; }
+
+    /* Retiro tab */
+    .retiro-header {
+      background: var(--retiro-bg);
+      border-left: 4px solid var(--retiro-border);
+      padding: 14px 20px;
+      margin: 16px 28px;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.85rem;
+      color: var(--retiro-text);
+    }
+    .retiro-header strong { display: block; font-size: 1rem; margin-bottom: 4px; color: var(--retiro-title); }
+
+    .loading { text-align: center; padding: 60px; color: var(--text3); }
+    .error-box { background: #fee2e2; color: #b91c1c; padding: 12px 20px; border-radius: 8px; margin: 20px 28px; font-size: 0.85rem; }
+
+    .divider { height: 14px; }
+
+    /* Ranking tab */
+    .ranking-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 10px 18px 12px;
+      height: calc(100vh - 215px);
+    }
+    .ranking-panel {
+      background: var(--surface);
+      border-radius: 10px;
+      box-shadow: 0 1px 4px var(--shadow);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .ranking-panel-header {
+      padding: 7px 12px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      border-radius: 10px 10px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .ranking-panel-header h3 {
+      font-size: 0.82rem;
+      font-weight: 700;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text);
+    }
+    .ranking-panel-header input {
+      padding: 4px 8px;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      font-size: 0.74rem;
+      background: var(--input-bg);
+      color: var(--text);
+      width: 110px;
+    }
+    .ranking-table-wrap {
+      overflow-x: auto;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    .ranking-table-wrap table { font-size: 0.72rem; }
+    .ranking-table-wrap th {
+      padding: 5px 6px;
+      font-size: 0.68rem;
+    }
+    .ranking-table-wrap td { padding: 4px 6px; }
+    .ranking-table-wrap canvas { max-height: none; }
+    .ranking-pager {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 4px 10px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .ranking-pager button {
+      padding: 3px 8px;
+      border: 1px solid var(--input-border);
+      border-radius: 5px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.72rem;
+    }
+    .ranking-pager button:disabled { opacity: .4; cursor: default; }
+    .ranking-pager span { font-size: 0.7rem; color: var(--text3); }
+
+    /* Modal configuración EBITDA */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(0,0,0,.45);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--modal-bg);
+      border-radius: 14px;
+      padding: 28px 32px 24px;
+      width: 420px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    }
+    .modal-box h3 { font-size: 1rem; color: var(--text); margin-bottom: 20px; }
+    .cfg-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .cfg-row:last-of-type { border-bottom: none; }
+    .cfg-row label { font-size: 0.82rem; color: var(--text2); flex: 1; }
+    .cfg-row .cfg-unit { font-size: 0.78rem; color: var(--text3); width: 28px; text-align: left; }
+    .cfg-row input[type=number] {
+      width: 90px;
+      padding: 5px 8px;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      text-align: right;
+      background: var(--input-bg);
+      color: var(--text);
+    }
+    .cfg-row input[type=number]:focus { outline: none; border-color: #4361ee; }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .modal-footer button {
+      padding: 7px 18px;
+      border-radius: 7px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--input-border);
+      background: var(--surface2);
+      color: var(--text);
+    }
+    .modal-footer button.btn-primary {
+      background: #4361ee;
+      color: #fff;
+      border-color: #4361ee;
+    }
+    .modal-footer button.btn-primary:hover { background: #3451d1; }
+    .cfg-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border: 1px solid var(--cfg-btn-border);
+      border-radius: 6px;
+      background: var(--cfg-btn-bg);
+      color: var(--cfg-btn-color);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .cfg-btn:hover { background: var(--cfg-btn-hover); }
+
+    .chart-chip {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin: 0 28px 8px;
+      padding: 8px 14px;
+      background: var(--chip-bg);
+      border: 1px solid var(--chip-border);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--chip-color);
+    }
+    .chart-chip strong { color: var(--chip-strong); }
+    .chart-chip button {
+      margin-left: auto;
+      background: none;
+      border: 1px solid var(--chip-border);
+      border-radius: 5px;
+      cursor: pointer;
+      color: var(--text3);
+      font-size: 0.78rem;
+      padding: 2px 8px;
+    }
+    .chart-chip button:hover { background: var(--chip-btn-hover); color: var(--chip-strong); }
+
+    /* ── MercadoLibre tab — split layout ── */
+    .ml-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 160px);
+    }
+    .ml-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+    .ml-panel:last-child { border-right: none; }
+    .ml-panel-hdr {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .ml-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px 14px;
+      min-height: 0;
+    }
+    /* Compact cards */
+    .ml-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .ml-card-sm {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 10px 12px;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+    .ml-card-sm h3 {
+      font-size: 0.62rem; color: var(--text3); text-transform: uppercase;
+      letter-spacing: .5px; margin-bottom: 7px; font-weight: 700;
+    }
+    .ml-n-big  { font-size: 1.55rem; font-weight: 700; color: var(--kpi-value); line-height: 1; }
+    .ml-n-med  { font-size: 1.05rem; font-weight: 700; color: var(--kpi-value); }
+    .ml-n-sm   { font-size: 0.88rem; font-weight: 600; color: var(--kpi-value); }
+    .ml-lbl    { font-size: 0.62rem; color: var(--text3); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 1px; }
+    .ml-row2   { display: flex; gap: 10px; }
+    .ml-col    { flex: 1; min-width: 0; }
+    .ml-divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+    .ml-rep-line { display: flex; justify-content: space-between; font-size: 0.74rem; padding: 3px 0; border-bottom: 1px solid var(--border); }
+    .ml-rep-line:last-child { border: none; }
+    .ml-metric-tab {
+      padding: 2px 8px; border-radius: 5px; border: 1px solid var(--border2);
+      background: var(--surface2); color: var(--text2); cursor: pointer; font-size: 0.65rem;
+    }
+    .ml-metric-tab.active { background: #4361ee; color: #fff; border-color: #4361ee; }
+    .ml-premium-section { margin-top: 10px; }
+    .ml-premium-section h3 { margin: 0 0 7px; font-size: 0.78rem; text-transform: uppercase; color: #f59e0b; letter-spacing: .04em; }
+    .ml-premium-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; border-bottom: 1px solid var(--border); font-size: 0.72rem; }
+    .ml-premium-item:hover { background: var(--surface2); }
+    .ml-premium-item img { width: 36px; height: 36px; object-fit: contain; border-radius: 4px; background: #fff; flex-shrink: 0; }
+    .ml-premium-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text1); }
+    .ml-premium-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+    .ml-premium-price { font-weight: 700; color: var(--text1); white-space: nowrap; }
+    .ml-premium-stock { color: var(--text3); white-space: nowrap; }
+    .ml-premium-sold  { color: #4361ee; white-space: nowrap; }
+
+    /* ── Logística ─────────────────────────────────────── */
+    .log-split { display:grid; grid-template-columns:1fr 1fr; height:calc(100vh - 160px); }
+    .log-panel { display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); }
+    .log-panel:last-child { border-right:none; }
+    .log-panel-hdr { display:flex; align-items:center; gap:8px; padding:7px 14px; background:var(--surface2); border-bottom:1px solid var(--border); flex-shrink:0; font-weight:600; font-size:0.84rem; }
+    .log-panel-body { flex:1; overflow-y:auto; padding:10px 12px 14px; min-height:0; }
+    .log-period-tabs { display:flex; gap:4px; margin-bottom:10px; }
+    .log-period-btn { padding:3px 10px; border-radius:5px; border:1px solid var(--border2); background:var(--surface2); color:var(--text2); cursor:pointer; font-size:0.72rem; }
+    .log-period-btn.active { background:#4361ee; color:#fff; border-color:#4361ee; }
+    .log-card { background:var(--surface); border-radius:8px; padding:10px 12px; box-shadow:0 1px 3px var(--shadow); margin-bottom:8px; }
+    .log-kpi-row { display:flex; gap:20px; margin-bottom:10px; }
+    .log-kpi { display:flex; flex-direction:column; }
+    .log-kpi-val { font-size:1.4rem; font-weight:700; }
+    .log-kpi-lbl { font-size:0.62rem; color:var(--text3); text-transform:uppercase; }
+    .log-tipos-wrap { display:flex; align-items:flex-start; gap:12px; }
+    .log-tipos-chart { width:72px; height:72px; flex-shrink:0; }
+    .log-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
+    .log-table th { text-align:left; padding:3px 6px; color:var(--text3); font-weight:600; border-bottom:1px solid var(--border2); }
+    .log-table td { padding:4px 6px; border-bottom:1px solid var(--border); }
+    .log-table tr:last-child td { border-bottom:none; }
+    .log-flex-badge { display:inline-block; padding:1px 6px; border-radius:4px; background:#dbeafe; color:#1e40af; font-size:0.66rem; font-weight:600; }
+    .log-me-badge   { display:inline-block; padding:1px 6px; border-radius:4px; background:#d1fae5; color:#065f46; font-size:0.66rem; font-weight:600; }
+    .log-full-badge { display:inline-block; padding:1px 6px; border-radius:4px; background:#fef3c7; color:#92400e; font-size:0.66rem; font-weight:600; }
+    .log-perf-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .log-exp-card { border-radius:6px; padding:8px 10px; }
+    .log-exp-level { font-size:1rem; font-weight:700; margin-bottom:4px; }
+    .log-exp-bullet { font-size:0.68rem; color:var(--text2); display:flex; align-items:flex-start; gap:4px; margin-top:3px; }
+    .log-hist-chart { position:relative; height:140px; }
+    .ml-loading { text-align: center; padding: 30px; color: var(--text3); font-size: 0.82rem; }
+    .ml-error   { background: #fee2e2; color: #b91c1c; padding: 8px 12px; border-radius: 7px; font-size: 0.78rem; margin-bottom: 8px; }
+    .ml-ok      { color: #15803d; }
+    .ml-err     { color: #b91c1c; }
+    .ml-green   { color: #15803d; }
+    .ml-red     { color: #b91c1c; }
+    .ml-btn-save { padding: 6px 12px; border-radius: 6px; border: none; background: #4361ee; color: #fff; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+    .ml-btn-save:hover { background: #3451d1; }
+    .ml-badge-level    { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 0.62rem; font-weight: 700; }
+    .ml-badge-platinum { background: #e0f2fe; color: #0369a1; }
+    .ml-badge-gold     { background: #fef9c3; color: #92400e; }
+    .ml-badge-silver   { background: #f1f5f9; color: #475569; }
+    .ml-badge-green    { background: #dcfce7; color: #15803d; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📦 Stock MercadoLibre — Dep. 198 / 199</h1>
+  <div style="display:flex;align-items:center;gap:6px;margin-left:24px">
+    <label style="font-size:0.78rem;color:#ccc;white-space:nowrap">Depósito:</label>
+    <select id="globalDep" onchange="onGlobalDepChange()" style="padding:6px 12px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;min-width:160px">
+      <option value="">Ambos (198 + 199)</option>
+      <option value="000198">198 - Tesi</option>
+      <option value="000199">199 - Pueblo</option>
+    </select>
+  </div>
+  <div class="tabs-bar">
+    <button class="tab-btn active"  onclick="switchTab('ebitda')">EBITDA</button>
+    <button class="tab-btn"         onclick="switchTab('rotacion')">Rotación</button>
+    <button class="tab-btn"         onclick="switchTab('ranking')">📊 Ranking</button>
+    <button class="tab-btn danger"  onclick="switchTab('retiro')">⚠ Retiro Recomendado</button>
+    <button class="tab-btn"         onclick="switchTab('mercadolibre')">🛒 MercadoLibre</button>
+    <button class="tab-btn"         onclick="switchTab('logistica')">🚚 Logística</button>
+  </div>
+  <button class="dark-toggle" id="darkToggleBtn" onclick="toggleDark()" title="Modo oscuro">🌙</button>
+</header>
+
+<!-- KPIs siempre visibles -->
+<div class="kpis" id="kpis"><div class="loading">Cargando datos SQL...</div></div>
+
+<!-- ════════════════════════════════════════════════
+     TAB 1 — EBITDA
+════════════════════════════════════════════════ -->
+<div id="tab-ebitda" class="tab-content active">
+
+  <div class="ebitda-summary" id="ebitdaSummary" style="display:none"></div>
+
+  <div class="divider"></div>
+
+  <div class="charts-grid" id="ebitdaCharts" style="display:none"></div>
+
+  <div class="divider"></div>
+
+  <div class="chart-chip" id="eChartChip"></div>
+
+  <div class="filters" id="ebitdaFilters" style="display:none">
+    <button class="cfg-btn" onclick="openEbitdaConfig()">⚙ Variables EBITDA</button>
+    <button class="cfg-btn" onclick="openPvpMinConfig()">💲 PVP Mínimo</button>
+    <label>Depósito:
+      <select id="eDep" onchange="applyEbitdaFilters()">
+        <option value="">Todos</option>
+        <option value="000198">198 - Tesi</option>
+        <option value="000199">199 - Pueblo</option>
+      </select>
+    </label>
+    <label>Proveedor:
+      <select id="eProv" onchange="applyEbitdaFilters()"><option value="">Todos</option></select>
+    </label>
+    <label>Resultado:
+      <select id="eRes" onchange="applyEbitdaFilters()">
+        <option value="">Todos</option>
+        <option value="pos">Positivo ✅</option>
+        <option value="neg">Negativo ❌</option>
+      </select>
+    </label>
+    <label>Buscar:
+      <input type="text" id="eSearch" placeholder="artículo..." oninput="applyEbitdaFilters()">
+    </label>
+    <span class="row-count" id="eRowCount"></span>
+  </div>
+
+  <div class="section">
+    <div class="table-wrap" id="ebitdaTable"><div class="loading">Cargando...</div></div>
+  </div>
+  <div class="pager" id="ePager" style="display:none">
+    <button id="ePrev" onclick="changePage('e',-1)">← Ant</button>
+    <span id="ePageInfo"></span>
+    <button id="eNext" onclick="changePage('e',1)">Sig →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     TAB 2 — ROTACIÓN
+════════════════════════════════════════════════ -->
+<div id="tab-rotacion" class="tab-content">
+
+  <div class="charts-grid" id="rotCharts" style="display:none; padding-top:16px"></div>
+
+  <div class="divider"></div>
+
+  <div class="chart-chip" id="rChartChip"></div>
+
+  <div class="filters" id="rotFilters" style="display:none">
+    <label>Depósito:
+      <select id="rDep" onchange="applyRotFilters()">
+        <option value="">Todos</option>
+        <option value="000198">198 - Tesi</option>
+        <option value="000199">199 - Pueblo</option>
+      </select>
+    </label>
+    <label>Rotación:
+      <select id="rRot" onchange="applyRotFilters()">
+        <option value="">Todas</option>
+        <option value="ok">Alta ✅</option>
+        <option value="warn">Media ⚠</option>
+        <option value="bad">Sin ventas ❌</option>
+        <option value="new">Ingreso reciente 🆕</option>
+      </select>
+    </label>
+    <label>Buscar:
+      <input type="text" id="rSearch" placeholder="artículo..." oninput="applyRotFilters()">
+    </label>
+    <span class="row-count" id="rRowCount"></span>
+  </div>
+
+  <div class="section">
+    <div class="table-wrap" id="rotTable"><div class="loading">Cargando...</div></div>
+  </div>
+  <div class="pager" id="rPager" style="display:none">
+    <button id="rPrev" onclick="changePage('r',-1)">← Ant</button>
+    <span id="rPageInfo"></span>
+    <button id="rNext" onclick="changePage('r',1)">Sig →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     TAB 3 — RANKING POR DEPÓSITO
+════════════════════════════════════════════════ -->
+<div id="tab-ranking" class="tab-content">
+  <div class="ranking-grid">
+    <div class="ranking-panel" id="rankPanel198"><div class="loading">Cargando...</div></div>
+    <div class="ranking-panel" id="rankPanel199"><div class="loading">Cargando...</div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     TAB 4 — RETIRO RECOMENDADO
+════════════════════════════════════════════════ -->
+<div id="tab-retiro" class="tab-content">
+  <div class="retiro-header">
+    <strong>⚠ Artículos recomendados para retirar del stock</strong>
+    Criterios (cualquiera activa el retiro): marca no permitida · EBITDA negativo + sin ventas 90d · PVP por debajo del mínimo configurado.
+    El capital inmovilizado en estos artículos podría liberarse.
+  </div>
+
+  <div class="ebitda-summary" id="retiroSummary" style="display:none"></div>
+
+  <div class="filters" id="retiroFilters" style="display:none">
+    <label>Depósito:
+      <select id="retDep" onchange="applyRetiroFilters()">
+        <option value="">Todos</option>
+        <option value="000198">198 - Tesi</option>
+        <option value="000199">199 - Pueblo</option>
+      </select>
+    </label>
+    <label>Proveedor:
+      <select id="retProv" onchange="applyRetiroFilters()"><option value="">Todos</option></select>
+    </label>
+    <label>Motivo:
+      <select id="retMotivo" onchange="applyRetiroFilters()">
+        <option value="">Todos</option>
+        <option value="marca">Marca no permitida</option>
+        <option value="ebitda">EBITDA neg. + sin rotación</option>
+        <option value="pvp">PVP bajo mínimo</option>
+      </select>
+    </label>
+    <label>Buscar:
+      <input type="text" id="retSearch" placeholder="artículo..." oninput="applyRetiroFilters()">
+    </label>
+    <span class="row-count" id="retRowCount"></span>
+  </div>
+
+  <div class="section">
+    <div class="table-wrap" id="retiroTable"><div class="loading">Cargando...</div></div>
+  </div>
+  <div class="pager" id="retPager" style="display:none">
+    <button id="retPrev" onclick="changePage('ret',-1)">← Ant</button>
+    <span id="retPageInfo"></span>
+    <button id="retNext" onclick="changePage('ret',1)">Sig →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     TAB 5 — MERCADOLIBRE
+════════════════════════════════════════════════ -->
+<div id="tab-mercadolibre" class="tab-content">
+  <div class="ml-split">
+    <!-- Panel izquierdo: Sportotal -->
+    <div class="ml-panel">
+      <div class="ml-panel-hdr">
+        🏪 Sportotal
+        <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198</span>
+        <span id="mlHdrStatus-sportotal" style="margin-left:auto;font-size:0.72rem;font-weight:400"></span>
+      </div>
+      <div class="ml-panel-body" id="mlBody-sportotal">
+        <div class="ml-loading">Iniciando...</div>
+      </div>
+    </div>
+    <!-- Panel derecho: Calzados Vallejo -->
+    <div class="ml-panel">
+      <div class="ml-panel-hdr">
+        🏪 Calzados Vallejo
+        <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198 + 199</span>
+        <span id="mlHdrStatus-vallejo" style="margin-left:auto;font-size:0.72rem;font-weight:400"></span>
+      </div>
+      <div class="ml-panel-body" id="mlBody-vallejo">
+        <div class="ml-loading">Iniciando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Logística -->
+<div id="tab-logistica" class="tab-content">
+  <div class="log-split">
+    <div class="log-panel">
+      <div class="log-panel-hdr">
+        🚚 Sportotal <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198</span>
+        <span id="logHdrStatus-sportotal" style="margin-left:auto;font-size:0.72rem;font-weight:400"></span>
+      </div>
+      <div class="log-panel-body" id="logBody-sportotal">
+        <div class="ml-loading">Iniciando...</div>
+      </div>
+    </div>
+    <div class="log-panel">
+      <div class="log-panel-hdr">
+        🚚 Calzados Vallejo <span style="font-weight:400;color:var(--text3);font-size:0.72rem">Dep. 198 + 199</span>
+        <span id="logHdrStatus-vallejo" style="margin-left:auto;font-size:0.72rem;font-weight:400"></span>
+      </div>
+      <div class="log-panel-body" id="logBody-vallejo">
+        <div class="ml-loading">Iniciando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal PVP Mínimo -->
+<div id="pvpMinModal" class="modal-overlay" onclick="closePvpMinConfig()">
+  <div class="modal-box" style="width:320px" onclick="event.stopPropagation()">
+    <h3>💲 PVP Mínimo requerido</h3>
+    <div class="cfg-row">
+      <label>Precio mínimo de venta</label>
+      <input type="number" id="cfgPvpMin" step="1000" min="0">
+      <span class="cfg-unit">$</span>
+    </div>
+    <p style="font-size:0.75rem;color:var(--text3);margin-top:10px">Afecta el KPI y el gráfico de PVP por sección.</p>
+    <div class="modal-footer">
+      <button onclick="closePvpMinConfig()">Cancelar</button>
+      <button class="btn-primary" onclick="savePvpMinConfig()">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal configuración EBITDA -->
+<div id="ebitdaConfigModal" class="modal-overlay" onclick="closeEbitdaConfig()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3>⚙ Variables del cálculo EBITDA</h3>
+    <div class="cfg-row">
+      <label>Comisión MercadoLibre</label>
+      <input type="number" id="cfgComision" step="0.1" min="0" max="100">
+      <span class="cfg-unit">%</span>
+    </div>
+    <div class="cfg-row">
+      <label>Ingresos Brutos (IIBB)</label>
+      <input type="number" id="cfgIIBB" step="0.1" min="0" max="100">
+      <span class="cfg-unit">%</span>
+    </div>
+    <div class="cfg-row">
+      <label>Costo de envío</label>
+      <input type="number" id="cfgEnvio" step="100" min="0">
+      <span class="cfg-unit">$</span>
+    </div>
+    <div class="cfg-row">
+      <label>Material de empaque</label>
+      <input type="number" id="cfgEmpaque" step="10" min="0">
+      <span class="cfg-unit">$</span>
+    </div>
+
+    <div class="modal-footer">
+      <button onclick="closeEbitdaConfig()">Cancelar</button>
+      <button class="btn-primary" onclick="saveEbitdaConfig()">Aplicar y recalcular</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Marcas no permitidas ─────────────────────────────────
+const MARCAS_NO_PERMITIDAS = ['adidas', 'nike'];
+function esMarcaNoPermitida(r) {
+  const marca = ((r.nommarca || '') + ' ' + (r.nomprov || '')).toLowerCase();
+  return MARCAS_NO_PERMITIDAS.some(m => marca.includes(m));
+}
+
+// ── Fechas de recepción ──────────────────────────────────
+function diasEnStock(primera_entrada) {
+  if (!primera_entrada) return null;
+  return Math.floor((Date.now() - new Date(primera_entrada).getTime()) / 86400000);
+}
+function fmtFecha(d) {
+  if (!d) return '-';
+  return new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// ── Filtro global depósito ───────────────────────────────
+let globalDep = '';
+
+function getActiveData() {
+  if (!globalDep) return stockData;
+  return stockData.filter(r => r.sucursal === globalDep);
+}
+
+// Agrupa los talles de un mismo artículo+color+depósito en una sola fila
+function groupByProduct(data) {
+  const map = new Map();
+  data.forEach(r => {
+    const key = `${r.sucursal}|${r.artprove}`;
+    if (!map.has(key)) {
+      map.set(key, { ...r });
+    } else {
+      const g = map.get(key);
+      g.stock      += r.stock;
+      g.stockPesos += r.stockPesos;
+      g.vta30u     += r.vta30u;
+      g['vta30$']  += r['vta30$'];
+      g.vta60u     += r.vta60u;
+      g['vta60$']  += r['vta60$'];
+      g.vta90u     += r.vta90u;
+      g['vta90$']  += r['vta90$'];
+      g.vtaTotu    += r.vtaTotu;
+      g['vtaTot$'] += r['vtaTot$'];
+    }
+  });
+  return Array.from(map.values()).map(r => ({
+    ...r,
+    _dias: diasEnStock(r.primera_entrada)
+  }));
+}
+
+function getGroupedData() {
+  return groupByProduct(getActiveData()).filter(r => !esMarcaNoPermitida(r));
+}
+
+function getGroupedDataCompleto() {
+  return groupByProduct(getActiveData());
+}
+
+function onGlobalDepChange() {
+  globalDep = document.getElementById('globalDep').value;
+  chartSel.e = { type: null, value: null };
+  chartSel.r = { type: null, value: null };
+  document.getElementById('eChartChip').style.display = 'none';
+  document.getElementById('rChartChip').style.display = 'none';
+  const data = getGroupedData();
+  renderKPIs(data);
+  renderEbitdaSummary(data);
+  destroyCharts();
+  renderEbitdaCharts(data);
+  renderRotCharts(data);
+  applyEbitdaFilters();
+  applyRotFilters();
+  renderRankingTab();
+  buildRetiro(getGroupedDataCompleto());
+}
+
+const chartInstances = {};
+
+// ── Selección desde gráfico ──────────────────────────────
+const chartSel = { e: { type: null, value: null }, r: { type: null, value: null } };
+let _provEData = [], _secsData = [], _topArtsData = [], _provRotData = [];
+
+function setChartSel(tab, type, value, label, pvpSide = null) {
+  if (chartSel[tab].type === type && chartSel[tab].value === value && chartSel[tab].pvpSide === pvpSide) {
+    clearChartSel(tab);
+    return;
+  }
+  chartSel[tab] = { type, value, pvpSide };
+  const chip = document.getElementById(tab === 'e' ? 'eChartChip' : 'rChartChip');
+  chip.innerHTML = `<span>Filtrando por: <strong>${label}</strong></span><button onclick="clearChartSel('${tab}')">✕ Limpiar filtro</button>`;
+  chip.style.display = 'flex';
+  if (tab === 'e') { _updateEHighlight(); applyEbitdaFilters(); }
+  else             { _updateRHighlight(); applyRotFilters(); }
+}
+
+function clearChartSel(tab) {
+  chartSel[tab] = { type: null, value: null };
+  document.getElementById(tab === 'e' ? 'eChartChip' : 'rChartChip').style.display = 'none';
+  if (tab === 'e') { _resetEHighlight(); applyEbitdaFilters(); }
+  else             { _resetRHighlight(); applyRotFilters(); }
+}
+
+function _resetEHighlight() {
+  const c1 = chartInstances['cEProv'];
+  if (c1) { c1.data.datasets[0].backgroundColor = _provEData.map(p => p[1] >= 0 ? '#06d6a0' : '#f72585'); c1.update('none'); }
+  const c2 = chartInstances['cEDist'];
+  if (c2) {
+    c2.data.datasets[0].backgroundColor = '#f72585';
+    c2.data.datasets[1].backgroundColor = '#06d6a0';
+    c2.update('none');
+  }
+}
+
+function _updateEHighlight() {
+  const sel = chartSel.e;
+  const c1  = chartInstances['cEProv'];
+  if (c1) {
+    c1.data.datasets[0].backgroundColor = _provEData.map(p =>
+      sel.type !== 'prov' || p[0] === sel.value ? (p[1] >= 0 ? '#06d6a0' : '#f72585') : '#e5e7eb'
+    );
+    c1.update('none');
+  }
+  const c2 = chartInstances['cEDist'];
+  if (c2) {
+    c2.data.datasets[0].backgroundColor = _secsData.map(s => {
+      if (s[0] !== sel.value) return '#d1d5db';
+      return sel.pvpSide === 'sobre' ? '#fbb6ce' : '#f72585'; // rojo atenuado si seleccionó verde
+    });
+    c2.data.datasets[1].backgroundColor = _secsData.map(s => {
+      if (s[0] !== sel.value) return '#d1d5db';
+      return sel.pvpSide === 'bajo' ? '#86efac' : '#06d6a0'; // verde atenuado si seleccionó rojo
+    });
+    c2.update('none');
+  }
+}
+
+function _resetRHighlight() {
+  const c1 = chartInstances['cRotTop'];
+  if (c1) { c1.data.datasets[0].backgroundColor = '#4361ee'; c1.update('none'); }
+  const c2 = chartInstances['cRotVsStock'];
+  if (c2) { c2.data.datasets[0].backgroundColor = '#4361ee88'; c2.data.datasets[1].backgroundColor = '#06d6a0'; c2.update('none'); }
+}
+
+function _updateRHighlight() {
+  const sel = chartSel.r;
+  const c1  = chartInstances['cRotTop'];
+  if (c1) {
+    c1.data.datasets[0].backgroundColor = _topArtsData.map(a => sel.type !== 'art' || a[0] === sel.value ? '#4361ee' : '#e5e7eb');
+    c1.update('none');
+  }
+  const c2 = chartInstances['cRotVsStock'];
+  if (c2) {
+    c2.data.datasets[0].backgroundColor = _provRotData.map(p => sel.type !== 'prov' || p[0] === sel.value ? '#4361ee88' : '#e5e7eb');
+    c2.data.datasets[1].backgroundColor = _provRotData.map(p => sel.type !== 'prov' || p[0] === sel.value ? '#06d6a0'   : '#d1d5db');
+    c2.update('none');
+  }
+}
+
+function destroyCharts() {
+  Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch(e){} });
+}
+
+function makeChart(id, config) {
+  if (chartInstances[id]) { try { chartInstances[id].destroy(); } catch(e){} }
+  chartInstances[id] = new Chart(document.getElementById(id), config);
+  return chartInstances[id];
+}
+
+// ── Utilidades ──────────────────────────────────────────
+const fmt  = n => (n||0).toLocaleString('es-AR');
+const fmtM = n => '$' + ((n||0)/1_000_000).toFixed(2) + 'M';
+const fmtK = n => { const v = n||0; return Math.abs(v) >= 1000 ? '$' + (v/1000).toFixed(1) + 'K' : '$' + Math.round(v).toLocaleString('es-AR'); };
+const fmtP = n => (n||0).toFixed(1) + '%';
+
+const COLORS = ['#4361ee','#06d6a0','#f72585','#ffd60a','#7209b7','#fb5607','#3f88c5','#e63946','#8338ec','#118ab2','#ef476f','#2ec4b6'];
+
+// ── EBITDA cálculo ───────────────────────────────────────
+// Fórmula: (pvp/IVA - costo) - (pvp*COMISION_ML + COSTO_ENVIO + COSTO_EMPAQUE + pvp*IIBB)
+let COMISION_ML   = 0.127;
+let IIBB          = 0.055;
+let COSTO_ENVIO   = 7900;
+let COSTO_EMPAQUE = 200;
+let IVA           = 1.21;
+let PVP_MIN       = 33000;
+
+function openPvpMinConfig() {
+  document.getElementById('cfgPvpMin').value = PVP_MIN;
+  document.getElementById('pvpMinModal').classList.add('open');
+}
+function closePvpMinConfig() {
+  document.getElementById('pvpMinModal').classList.remove('open');
+}
+function savePvpMinConfig() {
+  const val = parseFloat(document.getElementById('cfgPvpMin').value);
+  if (!isNaN(val) && val >= 0) PVP_MIN = val;
+  closePvpMinConfig();
+  const data = getGroupedData();
+  renderKPIs(data);
+  destroyCharts();
+  renderEbitdaCharts(data);
+  renderRotCharts(data);
+  buildRetiro(getGroupedDataCompleto());
+}
+
+function openEbitdaConfig() {
+  document.getElementById('cfgComision').value = (COMISION_ML  * 100).toFixed(2);
+  document.getElementById('cfgIIBB').value     = (IIBB         * 100).toFixed(2);
+  document.getElementById('cfgEnvio').value    = COSTO_ENVIO;
+  document.getElementById('cfgEmpaque').value  = COSTO_EMPAQUE;
+  document.getElementById('ebitdaConfigModal').classList.add('open');
+}
+
+function closeEbitdaConfig() {
+  document.getElementById('ebitdaConfigModal').classList.remove('open');
+}
+
+function saveEbitdaConfig() {
+  COMISION_ML   = parseFloat(document.getElementById('cfgComision').value) / 100;
+  IIBB          = parseFloat(document.getElementById('cfgIIBB').value)     / 100;
+  COSTO_ENVIO   = parseFloat(document.getElementById('cfgEnvio').value);
+  COSTO_EMPAQUE = parseFloat(document.getElementById('cfgEmpaque').value);
+  closeEbitdaConfig();
+  const data = getGroupedData();
+  renderEbitdaSummary(data);
+  destroyCharts();
+  renderEbitdaCharts(data);
+  renderRotCharts(data);
+  applyEbitdaFilters();
+  buildRetiro(getGroupedDataCompleto());
+}
+
+function calcEbitda(pvp, costo) {
+  if (!pvp || pvp <= 0) return null;
+  const ventaSinIva = pvp / IVA;
+  const costoML     = pvp * COMISION_ML;
+  const costoIIBB   = pvp * IIBB;
+  return ventaSinIva - costo - costoML - COSTO_ENVIO - COSTO_EMPAQUE - costoIIBB;
+}
+
+// Ratio de rotación mensual: unidades vendidas 30d / stock
+function rotRatio(vta30, stock) {
+  if (!stock || stock <= 0) return 0;
+  return vta30 / stock;
+}
+
+// Clasificación de rotación (considera antigüedad en stock)
+// 'new'  = ingresó hace menos de 60 días, no hay base para juzgar
+// 'ok'   = buena rotación (≥10% del stock vendido en 30d)
+// 'warn' = rotación baja pero algo vendió
+// 'bad'  = sin ventas en 12 meses y con suficiente antigüedad
+function rotClass(vta30, vta90, vtaTot, stock, dias) {
+  if (dias !== null && dias < 60) return 'new';
+  if (vta30 > 0 && rotRatio(vta30, stock) >= 0.10) return 'ok';
+  if (vta90 > 0) return 'warn';
+  if (vtaTot > 0) return 'warn';
+  return 'bad';
+}
+
+// Meses de cobertura con ritmo actual (30d)
+function mesesCob(vta30, stock) {
+  if (vta30 <= 0) return null;
+  return (stock / vta30).toFixed(1);
+}
+
+// ── Tab switching ────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const idx = { ebitda: 0, rotacion: 1, ranking: 2, retiro: 3, mercadolibre: 4, logistica: 5 }[name];
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  if (name === 'mercadolibre') initMlTab();
+  if (name === 'logistica') initLogTab();
+}
+
+// ── Logística ────────────────────────────────────────────
+let logTabInited = false;
+const logState = {};
+
+function initLogTab() {
+  if (logTabInited) return;
+  logTabInited = true;
+  for (const acc of ['sportotal', 'vallejo']) logFetchPanel(acc);
+}
+
+async function logFetchPanel(acc) {
+  document.getElementById(`logBody-${acc}`).innerHTML = '<div class="ml-loading">⏳ Cargando logística...</div>';
+  document.getElementById(`logHdrStatus-${acc}`).textContent = '';
+  try {
+    const r = await fetch(`/api/ml/logistics?account=${acc}`);
+    if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
+    const d = await r.json();
+    logState[acc] = d;
+    logRenderPanel(d, acc, 'hoy');
+  } catch (e) {
+    document.getElementById(`logBody-${acc}`).innerHTML =
+      `<div style="padding:20px;color:var(--text3);font-size:0.8rem">Error: ${e.message}</div>`;
+  }
+}
+
+function logRenderPanel(d, acc, period) {
+  const $ = n => '$' + Math.round(n || 0).toLocaleString('es-AR');
+  const pct = n => (n || 0).toFixed(1) + '%';
+  const data = d[period] || { total: 0, totalAmount: 0, tipos: [] };
+
+  const typeColors = { 'Flex': '#4361ee', 'Mercado Envíos': '#10b981', 'Full': '#f59e0b', 'Sin envío': '#9ca3af' };
+  const typeBadge  = t => t === 'Flex' ? 'log-flex-badge' : t === 'Full' ? 'log-full-badge' : t === 'Sin envío' ? '' : 'log-me-badge';
+
+  const tiposRows = data.tipos.map(t => `
+    <tr>
+      <td>${t.nombre ? `<span class="${typeBadge(t.nombre)}">${t.nombre}</span>` : '—'}</td>
+      <td style="text-align:right">${pct(t.porcentaje)}</td>
+      <td style="text-align:right;font-weight:600">${t.cantidad}</td>
+      <td style="text-align:right">${$(t.dinero)}</td>
+      <td style="text-align:right">${$(t.ticket)}</td>
+    </tr>`).join('');
+
+  const chartColors = data.tipos.map(t => typeColors[t.nombre] || '#9ca3af');
+  const chartData   = data.tipos.map(t => t.cantidad);
+  const chartLabels = data.tipos.map(t => t.nombre);
+
+  // Performance section
+  let perfHtml = '';
+  if (d.performance) {
+    const p = d.performance;
+    const metricas = [];
+    if (p.sales)                      metricas.push(['Ventas totales', p.sales?.total || p.sales]);
+    if (p.claims?.rate !== undefined) metricas.push(['Reclamos', pct(p.claims.rate * 100)]);
+    if (p.delayed_handling_time?.rate !== undefined)
+      metricas.push(['Demora en despacho', pct(p.delayed_handling_time.rate * 100)]);
+    if (p.cancellations?.rate !== undefined)
+      metricas.push(['Cancelaciones', pct(p.cancellations.rate * 100)]);
+    if (metricas.length > 0) {
+      perfHtml = `
+        <div class="log-card">
+          <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Desempeño</h3>
+          ${metricas.map(([k,v]) => `
+            <div style="display:flex;justify-content:space-between;font-size:0.73rem;padding:3px 0;border-bottom:1px solid var(--border)">
+              <span>${k}</span><strong>${v}</strong>
+            </div>`).join('')}
+        </div>`;
+    }
+  }
+
+  document.getElementById(`logBody-${acc}`).innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <strong style="font-size:0.84rem">${acc === 'sportotal' ? 'Sportotal' : 'Calzados Vallejo'}</strong>
+      <div style="display:flex;gap:4px;align-items:center">
+        <div class="log-period-tabs">
+          <button class="log-period-btn ${period==='hoy'?'active':''}"    onclick="logChangePeriod('${acc}','hoy')">Hoy</button>
+          <button class="log-period-btn ${period==='semana'?'active':''}" onclick="logChangePeriod('${acc}','semana')">7 días</button>
+          <button class="log-period-btn ${period==='mes'?'active':''}"    onclick="logChangePeriod('${acc}','mes')">30 días</button>
+        </div>
+        <button onclick="logFetchPanel('${acc}')" title="Actualizar"
+          style="padding:3px 9px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:0.7rem">↻</button>
+      </div>
+    </div>
+
+    <div class="log-card">
+      <div class="log-kpi-row">
+        <div class="log-kpi"><span class="log-kpi-val">${data.total}</span><span class="log-kpi-lbl">Envíos</span></div>
+        <div class="log-kpi"><span class="log-kpi-val" style="font-size:1.1rem">${$(data.totalAmount)}</span><span class="log-kpi-lbl">Dinero transaccionado</span></div>
+      </div>
+      ${data.tipos.length === 0
+        ? '<div style="color:var(--text3);font-size:0.72rem">Sin envíos en el período</div>'
+        : `<div class="log-tipos-wrap">
+            <div class="log-tipos-chart"><canvas id="logDonut-${acc}"></canvas></div>
+            <div style="flex:1;overflow-x:auto">
+              <table class="log-table">
+                <thead><tr>
+                  <th>Tipo</th><th style="text-align:right">%</th>
+                  <th style="text-align:right">Cant.</th>
+                  <th style="text-align:right">Dinero</th>
+                  <th style="text-align:right">Ticket prom.</th>
+                </tr></thead>
+                <tbody>${tiposRows}</tbody>
+              </table>
+            </div>
+          </div>`
+      }
+    </div>
+
+    ${perfHtml}
+
+    <div class="log-card">
+      <h3 style="font-size:0.78rem;text-transform:uppercase;color:var(--text3);margin:0 0 8px">Historial semanal — últimos 30 días</h3>
+      <div class="log-hist-chart"><canvas id="logHist-${acc}"></canvas></div>
+      <div style="display:flex;gap:12px;margin-top:6px;font-size:0.66rem;color:var(--text3)">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;margin-right:3px"></span>Pagados</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:3px"></span>Otros</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:3px"></span>Cancelados</span>
+      </div>
+    </div>
+  `;
+
+  // Donut chart tipos
+  if (data.tipos.length > 0) {
+    const k = `logDonut-${acc}`;
+    if (chartInstances[k]) { try { chartInstances[k].destroy(); } catch(e){} }
+    chartInstances[k] = new Chart(document.getElementById(k), {
+      type: 'doughnut',
+      data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, borderWidth: 1, borderColor: 'transparent' }] },
+      options: { cutout: '62%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}` } } } }
+    });
+  }
+
+  // Weekly historial chart
+  logRenderHistChart(d.historial || [], acc);
+}
+
+function logChangePeriod(acc, period) {
+  if (logState[acc]) logRenderPanel(logState[acc], acc, period);
+}
+
+function logRenderHistChart(historial, acc) {
+  const k = `logHist-${acc}`;
+  if (chartInstances[k]) { try { chartInstances[k].destroy(); } catch(e){} }
+  if (!historial.length || !document.getElementById(k)) return;
+
+  const labels = historial.map(w => {
+    const d = new Date(w.week + 'T00:00:00');
+    return `${d.getDate()}/${d.getMonth()+1}`;
+  });
+
+  const isDark = document.body.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+  const tickColor = isDark ? '#aaa' : '#999';
+
+  chartInstances[k] = new Chart(document.getElementById(k), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Pagados',    data: historial.map(w => w.paid),      backgroundColor: '#10b981', stack: 'a' },
+        { label: 'Otros',      data: historial.map(w => w.other),     backgroundColor: '#f59e0b', stack: 'a' },
+        { label: 'Cancelados', data: historial.map(w => w.cancelled), backgroundColor: '#ef4444', stack: 'a' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } },
+        y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 }, precision: 0 } }
+      },
+      plugins: { legend: { display: false }, tooltip: { mode: 'index' } }
+    }
+  });
+}
+
+// ── Paginación genérica ──────────────────────────────────
+const PAGE = 100;
+const pages = { e: 0, r: 0, ret: 0 };
+const filtered = { e: [], r: [], ret: [] };
+
+function changePage(key, dir) {
+  pages[key] += dir;
+  renderByKey(key);
+  window.scrollTo(0, 0);
+}
+
+function renderByKey(key) {
+  if (key === 'e')   renderEbitdaTable();
+  if (key === 'r')   renderRotTable();
+  if (key === 'ret') renderRetiroTable();
+}
+
+function pagerUpdate(key, total) {
+  const p = pages[key];
+  const ids = {
+    e:   { prev:'ePrev',   next:'eNext',   info:'ePageInfo',  pager:'ePager' },
+    r:   { prev:'rPrev',   next:'rNext',   info:'rPageInfo',  pager:'rPager' },
+    ret: { prev:'retPrev', next:'retNext', info:'retPageInfo',pager:'retPager' }
+  }[key];
+  document.getElementById(ids.pager).style.display = 'flex';
+  document.getElementById(ids.prev).disabled = p === 0;
+  document.getElementById(ids.next).disabled = (p + 1) * PAGE >= total;
+  document.getElementById(ids.info).textContent = `Pág ${p+1} / ${Math.ceil(total/PAGE)||1}`;
+}
+
+// ── CARGA PRINCIPAL ──────────────────────────────────────
+let stockData = [];
+
+fetch('/api/stock')
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      document.getElementById('kpis').innerHTML = `<div class="error-box">Error: ${data.error}</div>`;
+      return;
+    }
+    stockData = data;
+    const active = getGroupedData();
+    renderKPIs(active);
+    renderEbitdaSummary(active);
+    renderEbitdaCharts(active);
+    populateFilters(data);
+    applyEbitdaFilters();
+    applyRotFilters();
+    renderRankingTab();
+    buildRetiro(getGroupedDataCompleto());
+    document.getElementById('ebitdaFilters').style.display = 'flex';
+    document.getElementById('rotFilters').style.display   = 'flex';
+    document.getElementById('retiroFilters').style.display = 'flex';
+    document.getElementById('rotCharts').style.display    = 'grid';
+    renderRotCharts(active);
+  })
+  .catch(e => {
+    document.getElementById('kpis').innerHTML = `<div class="error-box">Error de conexión: ${e.message}</div>`;
+  });
+
+// ── KPIs ─────────────────────────────────────────────────
+function renderKPIs(data) {
+  const totalStock     = data.reduce((s, r) => s + r.stock, 0);
+  const articles       = new Set(data.map(r => r.artprove)).size;
+  const vta30          = data.reduce((s, r) => s + r.vta30u, 0);
+  const total198       = data.filter(r => r.sucursal === '000198').reduce((s,r) => s + r.stock, 0);
+  const total199       = data.filter(r => r.sucursal === '000199').reduce((s,r) => s + r.stock, 0);
+  const totalCosto     = data.reduce((s, r) => s + r.stockPesos, 0);
+  const pvpBajoMin     = data.filter(r => r.pvp > 0 && r.pvp < PVP_MIN);
+  const capPvpBajo     = pvpBajoMin.reduce((s, r) => s + r.stockPesos, 0);
+  const stockPvpBajo   = pvpBajoMin.reduce((s, r) => s + r.stock, 0);
+  const sinVta30rows   = data.filter(r => r.vta30u === 0 && (r._dias === null || r._dias >= 30));
+  const sinVta30       = sinVta30rows.length;
+  const stockSinVta30  = sinVta30rows.reduce((s, r) => s + r.stock, 0);
+  const sinVta60rows   = data.filter(r => r.vta60u === 0 && (r._dias === null || r._dias >= 60));
+  const sinVta60       = sinVta60rows.length;
+  const stockSinVta60  = sinVta60rows.reduce((s, r) => s + r.stock, 0);
+
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi">
+      <div class="label">Stock Total</div>
+      <div class="value">${fmt(totalStock)}</div>
+      <div class="sub">198: ${fmt(total198)} | 199: ${fmt(total199)}</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Artículos distintos</div>
+      <div class="value">${fmt(articles)}</div>
+      <div class="sub">${fmt(data.length)} combinaciones art/color</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Valor Stock (Costo)</div>
+      <div class="value">${fmtM(totalCosto)}</div>
+      <div class="sub">Capital inmovilizado</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Ventas 30 días</div>
+      <div class="value">${fmt(vta30)} u</div>
+      <div class="sub">Unidades vendidas (dep 198+199)</div>
+    </div>
+    <div class="kpi kpi-red">
+      <div class="label" style="display:flex;align-items:center;gap:6px">
+        PVP bajo mínimo
+        <button onclick="openPvpMinConfig()" title="Cambiar PVP mínimo"
+          style="background:none;border:none;cursor:pointer;font-size:0.75rem;color:var(--text3);padding:0;line-height:1">✏️</button>
+      </div>
+      <div class="value">${fmt(pvpBajoMin.length)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">· ${fmt(stockPvpBajo)} u</span></div>
+      <div class="sub">PVP &lt; $${fmt(PVP_MIN)} · Capital: ${fmtM(capPvpBajo)}</div>
+    </div>
+    <div class="kpi kpi-red">
+      <div class="label">Sin ventas — último mes</div>
+      <div class="value">${fmt(sinVta30)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">· ${fmt(stockSinVta30)} u</span></div>
+      <div class="sub">SKUs sin movimiento en 30 días</div>
+    </div>
+    <div class="kpi kpi-red">
+      <div class="label">Sin ventas — últimos 2 meses</div>
+      <div class="value">${fmt(sinVta60)} <span style="font-size:1rem;font-weight:500;color:var(--text3)">· ${fmt(stockSinVta60)} u</span></div>
+      <div class="sub">SKUs sin movimiento en 60 días</div>
+    </div>
+  `;
+}
+
+// ── EBITDA TAB ───────────────────────────────────────────
+function renderEbitdaSummary(data) {
+  const items = data.map(r => ({ ...r, ebitda: calcEbitda(r.pvp, r.costo) })).filter(r => r.ebitda !== null);
+  const positivos     = items.filter(r => r.ebitda > 0);
+  const negativos     = items.filter(r => r.ebitda <= 0);
+  const stockPositivos = positivos.reduce((s, r) => s + r.stock, 0);
+  const stockNegativos = negativos.reduce((s, r) => s + r.stock, 0);
+
+  // EBITDA promedio ponderado por stock
+  const totalUnidades = items.reduce((s, r) => s + r.stock, 0);
+  const ebitdaPond    = totalUnidades > 0
+    ? items.reduce((s, r) => s + r.ebitda * r.stock, 0) / totalUnidades
+    : 0;
+
+  const capitalEnRojo = negativos.reduce((s, r) => s + r.stockPesos, 0);
+
+  const el = document.getElementById('ebitdaSummary');
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <div class="ebitda-stat ${ebitdaPond >= 0 ? 'positive' : 'negative'}">
+      <div class="label">EBITDA Promedio (ponderado)</div>
+      <div class="value">${fmtK(ebitdaPond)} / u</div>
+    </div>
+    <div class="ebitda-stat positive">
+      <div class="label">SKUs con EBITDA positivo</div>
+      <div class="value">${fmt(positivos.length)}</div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:3px">${fmt(stockPositivos)} u en stock</div>
+    </div>
+    <div class="ebitda-stat negative">
+      <div class="label">SKUs con EBITDA negativo</div>
+      <div class="value">${fmt(negativos.length)}</div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:3px">${fmt(stockNegativos)} u en stock</div>
+    </div>
+    <div class="ebitda-stat neutral">
+      <div class="label">Capital en artículos negativos</div>
+      <div class="value">${fmtM(capitalEnRojo)}</div>
+    </div>
+  `;
+}
+
+function renderEbitdaCharts(data) {
+  const el = document.getElementById('ebitdaCharts');
+  el.style.display = 'grid';
+  el.innerHTML = `
+    <div class="card"><h2>EBITDA promedio por Proveedor (Top 15)</h2><canvas id="cEProv"></canvas></div>
+    <div class="card"><h2>Rango de PVP por Sección — mín $${fmt(PVP_MIN)}</h2><canvas id="cEDist"></canvas></div>
+  `;
+
+  const hoverCursor = (event, elements) => {
+    if (event.native) event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+  };
+
+  // EBITDA promedio por proveedor
+  const byProv = {};
+  data.forEach(r => {
+    const e = calcEbitda(r.pvp, r.costo);
+    if (e === null) return;
+    if (!byProv[r.nomprov]) byProv[r.nomprov] = { sum: 0, n: 0 };
+    byProv[r.nomprov].sum += e;
+    byProv[r.nomprov].n   += 1;
+  });
+  const provE = Object.entries(byProv)
+    .map(([k, v]) => [k, v.sum / v.n])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15);
+  _provEData = provE;
+
+  makeChart('cEProv', {
+    type: 'bar',
+    data: {
+      labels: provE.map(p => p[0].slice(0, 20)),
+      datasets: [{
+        data: provE.map(p => Math.round(p[1])),
+        backgroundColor: provE.map(p => p[1] >= 0 ? '#06d6a0' : '#f72585'),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: false } },
+      onHover: hoverCursor,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const p = _provEData[elements[0].index];
+        setChartSel('e', 'prov', p[0], 'Proveedor: ' + p[0]);
+      }
+    }
+  });
+
+  // Rango PVP por sección: [min, max] con split en PVP_MIN
+  const bySecPvp = {};
+  data.forEach(r => {
+    if (!r.pvp || r.pvp <= 0) return;
+    const sec = r.seccion || 'Sin sección';
+    if (!bySecPvp[sec]) bySecPvp[sec] = { min: Infinity, max: -Infinity };
+    if (r.pvp < bySecPvp[sec].min) bySecPvp[sec].min = r.pvp;
+    if (r.pvp > bySecPvp[sec].max) bySecPvp[sec].max = r.pvp;
+  });
+  const secsRange = Object.entries(bySecPvp)
+    .map(([k, v]) => [k, v])
+    .sort((a, b) => b[1].max - a[1].max)
+    .slice(0, 12);
+  _secsData = secsRange;
+
+  const redData   = secsRange.map(([, v]) =>
+    v.min >= PVP_MIN ? null : [v.min, Math.min(v.max, PVP_MIN)]
+  );
+  const greenData = secsRange.map(([, v]) =>
+    v.max <= PVP_MIN ? null : [Math.max(v.min, PVP_MIN), v.max]
+  );
+
+  makeChart('cEDist', {
+    type: 'bar',
+    data: {
+      labels: secsRange.map(s => s[0]),
+      datasets: [
+        {
+          label: 'Bajo mínimo',
+          data: redData,
+          backgroundColor: '#f72585',
+          borderSkipped: false
+        },
+        {
+          label: `Sobre mínimo`,
+          data: greenData,
+          backgroundColor: '#06d6a0',
+          borderSkipped: false
+        },
+        {
+          type: 'line',
+          label: `Mín $${fmt(PVP_MIN)}`,
+          data: secsRange.map(() => PVP_MIN),
+          borderColor: '#f59e0b',
+          borderWidth: 2,
+          borderDash: [5, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } }
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          ticks: { callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
+        }
+      },
+      onHover: hoverCursor,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const el = elements.find(e => e.datasetIndex < 2) || elements[0];
+        if (el.datasetIndex >= 2) return; // clic en la línea, ignorar
+        const sec     = _secsData[el.index][0];
+        const pvpSide = el.datasetIndex === 0 ? 'bajo' : 'sobre';
+        const label   = pvpSide === 'bajo'
+          ? `${sec} — PVP < $${fmt(PVP_MIN)}`
+          : `${sec} — PVP ≥ $${fmt(PVP_MIN)}`;
+        setChartSel('e', 'seccion', sec, label, pvpSide);
+      }
+    }
+  });
+}
+
+let ebitdaFiltered = [];
+let ebitdaSortCol = 'ebitda', ebitdaSortDir = 1;
+
+function applyEbitdaFilters() {
+  const dep  = document.getElementById('eDep').value;
+  const prov = document.getElementById('eProv').value;
+  const res  = document.getElementById('eRes').value;
+  const q    = document.getElementById('eSearch').value.toLowerCase();
+
+  const sel = chartSel.e;
+  ebitdaFiltered = getGroupedData()
+    .map(r => ({ ...r, ebitda: calcEbitda(r.pvp, r.costo) }))
+    .filter(r =>
+      (!dep  || r.sucursal === dep) &&
+      (!prov || r.nomprov  === prov) &&
+      (!res  || (res === 'pos' ? r.ebitda >= 0 : r.ebitda < 0)) &&
+      (!q    || r.nomartprove.toLowerCase().includes(q) || r.artprove.toLowerCase().includes(q)) &&
+      (sel.type !== 'prov' || r.nomprov === sel.value) &&
+      (sel.type !== 'seccion' || (
+        r.seccion === sel.value &&
+        (sel.pvpSide === 'bajo'  ? r.pvp < PVP_MIN  :
+         sel.pvpSide === 'sobre' ? r.pvp >= PVP_MIN : true)
+      ))
+    );
+
+  ebitdaFiltered.sort((a, b) => {
+    const av = a[ebitdaSortCol] ?? 0, bv = b[ebitdaSortCol] ?? 0;
+    return (av > bv ? 1 : av < bv ? -1 : 0) * ebitdaSortDir;
+  });
+
+  filtered.e = ebitdaFiltered;
+  pages.e = 0;
+  renderEbitdaTable();
+}
+
+function sortEbitda(col) {
+  if (ebitdaSortCol === col) ebitdaSortDir *= -1;
+  else { ebitdaSortCol = col; ebitdaSortDir = 1; }
+  applyEbitdaFilters();
+}
+
+function renderEbitdaTable() {
+  const data  = filtered.e;
+  const start = pages.e * PAGE;
+  const rows  = data.slice(start, start + PAGE);
+  document.getElementById('eRowCount').textContent = `${fmt(data.length)} filas`;
+  pagerUpdate('e', data.length);
+
+  document.getElementById('ebitdaTable').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortEbitda('sucursal')">Dep</th>
+          <th onclick="sortEbitda('artprove')">Código</th>
+          <th onclick="sortEbitda('nomprov')">Proveedor</th>
+          <th onclick="sortEbitda('nomartprove')">Artículo</th>
+          <th onclick="sortEbitda('primera_entrada')">Ingreso</th>
+          <th class="num" onclick="sortEbitda('_dias')">Días stock</th>
+          <th class="num" onclick="sortEbitda('pvp')">PVP</th>
+          <th class="num" onclick="sortEbitda('costo')">Costo</th>
+          <th class="num" onclick="sortEbitda('ebitda')">EBITDA / u</th>
+          <th class="num" onclick="sortEbitda('stock')">Stock</th>
+          <th class="num">EBITDA Total</th>
+          <th>Resultado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => {
+          const e = r.ebitda;
+          const eTotal = e !== null ? e * r.stock : null;
+          const rowCls = e === null ? '' : e >= 0 ? 'row-green' : 'row-red';
+          const badge  = e === null
+            ? '<span class="badge badge-zero">Sin PVP</span>'
+            : e >= 0
+              ? '<span class="badge badge-ok">✅ Positivo</span>'
+              : '<span class="badge badge-bad">❌ Negativo</span>';
+          const eStr   = e !== null ? fmtK(e) : '-';
+          const eTotStr = eTotal !== null ? fmtK(eTotal) : '-';
+          const diasStr = r._dias !== null ? r._dias + ' d' : '-';
+          const diasCls = r._dias !== null && r._dias < 60 ? 'style="color:#7c3aed;font-weight:600"' : '';
+          return `<tr class="${rowCls}">
+            <td><span class="badge-dep ${r.sucursal==='000198'?'dep-198':'dep-199'}">${r.sucursal==='000198'?'198':'199'}</span></td>
+            <td style="font-family:monospace;font-size:0.75rem">${r.artprove}</td>
+            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'…':r.nomprov}</td>
+            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'…':r.nomartprove}</td>
+            <td>${fmtFecha(r.primera_entrada)}</td>
+            <td class="num" ${diasCls}>${diasStr}</td>
+            <td class="num">$${fmt(Math.round(r.pvp))}</td>
+            <td class="num">$${fmt(Math.round(r.costo))}</td>
+            <td class="num"><strong>${eStr}</strong></td>
+            <td class="num">${fmt(r.stock)}</td>
+            <td class="num">${eTotStr}</td>
+            <td>${badge}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--tfoot-bg);font-weight:700;border-top:2px solid var(--border2)">
+          <td colspan="7" style="padding:9px 10px;font-size:0.8rem;color:var(--text2)">TOTAL (${fmt(data.length)} artículos)</td>
+          <td></td><td></td><td></td>
+          <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.stock,0))}</td>
+          <td class="num" style="padding:9px 10px;color:#b91c1c">${fmtK(data.filter(r=>r.ebitda<0).reduce((s,r)=>s+r.ebitda*r.stock,0))}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+}
+
+// ── ROTACIÓN TAB ─────────────────────────────────────────
+function renderRotCharts(data) {
+  const el = document.getElementById('rotCharts');
+
+  const hoverCursor = (event, elements) => {
+    if (event.native) event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+  };
+
+  // Top 15 artículos por ventas 30d (agrupado por artprove)
+  const byArt = {};
+  data.forEach(r => {
+    if (!byArt[r.nomartprove]) byArt[r.nomartprove] = { vta30: 0, vta90: 0, stock: 0 };
+    byArt[r.nomartprove].vta30  += r.vta30u;
+    byArt[r.nomartprove].vta90  += r.vta90u;
+    byArt[r.nomartprove].stock  += r.stock;
+  });
+  const topArts = Object.entries(byArt).sort((a, b) => b[1].vta30 - a[1].vta30).slice(0, 15);
+  _topArtsData = topArts;
+
+  el.innerHTML = `
+    <div class="card"><h2>Top 15 artículos — Ventas 30 días</h2><canvas id="cRotTop"></canvas></div>
+    <div class="card"><h2>Stock vs Ventas 30d — Top 12 proveedores</h2><canvas id="cRotVsStock"></canvas></div>
+  `;
+
+  makeChart('cRotTop', {
+    type: 'bar',
+    data: {
+      labels: topArts.map(a => a[0].slice(0, 28)),
+      datasets: [{
+        label: 'Vta 30d',
+        data: topArts.map(a => a[1].vta30),
+        backgroundColor: '#4361ee',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true } },
+      onHover: hoverCursor,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const art = _topArtsData[elements[0].index][0];
+        setChartSel('r', 'art', art, 'Artículo: ' + art.slice(0, 40));
+      }
+    }
+  });
+
+  // Stock vs ventas 30d por proveedor
+  const byProv = {};
+  data.forEach(r => {
+    if (!byProv[r.nomprov]) byProv[r.nomprov] = { stock: 0, vta30: 0 };
+    byProv[r.nomprov].stock += r.stock;
+    byProv[r.nomprov].vta30 += r.vta30u;
+  });
+  const provs = Object.entries(byProv).sort((a, b) => b[1].stock - a[1].stock).slice(0, 12);
+  _provRotData = provs;
+
+  makeChart('cRotVsStock', {
+    type: 'bar',
+    data: {
+      labels: provs.map(p => p[0].slice(0, 18)),
+      datasets: [
+        { label: 'Stock', data: provs.map(p => p[1].stock), backgroundColor: '#4361ee88', borderRadius: 3 },
+        { label: 'Vta 30d', data: provs.map(p => p[1].vta30), backgroundColor: '#06d6a0', borderRadius: 3 }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true } },
+      onHover: hoverCursor,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const prov = _provRotData[elements[0].index][0];
+        setChartSel('r', 'prov', prov, 'Proveedor: ' + prov);
+      }
+    }
+  });
+}
+
+let rotFiltered = [];
+let rotSortCol = 'vta30u', rotSortDir = -1;
+
+function applyRotFilters() {
+  const dep = document.getElementById('rDep').value;
+  const rot = document.getElementById('rRot').value;
+  const q   = document.getElementById('rSearch').value.toLowerCase();
+
+  const sel = chartSel.r;
+  rotFiltered = getGroupedData()
+    .map(r => ({ ...r, rotCls: rotClass(r.vta30u, r.vta90u, r.vtaTotu, r.stock, r._dias) }))
+    .filter(r =>
+      (!dep || r.sucursal === dep) &&
+      (!rot || r.rotCls   === rot) &&
+      (!q   || r.nomartprove.toLowerCase().includes(q) || r.artprove.toLowerCase().includes(q)) &&
+      (sel.type !== 'prov' || r.nomprov     === sel.value) &&
+      (sel.type !== 'art'  || r.nomartprove === sel.value)
+    );
+
+  rotFiltered.sort((a, b) => {
+    const av = a[rotSortCol] ?? 0, bv = b[rotSortCol] ?? 0;
+    return (av > bv ? 1 : av < bv ? -1 : 0) * rotSortDir;
+  });
+
+  filtered.r = rotFiltered;
+  pages.r = 0;
+  renderRotTable();
+}
+
+function sortRot(col) {
+  if (rotSortCol === col) rotSortDir *= -1;
+  else { rotSortCol = col; rotSortDir = 1; }
+  applyRotFilters();
+}
+
+function renderRotTable() {
+  const data  = filtered.r;
+  const start = pages.r * PAGE;
+  const rows  = data.slice(start, start + PAGE);
+  document.getElementById('rRowCount').textContent = `${fmt(data.length)} filas`;
+  pagerUpdate('r', data.length);
+
+  document.getElementById('rotTable').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortRot('sucursal')">Dep</th>
+          <th onclick="sortRot('artprove')">Código</th>
+          <th onclick="sortRot('nomprov')">Proveedor</th>
+          <th onclick="sortRot('nomartprove')">Artículo</th>
+          <th onclick="sortRot('primera_entrada')">Ingreso</th>
+          <th class="num" onclick="sortRot('_dias')">Días stock</th>
+          <th class="num" onclick="sortRot('stock')">Stock</th>
+          <th class="num" onclick="sortRot('vta30u')">Vta 30d</th>
+          <th class="num" onclick="sortRot('vta90u')">Vta 90d</th>
+          <th class="num" onclick="sortRot('vtaTotu')">Vta 12m</th>
+          <th class="num">Ratio Mensual</th>
+          <th class="num">Meses Cob.</th>
+          <th>Rotación</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => {
+          const cls   = r.rotCls;
+          const ratio = r.stock > 0 ? (r.vta30u / r.stock * 100).toFixed(1) : '0.0';
+          const meses = mesesCob(r.vta30u, r.stock);
+          const rowCls = cls === 'ok' ? 'row-green' : cls === 'bad' ? 'row-red' : cls === 'new' ? '' : 'row-yellow';
+          const badge  = cls === 'ok'
+            ? '<span class="badge badge-ok">✅ Alta</span>'
+            : cls === 'new'
+              ? '<span class="badge badge-new">🆕 Ingreso reciente</span>'
+              : cls === 'warn'
+                ? '<span class="badge badge-warn">⚠ Media</span>'
+                : r.vtaTotu > 0
+                  ? '<span class="badge badge-warn">⚠ Sin vta 90d</span>'
+                  : '<span class="badge badge-bad">❌ Sin ventas</span>';
+          const diasStr = r._dias !== null ? r._dias + ' d' : '-';
+          const diasCls = r._dias !== null && r._dias < 60 ? 'style="color:#7c3aed;font-weight:600"' : '';
+          return `<tr class="${rowCls}">
+            <td><span class="badge-dep ${r.sucursal==='000198'?'dep-198':'dep-199'}">${r.sucursal==='000198'?'198':'199'}</span></td>
+            <td style="font-family:monospace;font-size:0.75rem">${r.artprove}</td>
+            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'…':r.nomprov}</td>
+            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'…':r.nomartprove}</td>
+            <td>${fmtFecha(r.primera_entrada)}</td>
+            <td class="num" ${diasCls}>${diasStr}</td>
+            <td class="num"><strong>${fmt(r.stock)}</strong></td>
+            <td class="num">${fmt(r.vta30u)}</td>
+            <td class="num">${fmt(r.vta90u)}</td>
+            <td class="num">${fmt(r.vtaTotu)}</td>
+            <td class="num">${ratio}%</td>
+            <td class="num">${meses !== null ? meses + ' m' : '—'}</td>
+            <td>${badge}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--tfoot-bg);font-weight:700;border-top:2px solid var(--border2)">
+          <td colspan="7" style="padding:9px 10px;font-size:0.8rem;color:var(--text2)">TOTAL (${fmt(data.length)} artículos)</td>
+          <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.stock,0))}</td>
+          <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.vta30u,0))}</td>
+          <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.vta90u,0))}</td>
+          <td class="num" style="padding:9px 10px">${fmt(data.reduce((s,r)=>s+r.vtaTotu,0))}</td>
+          <td></td><td></td><td></td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+}
+
+// ── RETIRO TAB ───────────────────────────────────────────
+let retiroBase = [];
+
+function buildRetiro(data = getGroupedDataCompleto()) {
+  retiroBase = data
+    .map(r => {
+      const ebitda    = calcEbitda(r.pvp, r.costo);
+      const marca     = esMarcaNoPermitida(r);
+      const esNuevo   = r._dias !== null && r._dias < 90;
+      const sinRot    = r.vta90u === 0;
+      const ebitdaNeg = ebitda !== null && ebitda < 0;
+      const pvpBajo   = r.pvp > 0 && r.pvp < PVP_MIN;
+
+      const partes = [];
+      if (marca)                             partes.push('marca');
+      if (!esNuevo && ebitdaNeg && sinRot)   partes.push('ebitda');
+      if (pvpBajo)                           partes.push('pvp');
+
+      const motivo = partes.length > 0 ? partes.join('+') : null;
+      return { ...r, ebitda, motivo };
+    })
+    .filter(r => r.motivo !== null);
+
+  const capitalAtado = retiroBase.reduce((s, r) => s + r.stockPesos, 0);
+  const porMarca     = retiroBase.filter(r => r.motivo.includes('marca')).length;
+  const porEbitda    = retiroBase.filter(r => r.motivo.includes('ebitda')).length;
+  const porPvp       = retiroBase.filter(r => r.motivo.includes('pvp')).length;
+
+  const el = document.getElementById('retiroSummary');
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <div class="ebitda-stat negative">
+      <div class="label">Total SKUs a retirar</div>
+      <div class="value">${fmt(retiroBase.length)}</div>
+    </div>
+    <div class="ebitda-stat negative">
+      <div class="label">Capital inmovilizado</div>
+      <div class="value">${fmtM(capitalAtado)}</div>
+    </div>
+    <div class="ebitda-stat negative">
+      <div class="label">Marca no permitida</div>
+      <div class="value">${fmt(porMarca)}</div>
+    </div>
+    <div class="ebitda-stat negative">
+      <div class="label">EBITDA neg. + sin rotación</div>
+      <div class="value">${fmt(porEbitda)}</div>
+    </div>
+    <div class="ebitda-stat negative">
+      <div class="label">PVP bajo mínimo ($${fmt(PVP_MIN)})</div>
+      <div class="value">${fmt(porPvp)}</div>
+    </div>
+  `;
+
+  // Poblar filtros
+  const provs = [...new Set(retiroBase.map(r => r.nomprov))].sort();
+  const pSel  = document.getElementById('retProv');
+  pSel.innerHTML = '<option value="">Todos</option>';
+  provs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; pSel.appendChild(o); });
+
+  applyRetiroFilters();
+}
+
+function applyRetiroFilters() {
+  const dep    = document.getElementById('retDep').value;
+  const prov   = document.getElementById('retProv').value;
+  const motivo = document.getElementById('retMotivo').value;
+  const q      = document.getElementById('retSearch').value.toLowerCase();
+
+  filtered.ret = retiroBase.filter(r =>
+    (!dep    || r.sucursal === dep) &&
+    (!prov   || r.nomprov  === prov) &&
+    (!motivo || r.motivo.includes(motivo)) &&
+    (!q      || r.nomartprove.toLowerCase().includes(q) || r.artprove.toLowerCase().includes(q))
+  ).sort((a, b) => {
+    // marcas primero, luego pvp, luego peor EBITDA
+    if (a.motivo.includes('marca') !== b.motivo.includes('marca')) return a.motivo.includes('marca') ? -1 : 1;
+    if (a.motivo.includes('pvp')   !== b.motivo.includes('pvp'))   return a.motivo.includes('pvp')   ? -1 : 1;
+    return (a.ebitda || 0) - (b.ebitda || 0);
+  });
+
+  pages.ret = 0;
+  renderRetiroTable();
+}
+
+function renderRetiroTable() {
+  const data  = filtered.ret;
+  const start = pages.ret * PAGE;
+  const rows  = data.slice(start, start + PAGE);
+  document.getElementById('retRowCount').textContent = `${fmt(data.length)} artículos`;
+  pagerUpdate('ret', data.length);
+
+  document.getElementById('retiroTable').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Dep</th>
+          <th>Código</th>
+          <th>Proveedor</th>
+          <th>Artículo</th>
+          <th>Ingreso</th>
+          <th class="num">Días stock</th>
+          <th class="num">PVP</th>
+          <th class="num">Costo</th>
+          <th class="num">EBITDA / u</th>
+          <th class="num">Stock</th>
+          <th class="num">Capital Costo</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => {
+          const ebitdaStr = r.ebitda !== null ? fmtK(r.ebitda) : '-';
+          const badgeParts = [];
+          if (r.motivo.includes('marca'))  badgeParts.push('🚫 Marca no perm.');
+          if (r.motivo.includes('ebitda')) badgeParts.push('❌ EBITDA neg.');
+          if (r.motivo.includes('pvp'))    badgeParts.push('💲 PVP bajo mín.');
+          const motivoBadge = badgeParts.map(p => `<span class="badge badge-bad">${p}</span>`).join(' ');
+          return `<tr class="row-red">
+            <td><span class="badge-dep ${r.sucursal==='000198'?'dep-198':'dep-199'}">${r.sucursal==='000198'?'198':'199'}</span></td>
+            <td style="font-family:monospace;font-size:0.75rem">${r.artprove}</td>
+            <td title="${r.nomprov}">${r.nomprov.length>22?r.nomprov.slice(0,21)+'…':r.nomprov}</td>
+            <td title="${r.nomartprove}">${r.nomartprove.length>32?r.nomartprove.slice(0,31)+'…':r.nomartprove}</td>
+            <td>${fmtFecha(r.primera_entrada)}</td>
+            <td class="num">${r._dias !== null ? r._dias + ' d' : '-'}</td>
+            <td class="num">$${fmt(Math.round(r.pvp||0))}</td>
+            <td class="num">$${fmt(Math.round(r.costo||0))}</td>
+            <td class="num"><strong style="color:#b91c1c">${ebitdaStr}</strong></td>
+            <td class="num">${fmt(r.stock)}</td>
+            <td class="num">$${fmt(Math.round(r.stockPesos))}</td>
+            <td>${motivoBadge}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--tfoot-ret-bg);font-weight:700;border-top:2px solid var(--tfoot-ret-border)">
+          <td colspan="7" style="padding:9px 10px;font-size:0.8rem;color:var(--retiro-text)">TOTAL (${fmt(data.length)} artículos a retirar)</td>
+          <td></td><td></td><td></td>
+          <td class="num" style="padding:9px 10px;color:var(--retiro-text)">${fmt(data.reduce((s,r)=>s+r.stock,0))}</td>
+          <td class="num" style="padding:9px 10px;color:var(--retiro-text)">${fmtM(data.reduce((s,r)=>s+r.stockPesos,0))}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+}
+
+// ── Dark mode ────────────────────────────────────────────
+function toggleDark() {
+  const isDark = document.body.classList.toggle('dark');
+  document.getElementById('darkToggleBtn').textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('darkMode', isDark ? '1' : '0');
+}
+(function() {
+  if (localStorage.getItem('darkMode') === '1') {
+    document.body.classList.add('dark');
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('darkToggleBtn');
+      if (btn) btn.textContent = '☀️';
+    });
+  }
+})();
+
+// ── RANKING TAB ──────────────────────────────────────────
+const rankState = {
+  '000198': { sort: 'vta30u', dir: -1, search: '', page: 0, filtered: [] },
+  '000199': { sort: 'vta30u', dir: -1, search: '', page: 0, filtered: [] }
+};
+
+function renderRankingTab() {
+  applyRankFilters('000198');
+  applyRankFilters('000199');
+}
+
+function applyRankFilters(dep) {
+  const st = rankState[dep];
+  const q  = st.search.toLowerCase();
+  let rows = groupByProduct(stockData.filter(r => r.sucursal === dep))
+    .filter(r => !esMarcaNoPermitida(r))
+    .map(r => ({
+      ...r,
+      ebitda: calcEbitda(r.pvp, r.costo),
+      rotCls: rotClass(r.vta30u, r.vta90u, r.vtaTotu, r.stock, r._dias)
+    }))
+    .filter(r => !q || r.nomartprove.toLowerCase().includes(q) || r.artprove.toLowerCase().includes(q) || r.nomprov.toLowerCase().includes(q));
+
+  rows.sort((a, b) => {
+    const av = a[st.sort] ?? 0, bv = b[st.sort] ?? 0;
+    return (av > bv ? 1 : av < bv ? -1 : 0) * st.dir;
+  });
+
+  st.filtered = rows;
+  st.page     = 0;
+  renderRankPanel(dep);
+}
+
+function sortRank(dep, col) {
+  const st = rankState[dep];
+  if (st.sort === col) st.dir *= -1;
+  else { st.sort = col; st.dir = -1; }
+  st.page = 0;
+  renderRankPanel(dep);
+}
+
+function changeRankPage(dep, dir) {
+  rankState[dep].page += dir;
+  renderRankPanel(dep);
+}
+
+function renderRankPanel(dep) {
+  const st    = rankState[dep];
+  const data  = st.filtered;
+  const start = st.page * PAGE;
+  const rows  = data.slice(start, start + PAGE);
+  const label = dep === '000198' ? '198' : '199';
+  const name  = dep === '000198' ? 'Tesi' : 'Pueblo';
+  const depCls = dep === '000198' ? 'dep-198' : 'dep-199';
+  const sd    = st.sort;
+
+  const th  = (col, txt) => `<th onclick="sortRank('${dep}','${col}')" style="${sd===col?'color:#4361ee':''}">${txt}${sd===col?(st.dir===-1?' ↓':' ↑'):''}</th>`;
+  const thn = (col, txt) => `<th class="num" onclick="sortRank('${dep}','${col}')" style="${sd===col?'color:#4361ee':''}">${txt}${sd===col?(st.dir===-1?' ↓':' ↑'):''}</th>`;
+
+  const totalStock = data.reduce((s,r)=>s+r.stock,0);
+  const totalV30   = data.reduce((s,r)=>s+r.vta30u,0);
+  const totalV90   = data.reduce((s,r)=>s+r.vta90u,0);
+
+  const prevOk = st.page > 0;
+  const nextOk = (st.page + 1) * PAGE < data.length;
+
+  document.getElementById(`rankPanel${label}`).innerHTML = `
+    <div class="ranking-panel-header">
+      <h3>
+        <span class="badge-dep ${depCls}">${label}</span>
+        ${name}
+        <span style="font-weight:400;font-size:0.72rem;color:var(--text3)">${fmt(data.length)} arts.</span>
+      </h3>
+      <input type="text" placeholder="🔍 buscar..." value="${st.search.replace(/"/g,'&quot;')}"
+        oninput="rankState['${dep}'].search=this.value;applyRankFilters('${dep}')">
+    </div>
+    <div class="ranking-table-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:26px;text-align:center">#</th>
+          ${th('artprove','Código')}
+          ${th('nomartprove','Artículo')}
+          ${thn('_dias','Días')}
+          ${thn('pvp','PVP')}
+          ${thn('costo','Costo')}
+          ${thn('ebitda','EBITDA/u')}
+          ${thn('stock','Stock')}
+          ${thn('vta30u','Vta 30d')}
+          ${thn('vta90u','Vta 90d')}
+        </tr></thead>
+        <tbody>
+          ${rows.map((r, i) => {
+            const pos    = start + i + 1;
+            const e      = r.ebitda;
+            const cls    = r.rotCls;
+            const rowCls = cls === 'ok' ? 'row-green' : cls === 'bad' ? 'row-red' : cls === 'new' ? '' : 'row-yellow';
+            const eStr   = e !== null ? fmtK(e) : '-';
+            const eColor = e === null ? '' : e >= 0 ? 'color:#15803d' : 'color:#b91c1c';
+            const diasStr = r._dias !== null ? r._dias + 'd' : '-';
+            const diasCls = r._dias !== null && r._dias < 60 ? 'color:#7c3aed;font-weight:600' : '';
+            return `<tr class="${rowCls}">
+              <td style="text-align:center;color:var(--text3)">${pos}</td>
+              <td style="font-family:monospace">${r.artprove}</td>
+              <td title="${r.nomprov} — ${r.nomartprove}">${r.nomartprove.length>20?r.nomartprove.slice(0,19)+'…':r.nomartprove}</td>
+              <td class="num" style="${diasCls}">${diasStr}</td>
+              <td class="num">$${fmt(Math.round(r.pvp||0))}</td>
+              <td class="num">$${fmt(Math.round(r.costo||0))}</td>
+              <td class="num" style="${eColor}"><strong>${eStr}</strong></td>
+              <td class="num"><strong>${fmt(r.stock)}</strong></td>
+              <td class="num"><strong>${fmt(r.vta30u)}</strong></td>
+              <td class="num">${fmt(r.vta90u)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--tfoot-bg);font-weight:700;border-top:2px solid var(--border2)">
+            <td colspan="7" style="padding:5px 6px;font-size:0.7rem;color:var(--text2)">TOTAL (${fmt(data.length)})</td>
+            <td class="num" style="padding:5px 6px">${fmt(totalStock)}</td>
+            <td class="num" style="padding:5px 6px">${fmt(totalV30)}</td>
+            <td class="num" style="padding:5px 6px">${fmt(totalV90)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="ranking-pager">
+      <button onclick="changeRankPage('${dep}',-1)" ${prevOk?'':'disabled'}>← Ant</button>
+      <span>Pág ${st.page+1} / ${Math.ceil(data.length/PAGE)||1}</span>
+      <button onclick="changeRankPage('${dep}',1)"  ${nextOk?'':'disabled'}>Sig →</button>
+    </div>
+  `;
+}
+
+// ── Poblar filtros proveedor/sección ─────────────────────
+function populateFilters(data) {
+  const provs = [...new Set(data.map(r => r.nomprov))].sort();
+  ['eProv'].forEach(id => {
+    const sel = document.getElementById(id);
+    provs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  MERCADOLIBRE TAB — dual panel
+// ══════════════════════════════════════════════════════════
+let mlTabInited = false;
+const mlState = { data: {} };
+
+function initMlTab() {
+  mlLoadConfig();
+}
+
+async function mlLoadConfig() {
+  try {
+    const r   = await fetch('/api/ml/config');
+    const cfg = await r.json();
+    for (const acc of ['sportotal', 'vallejo']) {
+      const hdr = document.getElementById(`mlHdrStatus-${acc}`);
+      if (cfg[acc]?.configured) {
+        if (hdr) hdr.textContent = cfg[acc].nickname ? `@${cfg[acc].nickname}` : '✅';
+        if (mlState.data[acc]) mlRenderPanel(mlState.data[acc], acc);
+        else mlFetchPanel(acc);
+      } else {
+        if (hdr) hdr.textContent = '';
+        mlShowCredForm(acc);
+      }
+    }
+  } catch (e) {
+    for (const acc of ['sportotal', 'vallejo'])
+      document.getElementById(`mlBody-${acc}`).innerHTML = `<div class="ml-error">Error: ${e.message}</div>`;
+  }
+}
+
+function mlShowCredForm(acc) {
+  const label = acc === 'sportotal' ? 'Sportotal' : 'Calzados Vallejo';
+  document.getElementById(`mlBody-${acc}`).innerHTML = `
+    <div style="max-width:300px;margin:20px auto">
+      <div class="ml-card-sm">
+        <h3>Configurar acceso — ${label}</h3>
+        <p style="font-size:0.73rem;color:var(--text3);margin-bottom:10px">Ingresá el access token de la cuenta de MercadoLibre.</p>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input type="password" id="mlToken-${acc}" placeholder="Access token..."
+            style="flex:1;padding:6px 8px;border:1px solid var(--input-border);border-radius:6px;font-size:0.78rem;background:var(--input-bg);color:var(--text);font-family:monospace">
+          <button class="ml-btn-save" onclick="mlSaveToken('${acc}')">Guardar</button>
+        </div>
+        <div id="mlStatus-${acc}" style="font-size:0.73rem;min-height:16px"></div>
+      </div>
+    </div>`;
+}
+
+async function mlSaveToken(acc) {
+  const token    = document.getElementById(`mlToken-${acc}`)?.value?.trim();
+  const statusEl = document.getElementById(`mlStatus-${acc}`);
+  if (!token) { if (statusEl) statusEl.innerHTML = '<span class="ml-err">Ingresá el token</span>'; return; }
+  if (statusEl) statusEl.innerHTML = '<span style="color:var(--text3)">Verificando...</span>';
+  try {
+    const r = await fetch('/api/ml/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: acc, token })
+    });
+    const d = await r.json();
+    if (!r.ok) { if (statusEl) statusEl.innerHTML = `<span class="ml-err">❌ ${d.error}</span>`; return; }
+    mlLoadConfig();
+  } catch (e) {
+    if (statusEl) statusEl.innerHTML = `<span class="ml-err">Error: ${e.message}</span>`;
+  }
+}
+
+async function mlDeleteToken(acc) {
+  await fetch(`/api/ml/config/${acc}`, { method: 'DELETE' });
+  delete mlState.data[acc];
+  const hdr = document.getElementById(`mlHdrStatus-${acc}`);
+  if (hdr) hdr.textContent = '';
+  mlShowCredForm(acc);
+}
+
+async function mlFetchPanel(acc) {
+  document.getElementById(`mlBody-${acc}`).innerHTML = '<div class="ml-loading">⏳ Cargando...</div>';
+  try {
+    const r = await fetch(`/api/ml/dashboard?account=${acc}`);
+    const d = await r.json();
+    if (!r.ok) {
+      document.getElementById(`mlBody-${acc}`).innerHTML =
+        `<div class="ml-error">❌ ${d.error}</div>
+         <div style="text-align:center;margin-top:8px">
+           <button onclick="mlDeleteToken('${acc}')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:0.75rem">✕ Desconectar</button>
+         </div>`;
+      return;
+    }
+    mlState.data[acc] = d;
+    mlRenderPanel(d, acc);
+  } catch (e) {
+    document.getElementById(`mlBody-${acc}`).innerHTML = `<div class="ml-error">Error de conexión: ${e.message}</div>`;
+  }
+}
+
+function mlRenderPanel(d, acc) {
+  const $ = n => '$' + Math.round(n || 0).toLocaleString('es-AR');
+  const p = n => (n || 0).toFixed(2) + '%';
+  const pub  = d.publicaciones || {};
+  const pubO = Math.max(0, pub.total - pub.active - pub.paused);
+  const w7   = d.week7 || {};
+  const rep  = d.reputation;
+  const rl   = rep?.level || '';
+  const rbc  = rl.includes('platinum') ? 'ml-badge-platinum'
+    : rl.includes('gold')   ? 'ml-badge-gold'
+    : rl.includes('silver') ? 'ml-badge-silver' : 'ml-badge-green';
+
+  document.getElementById(`mlBody-${acc}`).innerHTML = `
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap">
+      <strong style="font-size:0.84rem">${d.user?.nickname || acc}</strong>
+      ${rl ? `<span class="ml-badge-level ${rbc}">${rl.replace(/_/g,' ')}</span>` : ''}
+      <a href="${d.user?.permalink||'#'}" target="_blank" style="font-size:0.68rem;color:var(--text3)">↗ tienda</a>
+      <button onclick="mlFetchPanel('${acc}')" title="Actualizar"
+        style="margin-left:auto;padding:3px 9px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:0.7rem">↻</button>
+      <button onclick="mlDeleteToken('${acc}')" title="Desconectar"
+        style="padding:3px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:0.7rem">✕</button>
+    </div>
+
+    <div class="ml-grid2">
+      <div class="ml-card-sm">
+        <h3>Actividad de hoy</h3>
+        <div class="ml-row2">
+          <div class="ml-col"><div class="ml-lbl">Ventas</div><div class="ml-n-big">${d.today?.ventas||0}</div></div>
+          <div class="ml-col"><div class="ml-lbl">Cobrado</div><div class="ml-n-med ml-green" style="font-size:0.95rem">${$(d.today?.monto)}</div></div>
+        </div>
+        <hr class="ml-divider">
+        <div class="ml-lbl">Valor prometido</div>
+        <div class="ml-n-sm" style="color:var(--text2)">${$(d.today?.pendiente)}</div>
+      </div>
+      <div class="ml-card-sm">
+        <h3>Preguntas</h3>
+        <div class="ml-row2">
+          <div class="ml-col"><div class="ml-lbl">Sin responder</div><div class="ml-n-big ${(d.questions?.unanswered||0)>0?'ml-red':''}">${d.questions?.unanswered||0}</div></div>
+          <div class="ml-col"><div class="ml-lbl">Recibidas hoy</div><div class="ml-n-big">${d.questions?.todayReceived||0}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ml-card-sm" style="margin-bottom:8px">
+      <h3>Publicaciones</h3>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="flex:1">
+          <!-- Totales -->
+          <div class="ml-row2" style="gap:18px;margin-bottom:8px">
+            <div><div class="ml-lbl">Total</div><div class="ml-n-big">${fmt(pub.total)}</div></div>
+            <div><div class="ml-lbl">Activas</div><div class="ml-n-med ml-green">${fmt(pub.active)}</div></div>
+            <div><div class="ml-lbl">Pausadas</div><div class="ml-n-med ml-red">${fmt(pub.paused)}</div></div>
+          </div>
+          <hr class="ml-divider">
+          <!-- Clásica vs Premium -->
+          <div class="ml-row2" style="gap:10px;margin-top:6px">
+            <div>
+              <div class="ml-lbl" style="color:#f59e0b;font-weight:700">★ Premium</div>
+              <div class="ml-row2" style="gap:10px;margin-top:2px">
+                <div><div class="ml-lbl">Activas</div><div class="ml-n-sm" style="color:#f59e0b">${fmt(pub.premiumActive)}</div></div>
+                <div><div class="ml-lbl">Pausadas</div><div class="ml-n-sm" style="color:var(--text2)">${fmt(pub.premiumPaused)}</div></div>
+              </div>
+            </div>
+            <div style="border-left:1px solid var(--border);padding-left:10px">
+              <div class="ml-lbl" style="font-weight:700">Clásica</div>
+              <div class="ml-row2" style="gap:10px;margin-top:2px">
+                <div><div class="ml-lbl">Activas</div><div class="ml-n-sm">${fmt(pub.clasicaActive)}</div></div>
+                <div><div class="ml-lbl">Pausadas</div><div class="ml-n-sm" style="color:var(--text2)">${fmt(pub.clasicaPaused)}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="width:64px;height:64px;flex-shrink:0"><canvas id="mlPub-${acc}"></canvas></div>
+      </div>
+    </div>
+
+    <div class="ml-grid2">
+      <div class="ml-card-sm">
+        <h3>Reputación</h3>
+        ${rep ? `
+        <div class="ml-rep-line"><span>Opiniones</span><strong>${fmt(rep.transactions)}</strong></div>
+        <div class="ml-rep-line"><span>Rating positivo</span><strong class="ml-green">${p(rep.rating_positive)}</strong></div>
+        <div class="ml-rep-line"><span>Reclamos</span><strong ${rep.claims_rate>2?'class="ml-red"':''}>${p(rep.claims_rate)}</strong></div>
+        <div class="ml-rep-line"><span>Cancelaciones</span><strong ${rep.cancellations>2?'class="ml-red"':''}>${p(rep.cancellations)}</strong></div>
+        <div class="ml-rep-line"><span>Mediaciones</span><strong ${rep.mediations>1?'class="ml-red"':''}>${p(rep.mediations)}</strong></div>
+        ` : '<div style="color:var(--text3);font-size:0.72rem">Sin datos</div>'}
+      </div>
+      <div class="ml-card-sm">
+        <h3>Performance — 7 días</h3>
+        <div class="ml-row2">
+          <div><div class="ml-lbl">Ventas</div><div class="ml-n-med">${fmt(w7.ventas)}</div></div>
+          <div><div class="ml-lbl">Monto</div><div class="ml-n-sm">${$(w7.monto)}</div></div>
+        </div>
+        <hr class="ml-divider">
+        <div class="ml-lbl">Ticket promedio</div>
+        <div class="ml-n-sm">${w7.ventas>0?$(w7.monto/w7.ventas):'—'}</div>
+        <hr class="ml-divider">
+        <div class="ml-lbl">Ventas 30d</div>
+        <div class="ml-n-sm">${fmt(d.month30?.ventas)} <span style="color:var(--text3);font-size:0.7rem">· ${$(d.month30?.monto)}</span></div>
+      </div>
+    </div>
+
+    <div class="ml-card-sm">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <h3 style="margin-bottom:0">Histórico 30 días</h3>
+        <button class="ml-metric-tab active" id="mlMv-${acc}" onclick="mlSwitchMetric('ventas','${acc}')">Ventas</button>
+        <button class="ml-metric-tab"        id="mlMm-${acc}" onclick="mlSwitchMetric('monto','${acc}')">Monto</button>
+      </div>
+      <div style="position:relative;height:130px"><canvas id="mlHist-${acc}"></canvas></div>
+    </div>
+
+    <div class="ml-premium-section ml-card-sm" id="mlPremium-${acc}">
+      <div class="ml-loading" style="padding:12px">⏳ Cargando publicaciones premium...</div>
+    </div>
+  `;
+
+  if (pub.total > 0) {
+    const k = `mlPub-${acc}`;
+    if (chartInstances[k]) { try { chartInstances[k].destroy(); } catch(e){} }
+    const premiumTotal = (pub.premiumActive || 0) + (pub.premiumPaused || 0);
+    const clasicaTotal = (pub.clasicaActive || 0) + (pub.clasicaPaused || 0);
+    const otrosTotal   = Math.max(0, pub.total - premiumTotal - clasicaTotal);
+    chartInstances[k] = new Chart(document.getElementById(k), {
+      type: 'doughnut',
+      data: {
+        labels: ['Premium','Clásica','Otras'],
+        datasets: [{ data:[premiumTotal, clasicaTotal, otrosTotal], backgroundColor:['#f59e0b','#4361ee','#9ca3af'], borderWidth:1, borderColor:'transparent' }]
+      },
+      options: { cutout:'62%', plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}} } }
+    });
+  }
+
+  mlRenderHistPanel(d.month30?.daily || {}, 'ventas', acc);
+  mlFetchPremiumItems(acc);
+}
+
+async function mlFetchPremiumItems(acc) {
+  try {
+    const r = await fetch(`/api/ml/premium-items?account=${acc}`);
+    const items = await r.json();
+    mlRenderPremiumItems(items, acc);
+  } catch (e) {
+    const el = document.getElementById(`mlPremium-${acc}`);
+    if (el) el.innerHTML = `<div style="color:var(--text3);font-size:0.72rem;padding:8px">Error cargando publicaciones</div>`;
+  }
+}
+
+function mlRenderPremiumItems(items, acc) {
+  const el = document.getElementById(`mlPremium-${acc}`);
+  if (!el) return;
+  const $ = n => '$' + Math.round(n || 0).toLocaleString('es-AR');
+  el.innerHTML = `
+    <h3>★ Publicaciones Premium activas (${items.length})</h3>
+    ${items.length === 0
+      ? '<div style="color:var(--text3);font-size:0.72rem;padding:4px">Sin publicaciones premium activas</div>'
+      : items.map(it => `
+        <a href="${it.permalink}" target="_blank" style="text-decoration:none">
+          <div class="ml-premium-item">
+            <img src="${it.thumbnail ? it.thumbnail.replace('http://','https://') : ''}" alt="" onerror="this.style.display='none'">
+            <span class="ml-premium-title" title="${(it.title||'').replace(/"/g,'&quot;')}">${it.title || it.id}</span>
+            <div class="ml-premium-meta">
+              <span class="ml-premium-price">${$(it.price)}</span>
+              <span class="ml-premium-stock">stock ${it.available_quantity ?? '—'}</span>
+              <span class="ml-premium-sold">vendidos ${it.sold_quantity ?? '—'}</span>
+            </div>
+          </div>
+        </a>`).join('')
+    }
+  `;
+}
+
+function mlSwitchMetric(metric, acc) {
+  document.getElementById(`mlMv-${acc}`)?.classList.toggle('active', metric === 'ventas');
+  document.getElementById(`mlMm-${acc}`)?.classList.toggle('active', metric === 'monto');
+  mlRenderHistPanel(mlState.data[acc]?.month30?.daily || {}, metric, acc);
+}
+
+function mlRenderHistPanel(daily, metric, acc) {
+  const labels = Object.keys(daily).sort();
+  const vals   = labels.map(d => metric === 'ventas' ? daily[d].ventas : daily[d].monto);
+  const isDark = document.body.classList.contains('dark');
+  const gc = isDark ? '#2d3148' : '#e5e7eb';
+  const tc = isDark ? '#718096' : '#999';
+  const k  = `mlHist-${acc}`;
+  if (chartInstances[k]) { try { chartInstances[k].destroy(); } catch(e){} }
+  chartInstances[k] = new Chart(document.getElementById(k), {
+    type: 'line',
+    data: {
+      labels: labels.map(d => d.slice(5)),
+      datasets: [{ data:vals, borderColor:'#4361ee', backgroundColor:'rgba(67,97,238,0.12)', fill:true, tension:0.35, pointRadius:1, pointHoverRadius:4, borderWidth:1.5 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label:c=>metric==='monto'?' $'+Math.round(c.raw).toLocaleString('es-AR'):` ${c.raw} ventas`}} },
+      scales: {
+        x: { grid:{color:gc}, ticks:{color:tc,font:{size:9},maxRotation:0,maxTicksLimit:10} },
+        y: { beginAtZero:true, grid:{color:gc}, ticks:{color:tc,font:{size:9},callback:v=>metric==='monto'?'$'+(v>=1000?(v/1000).toFixed(0)+'k':v):v} }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>

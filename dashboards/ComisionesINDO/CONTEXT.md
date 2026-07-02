@@ -67,7 +67,7 @@ SQL Server 2012 — sin `DATEFROMPARTS`; construir fechas con `CAST(CAST(@yr AS 
 | `calcularEncargados` (Retail) | categoría real | No (fix 2026-06-30) |
 | `calcularEncargadosMillon` | categoría real | No (implementado 2026-06-30) |
 | `calcularSupervisores` (`por_sucursal`) | categoría real | No (fix 2026-06-30) |
-| `calcularSupervisores` (`por_plaza`) | mejor categoría asignada | No (usa `factor_plaza` propio, sin relación con `mult`) |
+| `calcularSupervisores` (`por_plaza`) | siempre `categoria_suc='C'` (monto único en A/B/C) | No (usa `factor_plaza` propio, sin relación con `mult`) |
 | `calcularOperadores` (Retail) | siempre `'C'` | **Sí** — único caso correcto hoy; pendiente de unificar criterio |
 | `calcularOperadoresMillon` | categoría real (`MontosPrestamos`) | No |
 | `calcularCajeros` | categoría real (`MontosCajero`) | No (cajeros nunca llevan multiplicador) |
@@ -81,14 +81,25 @@ Funciones puras — reciben `ctx` con datos ya cargados (sin acceso a DB):
 | Función | Granularidad | Resumen |
 |---|---|---|
 | `calcularTotal(ctx)` | Por sucursal (Retail + Millón) | Escalones, semáforo, ratios de consumo y efectivo — **base para todo lo demás** |
-| `calcularCajeros(ctx, sucResultados)` | Por cajero | `vta_vta_tot >= obj_particip_pct` (sin tolerancia) |
+| `calcularCajeros(ctx, sucResultados)` | Por cajero | `ratio_particip > 0.96` — tolerancia 4% igual que escalones/G-O-R (agregada 2026-07-02) |
 | `calcularOperadores(ctx, sucResultados)` | Por operador (Retail) | Indicadores G/O/R; G es puerta de O y R |
 | `calcularOperadoresMillon(ctx)` | Por operador (Millón) | Solo efectivo; objetivo individual = objetivo sucursal / n operadores activos |
 | `calcularEncargados(ctx, sucResultados)` | Por sucursal Retail (id<100) | Escalón consumo + participación (G) — **componentes independientes** |
 | `calcularEncargadosMillon(ctx, sucResultados)` | Por sucursal Millón (id≥100) | Solo escalón efectivo — **sin** participación |
-| `calcularSupervisores(ctx, sucResultados)` | Por supervisor | Suma por sucursales asignadas + bono por plaza (mejor categoría entre sus sucursales) |
+| `calcularSupervisores(ctx, sucResultados)` | Por supervisor | Suma por sucursales asignadas (solo las que llegaron) + bono por plaza (por provincia, monto fijo) — ver detalle abajo |
 
 **Escalones**: umbrales E1=100%, E2=110%, E3=110%×1.15=126.5%; tolerancia: shortfall < 4% del umbral cuenta como alcanzado (`getEscalon()`).
+
+### Lógica de cálculo — Supervisores (reescrita 2026-07-01)
+
+La versión anterior (2026-06-30) pagaba un solo bono de "plaza" por supervisor usando la mejor categoría entre TODAS sus sucursales asignadas — no correspondía a la lógica real de negocio. Reescrita con la regla confirmada por el usuario:
+
+- **"Llegar a comisionar"** en una sucursal = `escalon_efectivo >= 1` si `tiene_efectivo`, sino `escalon_consumo >= 1` (reutiliza el campo que ya calcula `calcularTotal()`, sin recalcular nada de cero).
+- **$ por sucursal**: se paga por cada sucursal asignada al supervisor **solo si esa sucursal llegó**. Antes se pagaba siempre — bug corregido.
+- **$ por plaza = por PROVINCIA** (campo `sucursal.provincia`, no la categoría). Se paga un monto **fijo único** por cada provincia donde **TODAS** las sucursales asignadas al supervisor en esa provincia llegaron. Si al menos una no llegó, esa plaza no paga nada (las demás plazas del mismo supervisor pueden pagar igual si están completas). El monto se lee siempre de la fila `categoria_suc='C'` de `MontosSupervisor` (`tipo='por_plaza'`) porque en la data real A/B/C tienen el mismo valor — no hace falta diferenciar por categoría.
+- El resultado por supervisor incluye un array `plazas` (`provincia`, `cumplida`, `monto`) además del array `sucursales` (ahora con `provincia`, `escalon`, `llego`).
+
+**Pendiente**: sucursal id 1 (VALLEJO CALZADOS 01) está cerrada según el usuario pero sigue asignada a un supervisor sin `provincia` cargada — cae en un grupo "SIN PROVINCIA" ficticio. Falta decidir si se desactiva o se le quita la asignación (ver `RETOMAR.md`).
 
 ---
 
@@ -105,6 +116,17 @@ Funciones puras — reciben `ctx` con datos ya cargados (sin acceso a DB):
 
 `GET /calculo/encargados`, `/encargados-millon` y `/supervisores` leen del **último `CalculoHistorial` guardado** — no recalculan al vuelo. Si se agrega un campo nuevo al resultado de `/ejecutar`, hay que re-ejecutar el cálculo completo desde el Dashboard para que el historial lo tenga.
 
+### Botón "Ejecutar cálculo completo" (2026-07-01) — qué corre realmente
+
+`POST /calculo/ejecutar` **ya no es solo** `calcularTotal` + el resto del motor. Antes de cargar el contexto, encadena los recálculos que antes vivían aislados en sus propias páginas con su propio botón:
+
+0. `sincronizarObjetivos(periodo)` (`objetivos.js`, agregado 2026-07-02) — baja los objetivos de consumo y efectivo desde `METRIX.dbo.OBJETIVOS_MILLON` (BeClever) y los persiste en `ObjConsumo`/`ObjEfectivo`. **Antes ese cache solo se llenaba al entrar a cada solapa de la página Objetivos** → si nadie visitaba la solapa Efectivo, `ObjEfectivo` quedaba vacío para el período, todo `escalon_efectivo` daba 0 y la base efectivo de Operadores/Encargados salía en cero (pasó con 2026-06). Las dos queries a BeClever van **secuenciales**: el pool de BeClever tira `ECONNCLOSED` si se le pegan queries en paralelo.
+1. `calcularYGuardarRanking(pool, periodo)` (`ranking.js`) — recategoriza A/B/C todas las sucursales. **Antes no se llamaba nunca desde el botón principal** → si nadie entraba a la página Ranking a mano, toda sucursal cae al fallback `'C'` (bug que afectó a Supervisores el 2026-06-30).
+2. Resto del motor (`calcularTotal`, cajeros, operadores, encargados, encargados millón, supervisores) → se guarda en `CalculoHistorial` como siempre.
+3. `calcularYGuardarOperadores(pool, periodo)` (`operadores.js`) y `calcularYGuardarOperadoresMillon(pool, periodo)` (`millon.js`) — recalculan y persisten en sus tablas propias (`ResultadoOperadores` / `ResultadoOpMillon`), leídas por las páginas Operadores Retail/Millón. Antes solo corrían si el usuario entraba a esas páginas y apretaba su botón "Calcular".
+
+**Cajeros queda fuera** de este encadenado: su cálculo (`POST /calculo/cajeros`) recibe `overrides` de jornada que vienen de la UI, así que sigue siendo manual desde su propia página.
+
 ---
 
 ## Páginas (`src/pages/`) y sidebar
@@ -112,7 +134,7 @@ Funciones puras — reciben `ctx` con datos ya cargados (sin acceso a DB):
 | Sección sidebar | Ruta | Estado |
 |---|---|---|
 | Principal | `dashboard` | KPIs + botón "Ejecutar cálculo completo" |
-| DATOS | `visor-sucursales`, `millon`, `visor-montos`, `visor-ranking`, `visor-objetivos`, `visor-ventas`, `supervisores` (ABM) | Datos maestros — **blindado, no tocar** |
+| DATOS | `visor-sucursales`, `millon`, `visor-montos`, `visor-ranking`, `visor-objetivos`, `visor-ventas`, `supervisores` (ABM, label "Supervisores") | Datos maestros — **blindado, no tocar** |
 | Cálculos | `cajeros`, `operadores-retail`, `operadores-millon` | Resultado de cálculo individual — **blindado, no tocar** |
 | Cálculos | `encargados`, `encargados-millon` | Resultado por sucursal, sin nombres de personas — 2026-06-30 |
 | Cálculos | `resultado-supervisores` | Resultado por supervisor, fila expandible con detalle por sucursal — 2026-06-30 |
@@ -145,3 +167,5 @@ Restart-Service dashcomisionesindo.exe
 
 - **Operadores Retail** (`calcularOperadores`): revisar con el mismo criterio de no-doble-multiplicación — hoy ignora las filas reales A/B cargadas en `OPER_CON_EFECT`/`OPER_SIN_EFECT` y reconstruye desde `'C'` × `mult`. Decisión explícita del usuario: dejarlo para otra sesión.
 - **Encargados INDO** (sucursales con efectivo): aclarado por el usuario que para estas solo cuenta EFECTIVO — sin resolver si va dentro de Encargados Retail o es una sección aparte.
+- **Sucursal id 1** (VALLEJO CALZADOS 01) está cerrada según el usuario, pero sigue asignada a un supervisor y sin `provincia` cargada en el ABM de Sucursales — cae en un grupo "SIN PROVINCIA" en el cálculo de plaza de Supervisores. Falta decidir: desactivar (`activa=0`) y/o quitar la asignación al supervisor.
+- **Supervisores no está blindado todavía** — el usuario está validando la lógica nueva (por provincia/plaza) sesión por sesión. Ver `RETOMAR.md` para el detalle de lo cambiado el 2026-07-01.

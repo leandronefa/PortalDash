@@ -226,11 +226,11 @@ Configurables vía modal (persisten en `localStorage`):
 ## Tareas pendientes
 
 ### Alta prioridad
-1. **Renovación automática de tokens ML** — tokens vencen cada 6h; toda la integración ML deja de funcionar. Requiere app ML Developer con `client_id` + `client_secret` + `refresh_token`.
-2. **Deploy a servidor permanente** — actualmente en PC personal; si la PC está apagada, no funciona. Mover a `10.0.0.115`.
+1. ~~**Renovación automática de tokens ML**~~ ✅ **RESUELTO (2026-07-02)** — App ML creada (client_id `479257107101624`, guardada en `ml-config.json` bajo `_app`). Ambas cuentas autorizadas vía OAuth con `refresh_token`; el server renueva solo cada 5 h y reintenta ante 401. Flujo de re-autorización si hiciera falta: `/auth/ml/start?account=X` → pegar code en `POST /api/ml/exchange` (el redirect `https://www.valenet.com.ar/ml-callback` no apunta al server, se copia el code de la barra de direcciones).
+2. ~~**Deploy a servidor permanente**~~ ✅ **RESUELTO** — corre como servicio `dashmeli.exe` en 10.0.0.118, puerto 3010.
 
 ### Media prioridad
-3. **Tab Logística — datos reales** — el código está completo y correcto, pero no se pudieron probar porque el token estaba vencido al momento del handoff. Probar renovando el token y verificar que `o.shipping.logistic_type` devuelva valores correctos en las órdenes.
+3. ~~**Tab Logística — datos reales**~~ ✅ **RESUELTO (2026-07-02)** — Dos bugs corregidos: (a) `/orders/search` acepta `limit` máx 51 (se usaba 200 y ML devolvía error → todo en 0); ahora `mlOrdersAll()` pagina de a 51. (b) `logistic_type` NO viene en la búsqueda de órdenes, solo en `/shipments/{id}`; se enriquece con caché en memoria (`shipmentTypeCache`). Primera carga ~20 s por cuenta, después ~5 s.
 4. **Logística — costos de envío** — el campo "Envío a tu cargo" (visible en las imágenes de referencia `envio..png`) no está implementado. Requiere fetchear `GET /shipments/{id}` para cada orden (costoso) o usar la API de billing de ML. Explorar: `GET /users/{uid}/expenses` o `GET /billing/charges/search`.
 5. **Logística — desempeño Flex/Colecta** — las métricas de "Exposición actual" (Regular/Excelente/Muy mala) y "% envíos correctos" están visibles en `envio1..png` y `envio2..png`. Probar el endpoint `/users/{uid}/seller_performance` (ya se llama en el backend, pero `performance` devuelve `null` — puede ser que el token no tenga ese scope o que el endpoint sea diferente).
 

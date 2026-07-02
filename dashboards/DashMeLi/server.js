@@ -162,12 +162,164 @@ function saveMlConfig(cfg) {
   fs.writeFileSync(ML_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
 }
 
+// ── OAuth ML: renovación automática de tokens ────────────
+// La app (client_id/client_secret) se guarda en ml-config.json bajo la clave _app.
+
+async function refreshMlToken(account) {
+  const cfg = loadMlConfig();
+  const appCfg = cfg._app;
+  const acc = cfg[account];
+  if (!appCfg?.client_id || !appCfg?.client_secret) throw new Error('App ML no configurada (POST /api/ml/app)');
+  if (!acc?.refresh_token) throw new Error(`${account}: sin refresh_token — autorizar en /auth/ml/start?account=${account}`);
+  const r = await fetch('https://api.mercadolibre.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: appCfg.client_id,
+      client_secret: appCfg.client_secret,
+      refresh_token: acc.refresh_token,
+    })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(`refresh ${account}: ${data.message || data.error_description || data.error || `HTTP ${r.status}`}`);
+  const cur = loadMlConfig();
+  // ML rota el refresh_token en cada renovación
+  cur[account] = { ...cur[account], token: data.access_token, refresh_token: data.refresh_token || acc.refresh_token };
+  saveMlConfig(cur);
+  console.log(`[ML] Token de ${account} renovado (${new Date().toISOString()})`);
+  return data.access_token;
+}
+
+async function exchangeMlCode(account, code, redirectUri) {
+  const cfg = loadMlConfig();
+  const appCfg = cfg._app;
+  if (!appCfg?.client_id || !appCfg?.client_secret) throw new Error('App ML no configurada (POST /api/ml/app)');
+  const r = await fetch('https://api.mercadolibre.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: appCfg.client_id,
+      client_secret: appCfg.client_secret,
+      code,
+      redirect_uri: redirectUri,
+    })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.message || data.error_description || data.error || `HTTP ${r.status}`);
+  const u = await fetch('https://api.mercadolibre.com/users/me', {
+    headers: { Authorization: `Bearer ${data.access_token}` }
+  }).then(x => x.json());
+  const cur = loadMlConfig();
+  cur[account] = { token: data.access_token, refresh_token: data.refresh_token, userId: u.id, nickname: u.nickname };
+  saveMlConfig(cur);
+  console.log(`[ML] Cuenta ${account} autorizada como ${u.nickname} (refresh_token guardado)`);
+  return { userId: u.id, nickname: u.nickname };
+}
+
+// Fetch a ML API con reintento automático ante token vencido (401)
+async function mlFetch(account, ep, retried) {
+  const acc = loadMlConfig()[account];
+  if (!acc?.token) throw Object.assign(new Error('Cuenta no configurada'), { status: 400 });
+  const r = await fetch(`https://api.mercadolibre.com${ep}`, { headers: { Authorization: `Bearer ${acc.token}` } });
+  const d = await r.json();
+  if (r.status === 401 && !retried) {
+    await refreshMlToken(account);
+    return mlFetch(account, ep, true);
+  }
+  if (!r.ok) throw Object.assign(new Error(d.message || `ML ${r.status}`), { status: r.status });
+  return d;
+}
+
+// /orders/search acepta limit máximo 51 — pagina y devuelve la misma forma { paging, results }
+async function mlOrdersAll(account, query, maxResults = 1000) {
+  const results = [];
+  let total = 0;
+  for (let offset = 0; offset < maxResults; offset += 51) {
+    const page = await mlFetch(account, `/orders/search?${query}&limit=51&offset=${offset}`);
+    total = page.paging?.total ?? 0;
+    if (!page.results?.length) break;
+    results.push(...page.results);
+    if (results.length >= total) break;
+  }
+  return { paging: { total }, results };
+}
+
+// orders/search solo trae shipping.id; el logistic_type hay que buscarlo en /shipments/{id}.
+// Como no cambia nunca, se cachea en memoria por id de envío.
+const shipmentTypeCache = new Map();
+
+async function cacheShipmentTypes(account, orders) {
+  const ids = [...new Set(orders.map(o => o.shipping?.id).filter(Boolean))]
+    .filter(id => !shipmentTypeCache.has(id));
+  const CONC = 20;
+  for (let i = 0; i < ids.length; i += CONC) {
+    await Promise.allSettled(ids.slice(i, i + CONC).map(async id => {
+      const s = await mlFetch(account, `/shipments/${id}`);
+      shipmentTypeCache.set(id, s.logistic_type || 'not_specified');
+    }));
+  }
+}
+
+function mlRedirectUri(req) {
+  const appCfg = loadMlConfig()._app;
+  return appCfg?.redirect_uri || `${req.protocol}://${req.get('host')}/auth/callback`;
+}
+
+app.get('/api/ml/app', (req, res) => {
+  const appCfg = loadMlConfig()._app;
+  res.json(appCfg ? { configured: true, client_id: appCfg.client_id, redirect_uri: appCfg.redirect_uri || null } : { configured: false });
+});
+
+app.post('/api/ml/app', (req, res) => {
+  const { client_id, client_secret, redirect_uri } = req.body || {};
+  if (!client_id || !client_secret) return res.status(400).json({ error: 'Requerido: client_id y client_secret' });
+  const cfg = loadMlConfig();
+  cfg._app = { client_id: String(client_id), client_secret: String(client_secret), ...(redirect_uri ? { redirect_uri } : {}) };
+  saveMlConfig(cfg);
+  res.json({ ok: true });
+});
+
+// Paso 1 del OAuth: redirige a la pantalla de autorización de ML.
+// Abrir logueado en ML con la cuenta correspondiente: /auth/ml/start?account=sportotal
+app.get('/auth/ml/start', (req, res) => {
+  const { account } = req.query;
+  if (!['sportotal', 'vallejo'].includes(account)) return res.status(400).send('account debe ser sportotal o vallejo');
+  const appCfg = loadMlConfig()._app;
+  if (!appCfg?.client_id) return res.status(400).send('App ML no configurada (POST /api/ml/app)');
+  const url = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${appCfg.client_id}` +
+    `&redirect_uri=${encodeURIComponent(mlRedirectUri(req))}&state=${account}`;
+  res.redirect(url);
+});
+
+// Paso 2: ML vuelve acá con ?code=...&state=cuenta
+app.get('/auth/callback', async (req, res) => {
+  const { code, state: account } = req.query;
+  if (!code || !['sportotal', 'vallejo'].includes(account)) return res.status(400).send('Falta code o state inválido');
+  try {
+    const info = await exchangeMlCode(account, code, mlRedirectUri(req));
+    res.send(`<h2>✅ ${account} autorizada como ${info.nickname}</h2><p>Renovación automática activa. Ya podés cerrar esta pestaña.</p>`);
+  } catch (e) {
+    res.status(500).send(`<h2>❌ Error autorizando ${account}</h2><pre>${e.message}</pre>`);
+  }
+});
+
+// Alternativa manual: si el redirect no apunta a este server, pegar el code acá
+app.post('/api/ml/exchange', async (req, res) => {
+  const { account, code, redirect_uri } = req.body || {};
+  if (!account || !code) return res.status(400).json({ error: 'Requerido: account y code' });
+  try {
+    res.json({ ok: true, ...(await exchangeMlCode(account, code, redirect_uri || mlRedirectUri(req))) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/ml/config', (req, res) => {
   const c = loadMlConfig();
-  res.json({
-    sportotal: c.sportotal ? { configured: true, userId: c.sportotal.userId, nickname: c.sportotal.nickname } : { configured: false },
-    vallejo:   c.vallejo   ? { configured: true, userId: c.vallejo.userId,   nickname: c.vallejo.nickname   } : { configured: false }
-  });
+  const st = a => c[a] ? { configured: true, userId: c[a].userId, nickname: c[a].nickname, autoRefresh: !!(c[a].refresh_token && c._app) } : { configured: false };
+  res.json({ sportotal: st('sportotal'), vallejo: st('vallejo') });
 });
 
 app.post('/api/ml/config', async (req, res) => {
@@ -181,7 +333,7 @@ app.post('/api/ml/config', async (req, res) => {
     const user = await r.json();
     if (!r.ok) return res.status(400).json({ error: user.message || `Token inválido (HTTP ${r.status})` });
     const cfg = loadMlConfig();
-    cfg[account] = { token, userId: user.id, nickname: user.nickname };
+    cfg[account] = { ...cfg[account], token, userId: user.id, nickname: user.nickname };
     saveMlConfig(cfg);
     res.json({ ok: true, userId: user.id, nickname: user.nickname });
   } catch (e) {
@@ -202,15 +354,8 @@ app.get('/api/ml/dashboard', async (req, res) => {
   const acc = cfg[account];
   if (!acc) return res.status(400).json({ error: 'Cuenta no configurada' });
 
-  const hdr = { Authorization: `Bearer ${acc.token}` };
-  const uid  = acc.userId;
-
-  async function ml(ep) {
-    const r = await fetch(`https://api.mercadolibre.com${ep}`, { headers: hdr });
-    const d = await r.json();
-    if (!r.ok) throw Object.assign(new Error(d.message || `ML ${r.status}`), { status: r.status });
-    return d;
-  }
+  const uid = acc.userId;
+  const ml  = ep => mlFetch(account, ep);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayIso = today.toISOString();
@@ -238,9 +383,9 @@ app.get('/api/ml/dashboard', async (req, res) => {
     ml(`/users/${uid}/items/search?listing_type_id=gold_pro&status=paused&limit=0`),
     ml(`/users/${uid}/items/search?listing_type_id=gold_premium&status=paused&limit=0`),
     ml(`/users/${uid}/items/search?listing_type_id=gold_special&status=paused&limit=0`),
-    ml(`/orders/search?seller=${uid}&order.date_created.from=${todayIso}&limit=50`),
-    ml(`/orders/search?seller=${uid}&order.date_created.from=${ago7}&order.status=paid&limit=200`),
-    ml(`/orders/search?seller=${uid}&order.date_created.from=${ago30}&order.status=paid&limit=200`),
+    mlOrdersAll(account, `seller=${uid}&order.date_created.from=${todayIso}`),
+    mlOrdersAll(account, `seller=${uid}&order.date_created.from=${ago7}&order.status=paid`),
+    mlOrdersAll(account, `seller=${uid}&order.date_created.from=${ago30}&order.status=paid`),
   ]);
 
   const todayList = ordersToday?.results || [];
@@ -312,12 +457,10 @@ app.get('/api/ml/proxy', async (req, res) => {
   const rest = Object.entries(req.query)
     .filter(([k]) => k !== 'account' && k !== 'path')
     .map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-  const url = `https://api.mercadolibre.com${mlPath}${rest ? '?' + rest : ''}`;
   try {
-    const r = await fetch(url, { headers: { Authorization: `Bearer ${acc.token}` } });
-    res.status(r.status).json(await r.json());
+    res.json(await mlFetch(account, `${mlPath}${rest ? '?' + rest : ''}`));
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
@@ -327,15 +470,8 @@ app.get('/api/ml/logistics', async (req, res) => {
   const acc = cfg[account];
   if (!acc) return res.status(400).json({ error: 'Cuenta no configurada' });
 
-  const hdr = { Authorization: `Bearer ${acc.token}` };
   const uid = acc.userId;
-
-  async function ml(ep) {
-    const r = await fetch(`https://api.mercadolibre.com${ep}`, { headers: hdr });
-    const d = await r.json();
-    if (!r.ok) throw Object.assign(new Error(d.message || `ML ${r.status}`), { status: r.status });
-    return d;
-  }
+  const ml  = ep => mlFetch(account, ep);
 
   const settle = arr => Promise.allSettled(arr).then(rs => rs.map(r => r.status === 'fulfilled' ? r.value : null));
 
@@ -344,11 +480,15 @@ app.get('/api/ml/logistics', async (req, res) => {
   const ago30 = new Date(Date.now() - 30 * 86400000);
 
   const [ordersToday, orders7d, orders30d, performance] = await settle([
-    ml(`/orders/search?seller=${uid}&order.date_created.from=${todayStart.toISOString()}&limit=200`),
-    ml(`/orders/search?seller=${uid}&order.date_created.from=${ago7.toISOString()}&order.status=paid&limit=200`),
-    ml(`/orders/search?seller=${uid}&order.date_created.from=${ago30.toISOString()}&order.status=paid&limit=200`),
+    mlOrdersAll(account, `seller=${uid}&order.date_created.from=${todayStart.toISOString()}`),
+    mlOrdersAll(account, `seller=${uid}&order.date_created.from=${ago7.toISOString()}&order.status=paid`),
+    mlOrdersAll(account, `seller=${uid}&order.date_created.from=${ago30.toISOString()}&order.status=paid`),
     ml(`/users/${uid}/seller_performance`),
   ]);
+
+  // Enriquecer con el tipo logístico real de cada envío (cacheado)
+  const allOrders = [...(ordersToday?.results || []), ...(orders7d?.results || []), ...(orders30d?.results || [])];
+  try { await cacheShipmentTypes(account, allOrders); } catch (e) { console.error(`[ML] shipments ${account}: ${e.message}`); }
 
   function processOrders(data) {
     const results = data?.results || [];
@@ -356,7 +496,7 @@ app.get('/api/ml/logistics', async (req, res) => {
     let totalAmount = 0;
 
     for (const o of results) {
-      const lt = o.shipping?.logistic_type || 'not_specified';
+      const lt = shipmentTypeCache.get(o.shipping?.id) || o.shipping?.logistic_type || 'not_specified';
       const name = lt === 'self_service'  ? 'Flex'
         : lt === 'fulfillment'           ? 'Full'
         : lt === 'not_specified'         ? 'Sin envío'
@@ -415,15 +555,8 @@ app.get('/api/ml/premium-items', async (req, res) => {
   const acc = cfg[account];
   if (!acc) return res.status(400).json({ error: 'Cuenta no configurada' });
 
-  const hdr = { Authorization: `Bearer ${acc.token}` };
   const uid = acc.userId;
-
-  async function ml(ep) {
-    const r = await fetch(`https://api.mercadolibre.com${ep}`, { headers: hdr });
-    const d = await r.json();
-    if (!r.ok) throw Object.assign(new Error(d.message || `ML ${r.status}`), { status: r.status });
-    return d;
-  }
+  const ml  = ep => mlFetch(account, ep);
 
   const allIds = [];
   let offset = 0;
@@ -450,8 +583,20 @@ app.get('/api/ml/premium-items', async (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Renueva los tokens de las cuentas que tengan refresh_token (los access token duran 6 h)
+function refreshAllMlTokens() {
+  const cfg = loadMlConfig();
+  for (const account of ['sportotal', 'vallejo']) {
+    if (cfg[account]?.refresh_token && cfg._app) {
+      refreshMlToken(account).catch(e => console.error(`[ML] ${e.message}`));
+    }
+  }
+}
+
 app.listen(PORT, async () => {
   console.log(`Dashboard corriendo en http://localhost:${PORT}`);
+  refreshAllMlTokens();
+  setInterval(refreshAllMlTokens, 5 * 60 * 60 * 1000);
   try {
     await getPool();
     console.log(`Conectado a SQL Server ${dbConfig.server}/${dbConfig.database}`);

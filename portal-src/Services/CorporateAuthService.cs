@@ -77,6 +77,12 @@ public class CorporateAuthService(IConfiguration config, ILogger<CorporateAuthSe
                         var candidate = cols.Keys.FirstOrDefault(LooksLikeSuccessColumn);
                         if (candidate is not null)
                             explicitOk = IsTruthy(cols[candidate], successVals);
+                        else if (reader.FieldCount == 1)
+                        {
+                            // SP corporativo real: devuelve SIEMPRE una fila con una unica columna
+                            // sin nombre ('ok' o 'Acceso denegado!'). El valor ES el indicador.
+                            explicitOk = IsTruthy(cols.Values.FirstOrDefault(), successVals);
+                        }
                     }
 
                     displayName = displayCols

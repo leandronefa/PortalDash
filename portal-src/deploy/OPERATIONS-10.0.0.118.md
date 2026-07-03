@@ -143,6 +143,7 @@ Los archivos originales en `\\10.0.0.115\Cegid\` no se tocan (copiar, no mover d
 4. **sucursal-user-visualizer**: el backend es TypeScript y se compila a **`dist-server\index.js`** (`npm run build:prod`). El servicio apunta a ese archivo, no a `server.js`. (La carpeta trae también un `nssm.exe`/`install-service.ps1` propios que NO se usan.)
 5. **Restos de node-windows**: al borrar un servicio con `sc.exe delete`, queda la subcarpeta `daemon\` en la app y node-windows cree que "ya existe". Para reinstalar limpio: borrar esa carpeta `daemon\` primero.
 6. **Red / iframe**: los dashboards escuchan en `0.0.0.0` y el firewall está abierto en 3001/3002/3003. El iframe lo carga el navegador del cliente, que va directo a `http://10.0.0.118:PUERTO`.
+7. **Login del portal aceptaba cualquier contraseña** (jul 2026): el SP real `SP_VALIDAR_INICIO_SESION_APPS` devuelve SIEMPRE una fila con una única columna **sin nombre** (`'ok'` o `'Acceso denegado!'`). La autodetección por nombre de columna no encontraba indicador y `TreatAnyRowAsSuccess=true` daba por válido cualquier login de usuario existente. **Fix**: `CorporateAuthService.cs` ahora usa el valor de la columna única como indicador (compara contra `SuccessValues`, que incluye `"ok"`), y `TreatAnyRowAsSuccess` pasó a `false` en `appsettings.json` (fuente y `C:\apps\portal`).
 
 ## Cómo agregar / reinstalar un dashboard
 

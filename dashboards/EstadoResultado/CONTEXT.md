@@ -17,6 +17,18 @@ Estado de Resultado (**P&L mensual**) para TESI y PUEBLO. Lee archivos exportado
 - Los archivos se archivan en `SAPResultProcesado/` tras la lectura
 - **Caché local**: `data-cache/latest.json`
 
+## Vistas (tabs)
+- **Resumen** (default): matriz P&L por sucursal estilo Excel contable — Ventas / Costo de Ventas / Margen Bruto / Gastos Directos / Contribución / Gastos Indirectos / Utilidad Neta, con filas de % y cuadro de totales.
+  - Criterio de asignación (`buildMatrixPL` en `src/lib/data-processing.ts`): columnas = sucursales con ventas ≠ 0. **Gastos indirectos** = gastos de centros de costo (sucursales sin ventas) + registros sin sucursal + servicios centrales (4.2.002.02/03) + resultados financieros (4.2.004), **prorrateados por participación en ventas**. La suma de utilidades por sucursal cierra exacto con el resultado global.
+  - Referencia visual: `foto.jpeg` (Excel de contabilidad). Los números del Excel no coinciden 1:1 porque contabilidad aplica ajustes manuales.
+- **Estado de Resultado**: P&L por grupos de cuentas (colapsable).
+- **Por Sucursal**: resumen por sucursal con desglose expandible.
+- **Gráficos**: top gastos + ingresos vs gastos.
+
+**Selector de mes**: en el header, control índigo con flechas `‹ mes ›` + desplegable. Los archivos SAP traen varios períodos (campo 5 `YYYY-MM`); siempre se visualiza **un mes a la vez** (default: el más reciente) y aplica a todas las pestañas.
+
+> ⚠️ Tras cambiar `src/`, correr `npm run build` — el servicio sirve `dist/` desde disco (no hace falta reiniciar), pero un `dist` viejo hace que el navegador muestre features desactualizadas. Pedir Ctrl+F5 al usuario tras un deploy.
+
 ## Endpoints API
 | Método | Ruta | Descripción |
 |--------|------|-------------|

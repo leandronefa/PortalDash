@@ -1,18 +1,19 @@
 import { useEffect, useState, useMemo, useCallback, Fragment, useRef } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronRight, Moon, Sun, Upload } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightNav, Moon, Sun, Upload } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
 import {
-  buildPLStatement, buildBranchSummary, buildBranchPL, topExpenses,
-  type SAPRecord, type PLStatement, type BranchSummary, type PLRow
+  buildPLStatement, buildBranchSummary, buildBranchPL, topExpenses, buildMatrixPL,
+  type SAPRecord, type PLStatement, type BranchSummary, type PLRow, type MatrixPL
 } from '@/src/lib/data-processing'
 
 type Empresa = 'TESI' | 'PUEBLO'
-type TabId = 'pl' | 'sucursal' | 'graficos'
+type TabId = 'resumen' | 'pl' | 'sucursal' | 'graficos'
 
 const TABS: { id: TabId; label: string }[] = [
+  { id: 'resumen', label: 'Resumen' },
   { id: 'pl', label: 'Estado de Resultado' },
   { id: 'sucursal', label: 'Por Sucursal' },
   { id: 'graficos', label: 'Gráficos' },
@@ -232,6 +233,133 @@ function SucursalRow({
   )
 }
 
+// ─── Vista Resumen: matriz P&L por sucursal (estilo Excel contable) ──────────
+function sucLabel(code: string): string {
+  return `SUC${code.replace(/^0/, '')}`
+}
+
+function pct(num: number, den: number, decimals = 0): string {
+  if (den === 0) return '–'
+  return `${((num / den) * 100).toFixed(decimals)}%`
+}
+
+function MatrixCell({ value, bold = false, negative = false }: { value: number; bold?: boolean; negative?: boolean }) {
+  const isNeg = value < 0
+  return (
+    <td className={`px-3 py-1.5 text-right font-mono text-xs whitespace-nowrap border-l border-slate-200 dark:border-slate-700 ${
+      negative && isNeg
+        ? 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 font-semibold'
+        : isNeg
+          ? 'text-red-500 dark:text-red-400'
+          : 'text-slate-700 dark:text-slate-200'
+    } ${bold ? 'font-semibold' : ''}`}>
+      {nfAR0.format(Math.round(value))}
+    </td>
+  )
+}
+
+function MatrixView({ matrix, periodoStr }: { matrix: MatrixPL; periodoStr: string | null }) {
+  const { columnas, totales } = matrix
+  const t = totales
+
+  const labelCls = 'sticky left-0 z-10 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap border-r-2 border-slate-300 dark:border-slate-600'
+  const pctCls = 'px-3 py-1 text-right font-mono text-[0.68rem] text-slate-500 dark:text-slate-400 whitespace-nowrap border-l border-slate-200 dark:border-slate-700'
+
+  function PctRow({ label, get }: { label: string; get: (c: typeof columnas[number]) => string }) {
+    return (
+      <tr className="border-b border-slate-200 dark:border-slate-700">
+        <td className={`${labelCls} font-normal text-slate-400 dark:text-slate-500`}>{label}</td>
+        {columnas.map(c => <td key={c.sucursal} className={pctCls}>{get(c)}</td>)}
+      </tr>
+    )
+  }
+
+  function ValRow({ label, get, bold = false, negative = false, topBorder = false }: {
+    label: string; get: (c: typeof columnas[number]) => number; bold?: boolean; negative?: boolean; topBorder?: boolean
+  }) {
+    return (
+      <tr className={`border-b border-slate-200 dark:border-slate-700 ${topBorder ? 'border-t-2 border-t-slate-400 dark:border-t-slate-500' : ''} ${bold ? 'bg-slate-50 dark:bg-slate-700/40' : ''}`}>
+        <td className={`${labelCls} ${bold ? 'uppercase' : ''}`}>{label}</td>
+        {columnas.map(c => <MatrixCell key={c.sucursal} value={get(c)} bold={bold} negative={negative} />)}
+      </tr>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-slate-200 dark:bg-slate-700 border-b-2 border-slate-400 dark:border-slate-500">
+                <th className="sticky left-0 z-10 bg-slate-200 dark:bg-slate-700 px-3 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 capitalize border-r-2 border-slate-300 dark:border-slate-600 whitespace-nowrap">
+                  {periodoStr ?? ''}
+                </th>
+                {columnas.map(c => (
+                  <th key={c.sucursal} className="px-3 py-2 text-right text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap border-l border-slate-300 dark:border-slate-600">
+                    {sucLabel(c.sucursal)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <ValRow label="Ventas" get={c => c.ventas} bold />
+              <PctRow label="%" get={c => pct(c.ventas, t.ventas)} />
+              <ValRow label="Costo de Ventas" get={c => c.costo} />
+              <ValRow label="Margen Bruto" get={c => c.margen} bold topBorder />
+              <PctRow label="%" get={c => pct(c.margen, c.ventas, 1)} />
+              <ValRow label="Gastos Directos" get={c => c.directos} />
+              <ValRow label="Contribución" get={c => c.contribucion} bold topBorder />
+              <PctRow label="%" get={c => pct(c.contribucion, c.ventas)} />
+              <ValRow label="Gastos Indirectos" get={c => c.indirectos} />
+              <ValRow label="Utilidad Neta" get={c => c.utilidad} bold negative topBorder />
+              <PctRow label="%" get={c => pct(c.utilidad, c.ventas)} />
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Cuadro de totales (como el Excel) */}
+      <div className="flex justify-end">
+        <Card className="w-full sm:w-[26rem]">
+          <table className="w-full text-sm">
+            <tbody>
+              {([
+                { label: 'Total Ventas', value: t.ventas, bold: true },
+                { label: 'Total costo de ventas', value: t.costo },
+                { label: 'Margen Bruto', value: t.margen, bold: true, extra: pct(t.margen, t.ventas, 1) },
+                { label: 'Total gastos directos', value: t.directos },
+                { label: 'Total gastos indirectos', value: t.indirectos, extra: nfAR0.format(Math.round(t.totalGastos)) },
+                { label: 'Utilidad neta', value: t.utilidad, bold: true },
+              ] as { label: string; value: number; bold?: boolean; extra?: string }[]).map(row => (
+                <tr key={row.label} className={`border-b border-slate-100 dark:border-slate-700 ${row.bold ? 'bg-slate-100 dark:bg-slate-700/50' : ''}`}>
+                  <td className={`px-3 py-1.5 text-xs ${row.bold ? 'font-bold' : 'font-medium'} text-slate-700 dark:text-slate-200`}>{row.label}</td>
+                  <td className={`px-3 py-1.5 text-right font-mono text-xs whitespace-nowrap ${row.bold ? 'font-bold' : ''} ${row.value < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                    {nfAR0.format(Math.round(row.value))}
+                  </td>
+                  <td className="px-2 py-1.5 text-right font-mono text-[0.68rem] text-slate-400 dark:text-slate-500 whitespace-nowrap w-20">
+                    {row.extra ?? ''}
+                  </td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700">
+                <td className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">Resultado</td>
+                <td className={`px-3 py-2 text-right font-mono text-xs font-bold whitespace-nowrap ${t.utilidad < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  {nfAR0.format(Math.round(t.utilidad))}
+                </td>
+                <td />
+              </tr>
+            </tbody>
+          </table>
+          <p className="px-3 py-2 text-[0.65rem] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700">
+            Gastos indirectos = centros de costo + servicios centrales + resultados financieros, prorrateados por participación en ventas.
+          </p>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -240,7 +368,7 @@ export default function App() {
   const [lastUpdate, setLastUpdate] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState<TabId>('pl')
+  const [activeTab, setActiveTab] = useState<TabId>('resumen')
   const [sortField, setSortField] = useState<'sucursal' | 'ventasNetas' | 'totalGastos' | 'resultado'>('ventasNetas')
   const [expandedBranches, setExpandedBranches] = useState<Set<string>>(new Set())
   const [sourcePath, setSourcePath] = useState<string | null>(null)
@@ -314,6 +442,7 @@ export default function App() {
     return b[sortField] - a[sortField]
   }), [branches, sortField])
   const chartData = useMemo(() => pl ? topExpenses(pl, 15) : [], [pl])
+  const matrix = useMemo<MatrixPL | null>(() => filteredRecords ? buildMatrixPL(filteredRecords) : null, [filteredRecords])
 
   async function handleRefresh() {
     if (refreshing) return
@@ -393,17 +522,42 @@ export default function App() {
               ))}
             </div>
 
-            {/* Period selector */}
+            {/* Period selector: ‹ mes › (periodos ordenados de más nuevo a más viejo) */}
             {periodos.length > 0 && (
-              <select
-                value={selectedPeriodo ?? ''}
-                onChange={e => setSelectedPeriodo(e.target.value)}
-                className="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 capitalize"
-              >
-                {periodos.map(p => (
-                  <option key={p} value={p} className="capitalize">{formatPeriodoOption(p)}</option>
-                ))}
-              </select>
+              <div className="flex items-center rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 overflow-hidden">
+                <button
+                  onClick={() => {
+                    const i = periodos.indexOf(selectedPeriodo ?? '')
+                    if (i < periodos.length - 1) setSelectedPeriodo(periodos[i + 1])
+                  }}
+                  disabled={periodos.indexOf(selectedPeriodo ?? '') >= periodos.length - 1}
+                  className="px-2.5 py-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-30 disabled:cursor-default transition-colors"
+                  title="Mes anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <select
+                  value={selectedPeriodo ?? ''}
+                  onChange={e => setSelectedPeriodo(e.target.value)}
+                  className="px-2 py-2 text-sm font-semibold bg-transparent text-indigo-700 dark:text-indigo-300 focus:outline-none capitalize cursor-pointer"
+                  title="Elegir mes a visualizar"
+                >
+                  {periodos.map(p => (
+                    <option key={p} value={p} className="capitalize bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200">{formatPeriodoOption(p)}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => {
+                    const i = periodos.indexOf(selectedPeriodo ?? '')
+                    if (i > 0) setSelectedPeriodo(periodos[i - 1])
+                  }}
+                  disabled={periodos.indexOf(selectedPeriodo ?? '') <= 0}
+                  className="px-2.5 py-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-30 disabled:cursor-default transition-colors"
+                  title="Mes siguiente"
+                >
+                  <ChevronRightNav className="w-4 h-4" />
+                </button>
+              </div>
             )}
 
             <button
@@ -536,6 +690,11 @@ export default function App() {
                 ))}
               </nav>
             </div>
+
+            {/* Tab: Resumen (matriz por sucursal) */}
+            {activeTab === 'resumen' && matrix && (
+              <MatrixView matrix={matrix} periodoStr={periodoStr} />
+            )}
 
             {/* Tab: Estado de Resultado */}
             {activeTab === 'pl' && (

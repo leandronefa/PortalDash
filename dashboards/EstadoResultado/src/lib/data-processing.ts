@@ -124,6 +124,94 @@ export function buildBranchPL(records: SAPRecord[], sucursal: string): PLStateme
   return buildPLStatement(records.filter(r => r.sucursal === sucursal))
 }
 
+// ─── Matriz P&L por sucursal (vista Resumen) ────────────────────────────────
+// Líneas estilo Excel contable: Ventas / Costo / Margen / G.Directos / Contribución / G.Indirectos / Utilidad
+// Criterio: los gastos de sucursales SIN ventas (centros de costo), los gastos sin sucursal
+// y las cuentas de servicios centrales (4.2.002.02/03) + resultados financieros (4.2.004)
+// forman un pool de "gastos indirectos" que se prorratea por participación en ventas.
+export interface MatrixColumn {
+  sucursal: string
+  ventas: number
+  costo: number
+  margen: number
+  directos: number
+  contribucion: number
+  indirectos: number
+  utilidad: number
+}
+
+export interface MatrixPL {
+  columnas: MatrixColumn[]
+  totales: {
+    ventas: number; costo: number; margen: number
+    directos: number; indirectos: number; totalGastos: number
+    contribucion: number; utilidad: number
+  }
+}
+
+export function buildMatrixPL(records: SAPRecord[]): MatrixPL {
+  type Acc = { ventas: number; costo: number; directos: number; otros: number }
+  const by = new Map<string, Acc>()
+
+  for (const r of records) {
+    const suc = r.sucursal || '(sin)'
+    let b = by.get(suc)
+    if (!b) { b = { ventas: 0, costo: 0, directos: 0, otros: 0 }; by.set(suc, b) }
+    const v = r.cuenta.startsWith('4.1') ? -r.valor : r.valor
+    if (r.cuenta.startsWith('4.1')) b.ventas += v
+    else if (r.cuenta.startsWith('4.2.001')) b.costo += v
+    else if (r.cuenta.startsWith('4.2.002.01')) b.directos += v
+    else b.otros += v // servicios centrales + resultados financieros
+  }
+
+  let pool = 0
+  const selling: { sucursal: string; ventas: number; costo: number; directos: number }[] = []
+
+  for (const [suc, b] of by) {
+    if (b.ventas !== 0 && suc !== '(sin)') {
+      selling.push({ sucursal: suc, ventas: b.ventas, costo: b.costo, directos: b.directos })
+      pool += b.otros
+    } else {
+      // centro de costo (sin ventas) o registros sin sucursal → todo al pool de indirectos
+      pool += b.costo + b.directos + b.otros - b.ventas
+    }
+  }
+
+  const totalVentas = selling.reduce((a, s) => a + s.ventas, 0)
+
+  const columnas: MatrixColumn[] = selling
+    .sort((a, b) => a.sucursal.localeCompare(b.sucursal))
+    .map(s => {
+      const margen = s.ventas - s.costo
+      const contribucion = margen - s.directos
+      const indirectos = totalVentas !== 0 ? pool * (s.ventas / totalVentas) : 0
+      return {
+        sucursal: s.sucursal,
+        ventas: s.ventas,
+        costo: s.costo,
+        margen,
+        directos: s.directos,
+        contribucion,
+        indirectos,
+        utilidad: contribucion - indirectos
+      }
+    })
+
+  const sumCol = (k: keyof MatrixColumn) => columnas.reduce((a, c) => a + (c[k] as number), 0)
+  const totales = {
+    ventas: sumCol('ventas'),
+    costo: sumCol('costo'),
+    margen: sumCol('margen'),
+    directos: sumCol('directos'),
+    indirectos: pool,
+    totalGastos: sumCol('directos') + pool,
+    contribucion: sumCol('contribucion'),
+    utilidad: sumCol('contribucion') - pool
+  }
+
+  return { columnas, totales }
+}
+
 export function topExpenses(pl: PLStatement, n = 15): { descripcion: string; valor: number }[] {
   const all = [
     ...pl.gastosOperativos.rows,

@@ -103,6 +103,7 @@ export async function renderOperadores(container, periodo, tipo = 'all') {
 
   let allData = [];
   let currentGroups = [];
+  const expandedSet = new Set();
 
   // ── Resumen KPIs ─────────────────────────────────────────────────────────────
   function renderSummary(groups) {
@@ -158,6 +159,11 @@ export async function renderOperadores(container, periodo, tipo = 'all') {
           indicador_r:      r.indicador_r  ?? -1,
           calc_consumo:     +r.calc_consumo  || 0,
           calc_efectivo:    +r.calc_efectivo || 0,
+          // null = cálculo guardado con formato viejo (sin desglose); 0 = componente no aplicado
+          comp_escalon:     r.comp_escalon   == null ? null : +r.comp_escalon,
+          comp_particip:    r.comp_particip  == null ? null : +r.comp_particip,
+          comp_ticket:      r.comp_ticket    == null ? null : +r.comp_ticket,
+          comp_operacion:   r.comp_operacion == null ? null : +r.comp_operacion,
           monto_full:       +r.monto_full    || 0,
           monto_part:       +r.monto_part    || 0,
         });
@@ -167,13 +173,82 @@ export async function renderOperadores(container, periodo, tipo = 'all') {
     currentGroups = groups;
     renderSummary(groups);
 
+    // Desglose de la composición del monto (fila expandible)
+    const MULT_VAL = { A: 1.30, B: 1.15, C: 1.00 };
+    function detalleHTML(g) {
+      if (g.comp_escalon == null) {
+        return `<div style="padding:12px 16px;font-size:12px;color:var(--badge-e-t)">
+          ⚠ Este cálculo fue guardado con un formato anterior que no incluye el desglose por componente.
+          Presioná <strong>⟳ Calcular</strong> para regenerarlo con el detalle.
+        </div>`;
+      }
+      const mult = MULT_VAL[g.categoria] ?? 1.0;
+      const ok   = '<span style="color:var(--color-success);font-weight:700">✓</span>';
+      const no   = '<span style="color:var(--color-danger);font-weight:700">✗</span>';
+      const gOk  = g.indicador_g > -0.04;
+      const item = (label, monto, aplica, motivo) => `
+        <tr>
+          <td style="padding:3px 10px 3px 0;color:var(--color-muted)">${label}</td>
+          <td style="padding:3px 10px;text-align:center">${aplica ? ok : no}</td>
+          <td style="padding:3px 0;text-align:right;font-weight:600;${monto === 0 ? 'opacity:.45' : ''}">$ ${fmtMoney(monto)}</td>
+          <td style="padding:3px 0 3px 14px;color:var(--color-muted);font-size:11px">${motivo}</td>
+        </tr>`;
+
+      const consumoRows = [
+        item(`Escalón consumo`, g.comp_escalon, g.escalon_consumo >= 1,
+             g.escalon_consumo >= 1 ? `llegó a E${g.escalon_consumo}` : 'no llegó a E1'),
+        item(`Participación (G)`, g.comp_particip, gOk,
+             gOk ? `G ${(g.indicador_g * 100).toFixed(1)}% &gt; −4%` : `G ${(g.indicador_g * 100).toFixed(1)}% ≤ −4%`),
+        item(`Ticket promedio (O)`, g.comp_ticket, gOk && g.indicador_o > -0.04,
+             !gOk ? 'bloqueado: requiere G' : g.indicador_o > -0.04 ? `O ${(g.indicador_o * 100).toFixed(1)}% &gt; −4%` : `O ${(g.indicador_o * 100).toFixed(1)}% ≤ −4%`),
+        item(`Operaciones (R)`, g.comp_operacion, gOk && g.indicador_r > -0.04,
+             !gOk ? 'bloqueado: requiere G' : g.indicador_r > -0.04 ? `R ${(g.indicador_r * 100).toFixed(1)}% &gt; −4%` : `R ${(g.indicador_r * 100).toFixed(1)}% ≤ −4%`),
+      ].join('');
+
+      const efectivoHTML = g.tiene_efectivo
+        ? `<table style="width:auto;font-size:12px">
+             ${item(`Escalón efectivo`, g.calc_efectivo, g.escalon_efectivo >= 1,
+                    g.escalon_efectivo >= 1 ? `llegó a E${g.escalon_efectivo} (tabla Préstamos)` : 'no llegó a E1')}
+           </table>`
+        : `<div style="font-size:12px;color:var(--color-muted)">Sucursal SIN efectivo — no aplica.</div>`;
+
+      return `
+        <div style="display:flex;gap:36px;flex-wrap:wrap;padding:12px 16px 14px 34px;background:var(--color-bg)">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px">Consumo (montos base cat. C)</div>
+            <table style="width:auto;font-size:12px">
+              ${consumoRows}
+              <tr style="border-top:1px solid var(--color-border)">
+                <td style="padding:4px 10px 0 0;font-weight:700">Base consumo</td><td></td>
+                <td style="padding:4px 0 0;text-align:right;font-weight:700">$ ${fmtMoney(g.calc_consumo)}</td><td></td>
+              </tr>
+            </table>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px">Efectivo (montos base cat. C)</div>
+            ${efectivoHTML}
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px">Monto final</div>
+            <div style="font-size:12px;line-height:1.9">
+              ($ ${fmtMoney(g.calc_consumo)} + $ ${fmtMoney(g.calc_efectivo)}) × <strong>${mult.toFixed(2)}</strong> (cat. ${g.categoria})
+              = $ ${fmtMoney((g.calc_consumo + g.calc_efectivo) * mult)}<br>
+              <span style="color:var(--color-muted)">redondeado a miles →</span>
+              <strong>$ ${fmtMoney(g.monto_full)}</strong>
+              <span style="color:var(--color-muted);font-size:11px">(part-time: $ ${fmtMoney(g.monto_part)})</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
     const rows = groups.map(g => {
       const zero = 'opacity:.45';
       const multStr = MULT_MAP[g.categoria] ?? '×1.00';
+      const expanded = expandedSet.has(g.sucursal_id);
       return `
-        <tr>
+        <tr class="op-row" data-suc-id="${g.sucursal_id}" style="cursor:pointer" title="Click para ver el desglose del monto">
           <td style="padding:10px 14px;font-weight:600">
-            <span style="font-weight:700;color:var(--color-muted);font-size:12px;margin-right:4px">#${g.sucursal_id}</span>
+            <span class="op-arrow" style="display:inline-block;font-size:9px;color:var(--color-muted);margin-right:6px;transition:transform 150ms;transform:rotate(${expanded ? 90 : 0}deg)">▶</span><span style="font-weight:700;color:var(--color-muted);font-size:12px;margin-right:4px">#${g.sucursal_id}</span>
             ${g.sucursal_nombre}
             ${catBadge(g.categoria)}
             ${tipoBadge(g.tipo_operador)}
@@ -191,6 +266,9 @@ export async function renderOperadores(container, periodo, tipo = 'all') {
           <td style="padding:10px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--color-muted)">${multStr}</td>
           <td style="padding:10px 6px;text-align:right;font-weight:700">${fmtMoney(g.monto_full)}</td>
           <td style="padding:10px 14px 10px 6px;text-align:right;font-size:11px;color:var(--color-muted)">${fmtMoney(g.monto_part)}</td>
+        </tr>
+        <tr class="op-detail" data-suc-id="${g.sucursal_id}" style="display:${expanded ? '' : 'none'}">
+          <td colspan="14" style="padding:0;border-bottom:2px solid var(--color-border)">${detalleHTML(g)}</td>
         </tr>`;
     }).join('');
 
@@ -222,6 +300,18 @@ export async function renderOperadores(container, periodo, tipo = 'all') {
           </thead>
           <tbody>${rows}</tbody>
         </table>`;
+
+    wrap.querySelectorAll('.op-row').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const sucId  = parseInt(tr.dataset.sucId, 10);
+        const detail = wrap.querySelector(`.op-detail[data-suc-id="${sucId}"]`);
+        const arrow  = tr.querySelector('.op-arrow');
+        const open   = detail.style.display !== 'none';
+        detail.style.display  = open ? 'none' : '';
+        arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+        if (open) expandedSet.delete(sucId); else expandedSet.add(sucId);
+      });
+    });
   }
 
   // ── Filtros ───────────────────────────────────────────────────────────────────

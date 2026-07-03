@@ -365,20 +365,21 @@ export function calcularOperadores(ctx, sucResultados) {
     const getRow = (esc) =>
       montos.find(m => m.seccion === seccion && m.escalon === esc && m.categoria_suc === 'C');
 
-    // ── CALCULO CONSUMO (base cat C) ──────────────────────────────────
-    let calcConsumo;
+    // ── CALCULO CONSUMO (base cat C) — componentes por separado ───────
+    let compEscalon = 0, compParticip = 0, compTicket = 0, compOperacion = 0;
     if (conEscalon === 0) {
       // No llegó al escalón 1, pero dentro de la tolerancia → solo participacion del esc1
-      calcConsumo = (G > -0.04) ? (getRow(1)?.participacion ?? 0) : 0;
+      if (G > -0.04) compParticip = getRow(1)?.participacion ?? 0;
     } else {
       const row = getRow(conEscalon);
-      calcConsumo = row?.escalon_monto ?? 0;        // C: siempre
-      if (G > -0.04) {                               // G es la puerta: sin participación no hay O ni R
-        calcConsumo += row?.participacion   ?? 0;   // B
-        if (O > -0.04) calcConsumo += row?.ticket_promedio ?? 0;  // E
-        if (R > -0.04) calcConsumo += row?.operacion       ?? 0;  // F
+      compEscalon = row?.escalon_monto ?? 0;         // C: siempre
+      if (G > -0.04) {                                // G es la puerta: sin participación no hay O ni R
+        compParticip = row?.participacion ?? 0;      // B
+        if (O > -0.04) compTicket    = row?.ticket_promedio ?? 0;  // E
+        if (R > -0.04) compOperacion = row?.operacion       ?? 0;  // F
       }
     }
+    const calcConsumo = compEscalon + compParticip + compTicket + compOperacion;
 
     // ── CALCULO EFECTIVO (base cat C) ────────────────────────────────
     let calcEfectivo = 0;
@@ -423,6 +424,10 @@ export function calcularOperadores(ctx, sucResultados) {
       indicador_r:      +R.toFixed(4),
       calc_consumo:     calcConsumo,
       calc_efectivo:    calcEfectivo,
+      comp_escalon:     compEscalon,
+      comp_particip:    compParticip,
+      comp_ticket:      compTicket,
+      comp_operacion:   compOperacion,
       jornada,
       monto_full:       monto_full,
       monto_part:       monto_part,

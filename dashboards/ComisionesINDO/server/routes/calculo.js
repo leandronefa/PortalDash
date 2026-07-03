@@ -103,7 +103,7 @@ async function cargarContexto(pool, periodo) {
     supervisoresR, supSucursalesR,
     qlikUsuariosR, jornadasR
   ] = await Promise.all([
-    pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 ORDER BY id'),
+    pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 AND activa=1 ORDER BY id'),
     p('SELECT * FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo=@periodo'),
     pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_RankingMultiplicador'),
     p('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjConsumo WHERE periodo=@periodo'),
@@ -215,7 +215,7 @@ router.post('/cajeros', async (req, res) => {
       sucursalesR, rankingR, multR,
       objConsumoR, montosCajR, cakerosR
     ] = await Promise.all([
-      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 ORDER BY id'),
+      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 AND activa=1 ORDER BY id'),
       pool.request().input('periodo', sql.VarChar, periodo).query('SELECT * FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo=@periodo'),
       pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_RankingMultiplicador'),
       pool.request().input('periodo', sql.VarChar, periodo).query('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjConsumo WHERE periodo=@periodo'),

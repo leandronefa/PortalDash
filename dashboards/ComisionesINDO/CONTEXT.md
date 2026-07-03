@@ -167,5 +167,5 @@ Restart-Service dashcomisionesindo.exe
 
 - **Operadores Retail** (`calcularOperadores`): revisar con el mismo criterio de no-doble-multiplicación — hoy ignora las filas reales A/B cargadas en `OPER_CON_EFECT`/`OPER_SIN_EFECT` y reconstruye desde `'C'` × `mult`. Decisión explícita del usuario: dejarlo para otra sesión.
 - **Encargados INDO** (sucursales con efectivo): aclarado por el usuario que para estas solo cuenta EFECTIVO — sin resolver si va dentro de Encargados Retail o es una sección aparte.
-- **Sucursal id 1** (VALLEJO CALZADOS 01) está cerrada según el usuario, pero sigue asignada a un supervisor y sin `provincia` cargada en el ABM de Sucursales — cae en un grupo "SIN PROVINCIA" en el cálculo de plaza de Supervisores. Falta decidir: desactivar (`activa=0`) y/o quitar la asignación al supervisor.
+- ~~Sucursal id 1 cerrada~~ → resuelto 2026-07-03: `activa=0` en el ABM y el motor filtra `activa=1` al cargar sucursales (`calculo.js`, `operadores.js`, `millon.js`). Limpieza opcional pendiente: quitar la asignación de suc01 al supervisor Eric Vidable en `tbl_CoVenAppINDO_SupervisorSucursales` (hoy el motor la saltea sola).
 - **Supervisores no está blindado todavía** — el usuario está validando la lógica nueva (por provincia/plaza) sesión por sesión. Ver `RETOMAR.md` para el detalle de lo cambiado el 2026-07-01.

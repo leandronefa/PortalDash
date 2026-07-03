@@ -65,6 +65,10 @@ async function ensureTables(pool) {
     ['ratio_consumo',    'DECIMAL(8,4) NULL'],
     ['ratio_efectivo',   'DECIMAL(8,4) NULL'],
     ['marcador',         'VARCHAR(10) NULL'],
+    ['comp_escalon',     'DECIMAL(14,2) NULL'],
+    ['comp_particip',    'DECIMAL(14,2) NULL'],
+    ['comp_ticket',      'DECIMAL(14,2) NULL'],
+    ['comp_operacion',   'DECIMAL(14,2) NULL'],
   ]) {
     await pool.request().query(`
       IF NOT EXISTS (
@@ -169,7 +173,7 @@ export async function calcularYGuardarOperadores(pool, periodo) {
       montosR, montosPresR,
       jornadasR, qlikUsuariosR
     ] = await Promise.all([
-      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 ORDER BY id'),
+      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 AND activa=1 ORDER BY id'),
       pool.request().input('periodo', sql.VarChar, periodo)
            .query('SELECT * FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo=@periodo'),
       pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_RankingMultiplicador'),
@@ -282,19 +286,25 @@ export async function calcularYGuardarOperadores(pool, periodo) {
         .input('ratio_consumo',    sql.Decimal(8,4),  op.ratio_consumo ?? 0)
         .input('ratio_efectivo',   sql.Decimal(8,4),  op.ratio_efectivo ?? 0)
         .input('marcador',         sql.VarChar(10),   op.marcador ?? null)
+        .input('comp_escalon',     sql.Decimal(14,2), op.comp_escalon ?? 0)
+        .input('comp_particip',    sql.Decimal(14,2), op.comp_particip ?? 0)
+        .input('comp_ticket',      sql.Decimal(14,2), op.comp_ticket ?? 0)
+        .input('comp_operacion',   sql.Decimal(14,2), op.comp_operacion ?? 0)
         .query(`
           INSERT INTO dbo.tbl_CoVenAppINDO_ResultadoOperadores
             (periodo,usuario,nombre,sucursal_id,sucursal_nombre,categoria,
              tiene_efectivo,tipo_operador,escalon,escalon_consumo,escalon_efectivo,
              indicador_g,indicador_o,indicador_r,calc_consumo,calc_efectivo,
              sin_operador,jornada,monto_full,monto_part,monto,
-             ratio_consumo,ratio_efectivo,marcador,fecha_calculo)
+             ratio_consumo,ratio_efectivo,marcador,
+             comp_escalon,comp_particip,comp_ticket,comp_operacion,fecha_calculo)
           VALUES
             (@periodo,@usuario,@nombre,@sucursal_id,@sucursal_nombre,@categoria,
              @tiene_efectivo,@tipo_operador,@escalon,@escalon_consumo,@escalon_efectivo,
              @indicador_g,@indicador_o,@indicador_r,@calc_consumo,@calc_efectivo,
              @sin_operador,@jornada,@monto_full,@monto_part,@monto,
-             @ratio_consumo,@ratio_efectivo,@marcador,GETDATE())
+             @ratio_consumo,@ratio_efectivo,@marcador,
+             @comp_escalon,@comp_particip,@comp_ticket,@comp_operacion,GETDATE())
         `);
     }
 

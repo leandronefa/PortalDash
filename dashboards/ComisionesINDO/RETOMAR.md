@@ -1,7 +1,35 @@
-# Retomar — ComisionesINDO — actualizado 2026-07-02
+# Retomar — ComisionesINDO — actualizado 2026-07-03
 
 ## Estado general
-Servicio `dashcomisionesindo.exe` corriendo en puerto 3005. Build hecho y servicio reiniciado con todos los cambios de hoy. Probado contra datos reales del período 2026-06.
+Servicio `dashcomisionesindo.exe` corriendo en puerto 3005. Build hecho y servicio reiniciado con todos los cambios de hoy. **Falta que el usuario presione ⟳ Calcular (o el cálculo completo del Dashboard) para regenerar 2026-06** con el desglose nuevo y sin la suc01.
+
+---
+
+## Sesión 2026-07-03
+
+### 1. Desglose de composición del monto en Operadores (pedido del usuario: "veo 20000 en consumo en suc02 y no sé cómo se compone")
+- **Motor** (`calcularOperadores`): ahora retorna los 4 componentes del consumo por separado — `comp_escalon`, `comp_particip`, `comp_ticket`, `comp_operacion` (`calc_consumo` = suma; la lógica de cálculo NO cambió).
+- **Persistencia**: 4 columnas nuevas en `tbl_CoVenAppINDO_ResultadoOperadores` (vía loop de ALTER en `ensureTables`). Filas de cálculos viejos quedan `NULL` → la página muestra aviso amarillo "recalculá para ver el desglose".
+- **Página Operadores Retail** (`src/pages/operadores.js`): cada fila de sucursal es clickeable y expande el desglose: componentes de consumo con ✓/✗ y motivo (escalón alcanzado, G/O/R vs −4%, bloqueos por G), efectivo, y la fórmula final `(base cons + base ef) × mult (cat) = full` con redondeo a miles. Etiquetado explícito "montos base cat. C".
+- **Página Operadores Millón**: tooltip en Full $ con la fila de Préstamos usada (tipo suc, escalón, categoría — valor final, sin multiplicador adicional).
+
+### 2. Suc01 (VALLEJO CALZADOS 01) cerrada — excluida del cálculo (decisión del usuario: "la sucursal cerró, opción 1")
+- `activa=0` en `tbl_CoVenAppINDO_Sucursales` (aplicado en DB).
+- El motor ahora filtra `AND activa=1` al cargar sucursales: `calculo.js` (cargarContexto + endpoint cajeros), `operadores.js` y `millon.js` (operadores millón). Antes cargaba todas las `id < 300` ignorando el flag.
+- Efecto en Supervisores: `calcularSupervisores` hace `if (!sucRes) continue` sobre las asignaciones, así que la asignación vieja de suc01 a Eric Vidable se saltea sola — el grupo fantasma "SIN PROVINCIA"/plaza imposible desaparece al recalcular. **Limpieza opcional**: quitar la asignación en el ABM de Supervisores (`tbl_CoVenAppINDO_SupervisorSucursales`, supervisor_id=4).
+
+### ⚠ Gotcha nuevo (encoding)
+NO editar archivos fuente con `-replace`/`Set-Content` de PowerShell 5.1: rompe UTF-8 (mojibake en acentos + BOM). Pasó hoy con `calculo.js`; se revirtió con `git checkout` y se rehízo con el editor.
+
+### Archivos tocados hoy (sin commitear, junto con lo del 01/02)
+| Archivo | Cambio |
+|---|---|
+| `server/services/calcEngine.js` | `calcularOperadores`: componentes del consumo separados + expuestos en el retorno |
+| `server/routes/operadores.js` | 4 columnas `comp_*` (ALTER + INSERT); filtro `activa=1` |
+| `server/routes/calculo.js` | Filtro `activa=1` en las 2 cargas de sucursales |
+| `server/routes/millon.js` | Filtro `activa=1` en sucursales Millón |
+| `src/pages/operadores.js` | Fila expandible con desglose del monto |
+| `src/pages/operadores-millon.js` | Tooltips de origen del monto en Full $ |
 
 ---
 
@@ -57,7 +85,9 @@ La implementación anterior (2026-06-30) calculaba UN solo bono de plaza por sup
 
 ## Pendiente para retomar mañana
 
-- **Sucursal ID 1 (VALLEJO CALZADOS 01) está CERRADA** — el usuario aclaró que ya no aplica. Hoy apareció con `provincia = NULL` ("SIN PROVINCIA") todavía asignada al supervisor Eric Vidable (id 4) en `tbl_CoVenAppINDO_SupervisorSucursales`. **No se tocó nada todavía** — falta decidir con el usuario: ¿se desactiva en Sucursales (`activa=0`), se le quita la asignación de supervisor, o ambas? Mientras siga asignada sin provincia, cae en un grupo "SIN PROVINCIA" que nunca puede completar una plaza real.
+- **Re-ejecutar el cálculo completo de 2026-06** desde el Dashboard (o ⟳ Calcular en Operadores): regenera con el desglose `comp_*` nuevo y sin la suc01.
+- ~~Sucursal ID 1 cerrada~~ → **RESUELTO 2026-07-03** (`activa=0` + filtro `activa=1` en el motor, ver sesión de hoy). Queda solo la limpieza opcional de la asignación a Eric Vidable en el ABM.
+- El usuario sigue con la duda de si el consumo de suc02 ($20.000) es correcto — con el desglose nuevo puede verificarlo; si la diferencia viene de la fila base C × mult vs las filas reales A/B de Montos, es el pendiente histórico de Operadores Retail (corregir con el mismo patrón que Encargados).
 - Confirmar con el usuario si el resultado de Supervisores (por sucursal + por plaza, con la lógica nueva) ya es el correcto para cerrar/blindar el módulo, o si falta algo más de revisión suya.
 - Una vez cerrado, agregar Supervisores a la lista de módulos blindados (junto con Cajeros, Operadores Retail/Millón, Dashboard, Total, visores DATOS, ABM Supervisores).
 - Considerar re-ejecutar el cálculo completo para otros períodos ya cargados, ahora que arrastra Ranking + Operadores Retail/Millón + Supervisores corregidos en una sola corrida (antes esos períodos solo tenían el fix viejo de Encargados/doble-multiplicación).

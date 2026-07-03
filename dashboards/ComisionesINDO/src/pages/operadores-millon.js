@@ -135,7 +135,10 @@ export async function renderOperadoresMillon(container, periodo) {
             <td style="padding:8px 8px;text-align:center">${fmtRatio(op.ratio)}</td>
             <td style="padding:8px 8px;text-align:center">${escalonBadge(op.escalon)}</td>
             <td style="padding:8px 8px;text-align:center">${comisionaBadge(op.comisiona)}</td>
-            <td style="padding:8px 8px;text-align:right;font-weight:700;${op.monto_full === 0 ? zero : ''}">$ ${fmtMoney(op.monto_full)}</td>
+            <td style="padding:8px 8px;text-align:right;font-weight:700;cursor:help;${op.monto_full === 0 ? zero : ''}"
+                title="${op.escalon >= 1
+                  ? `Monto de la tabla Préstamos (tipo suc), escalón E${op.escalon}, categoría ${op.categoria}. Valor final por categoría — sin multiplicador adicional.`
+                  : 'No llegó a E1 → sin comisión.'}">$ ${fmtMoney(op.monto_full)}</td>
             <td style="padding:8px 14px 8px 8px;text-align:right;font-size:11px;color:var(--color-muted);${op.monto_part === 0 ? zero : ''}">$ ${fmtMoney(op.monto_part)}</td>
           </tr>`;
       }).join('');
@@ -170,7 +173,7 @@ export async function renderOperadoresMillon(container, periodo) {
                   <th style="padding:6px 8px;text-align:center;font-size:11px;cursor:help" title="Ventas / Objetivo. ≥96% pasa por tolerancia, ≥100% estricto.">Ratio</th>
                   <th style="padding:6px 8px;text-align:center;font-size:11px">Esc.</th>
                   <th style="padding:6px 8px;text-align:center;font-size:11px">Comisiona</th>
-                  <th style="padding:6px 8px;text-align:right;font-size:11px">Full $</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:11px;cursor:help" title="Monto fijo de la tabla Préstamos (tipo suc) según escalón y categoría de la sucursal. Pasá el mouse sobre cada monto para ver la fila usada.">Full $</th>
                   <th style="padding:6px 14px 6px 8px;text-align:right;font-size:11px">Part $</th>
                 </tr>
               </thead>

@@ -321,7 +321,7 @@ export async function calcularYGuardarOperadoresMillon(pool, periodo) {
                 FROM dbo.tbl_CoVenAppINDO_ObjEfectivo
                 WHERE periodo = @periodo`),
       pool.request()
-        .query(`SELECT id, nombre FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id >= 100 ORDER BY id`),
+        .query(`SELECT id, nombre FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id >= 100 AND activa=1 ORDER BY id`),
       pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_RankingMultiplicador'),
       pool.request()
         .input('periodo', sql.VarChar(7), periodo)

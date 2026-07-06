@@ -16,6 +16,14 @@ function parsePeriodo(periodo) {
   return { year, month };
 }
 
+// ── Helper: ids de sucursales deshabilitadas (activa=0) ───────────
+async function getInactivasSet() {
+  const pool = await getPool();
+  const r = await pool.request()
+    .query('SELECT id FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE activa = 0');
+  return new Set(r.recordset.map(x => x.id));
+}
+
 // ── Helper: ejecutar sp_ReporteVentasCobrosObjetivos y devolver
 //    filas filtradas por Producto (CONSUMO o EFECTIVO) con sucursal_id
 async function getVentasSP(year, month, producto) {
@@ -64,8 +72,10 @@ router.get('/consumo', async (req, res) => {
   const pm = parsePeriodo(req.query.periodo);
   if (!pm) return res.status(400).json({ error: 'Parámetro periodo requerido (YYYY-MM)' });
   try {
-    const rows = await getVentasSP(pm.year, pm.month, 'CONSUMO');
-    res.json(rows);
+    const [rows, inactivas] = await Promise.all([
+      getVentasSP(pm.year, pm.month, 'CONSUMO'), getInactivasSet(),
+    ]);
+    res.json(rows.filter(r => !inactivas.has(r.sucursal_id)));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 
@@ -148,8 +158,10 @@ router.get('/efectivo', async (req, res) => {
   const pm = parsePeriodo(req.query.periodo);
   if (!pm) return res.status(400).json({ error: 'Parámetro periodo requerido (YYYY-MM)' });
   try {
-    const rows = await getVentasSP(pm.year, pm.month, 'EFECTIVO');
-    res.json(rows);
+    const [rows, inactivas] = await Promise.all([
+      getVentasSP(pm.year, pm.month, 'EFECTIVO'), getInactivasSet(),
+    ]);
+    res.json(rows.filter(r => !inactivas.has(r.sucursal_id)));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 
@@ -238,7 +250,8 @@ router.get('/reporte', async (req, res) => {
       .input('Mes',  sql.Int, pm.month)
       .execute('dbo.sp_ReporteOriginacionesCreditos');
 
-    const rows = spR.recordset.map(r => ({
+    const inactivas = await getInactivasSet();
+    const rows = spR.recordset.filter(r => !inactivas.has(r.IdSucursalEntidad)).map(r => ({
       id_originacion:     r.IdOriginacion,
       estado:             r.Des,
       usuario_originador: r.IdUsuario,

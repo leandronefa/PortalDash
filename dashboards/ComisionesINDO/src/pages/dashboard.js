@@ -1,5 +1,4 @@
 import { api } from '../api/client.js';
-import { showToast } from '../components/toast.js';
 
 export async function renderDashboard(container, periodo) {
   container.innerHTML = `
@@ -7,9 +6,6 @@ export async function renderDashboard(container, periodo) {
 
       <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
         <h2 style="font-size:20px;font-weight:700;margin:0">Dashboard — ${periodo}</h2>
-        <button id="btn-ejecutar" class="btn btn-primary" style="font-size:14px;padding:8px 18px">
-          ▶ Ejecutar cálculo completo
-        </button>
       </div>
 
       <div id="estado-wrap" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
@@ -28,7 +24,6 @@ export async function renderDashboard(container, periodo) {
     </div>
   `;
 
-  container.querySelector('#btn-ejecutar').addEventListener('click', () => ejecutarCalculo(container, periodo));
   await cargarDatos(container, periodo);
 }
 
@@ -186,20 +181,4 @@ async function cargarDatos(container, periodo) {
     </div>
 
   `;
-}
-
-async function ejecutarCalculo(container, periodo) {
-  const btn = container.querySelector('#btn-ejecutar');
-  btn.disabled = true;
-  btn.textContent = '⏳ Calculando…';
-  try {
-    await api.post('/calculo/ejecutar', { periodo });
-    showToast('Cálculo ejecutado correctamente', 'success');
-    await cargarDatos(container, periodo);
-  } catch (err) {
-    showToast(err.message || 'Error al ejecutar el cálculo', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '▶ Ejecutar cálculo completo';
-  }
 }

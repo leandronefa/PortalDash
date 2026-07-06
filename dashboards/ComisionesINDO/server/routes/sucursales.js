@@ -27,10 +27,11 @@ async function ensureConEfectivo(pool) {
 }
 
 
-// ── GET /api/sucursales?periodo=YYYY-MM ────────────────────────────────────────
+// ── GET /api/sucursales?periodo=YYYY-MM[&todas=1] ──────────────────────────────
 // Devuelve sucursales con su categoría del período (si se pasa) y con_efectivo.
+// Por defecto solo las activas; con todas=1 incluye las inactivas (ABM).
 router.get('/', async (req, res) => {
-  const { periodo } = req.query;
+  const { periodo, todas } = req.query;
   try {
     const pool = await getPool();
     await ensureConEfectivo(pool);
@@ -48,12 +49,32 @@ router.get('/', async (req, res) => {
              ${periodo ? 'r.categoria' : 'NULL AS categoria'}
       FROM dbo.tbl_CoVenAppINDO_Sucursales s
       ${rankingJoin}
-      WHERE s.id < 300
+      WHERE s.id < 300 ${todas === '1' ? '' : 'AND s.activa = 1'}
       ORDER BY s.id
     `);
     res.json(r.recordset);
   } catch (err) {
     console.error('[SUC GET]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PATCH /api/sucursales/:id/activa — habilitar/deshabilitar sucursal ─────────
+router.patch('/:id/activa', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { activa } = req.body;
+  if (typeof activa !== 'boolean' && activa !== 0 && activa !== 1)
+    return res.status(400).json({ error: 'activa debe ser true/false' });
+
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id',     sql.Int, id)
+      .input('activa', sql.Bit, activa ? 1 : 0)
+      .query(`UPDATE dbo.tbl_CoVenAppINDO_Sucursales SET activa=@activa WHERE id=@id`);
+    res.json({ ok: true, id, activa: !!activa });
+  } catch (err) {
+    console.error('[SUC PATCH activa]', err);
     res.status(500).json({ error: err.message });
   }
 });

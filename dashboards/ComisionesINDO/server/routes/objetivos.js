@@ -13,6 +13,14 @@ function parsePeriodo(p) {
   return { year: y, month: m };
 }
 
+// Ids de sucursales deshabilitadas (activa=0) — se ocultan en los GET del visor
+async function getInactivasSet() {
+  const pool = await getPool();
+  const r = await pool.request()
+    .query('SELECT id FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE activa = 0');
+  return new Set(r.recordset.map(x => x.id));
+}
+
 // Cache automático en db_Cegid al consultar objetivos
 async function cacheConsumo(periodo, rows) {
   const pool = await getPool();
@@ -107,7 +115,8 @@ router.get('/consumo', async (req, res) => {
   if (!pm) return res.status(400).json({ error: 'Parámetro periodo requerido (YYYY-MM)' });
   try {
     const rows = await fetchConsumoBC(pm);
-    res.json(rows);
+    const inactivas = await getInactivasSet();
+    res.json(rows.filter(r => !inactivas.has(r.sucursal_id)));
     cacheConsumo(req.query.periodo, rows)
       .catch(e => console.error('[OBJ cache consumo]', e.message));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
@@ -119,7 +128,8 @@ router.get('/efectivo', async (req, res) => {
   if (!pm) return res.status(400).json({ error: 'Parámetro periodo requerido (YYYY-MM)' });
   try {
     const rows = await fetchEfectivoBC(pm);
-    res.json(rows);
+    const inactivas = await getInactivasSet();
+    res.json(rows.filter(r => !inactivas.has(r.sucursal_id)));
     cacheEfectivo(req.query.periodo, rows)
       .catch(e => console.error('[OBJ cache efectivo]', e.message));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }

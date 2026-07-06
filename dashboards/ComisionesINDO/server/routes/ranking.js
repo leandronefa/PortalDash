@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
              s.nombre
       FROM dbo.tbl_CoVenAppINDO_Ranking r
       LEFT JOIN dbo.tbl_CoVenAppINDO_Sucursales s ON s.id = r.sucursal_id
-      ${where}
+      ${where} AND ISNULL(s.activa, 1) = 1
       ORDER BY r.grupo, r.posicion, r.sucursal_id
     `);
     res.json(r.recordset);

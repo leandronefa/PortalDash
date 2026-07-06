@@ -43,6 +43,7 @@ function agruparPorSucursal(rows) {
         categoria:       r.categoria,
         obj_sucursal:    r.obj_sucursal,
         n_operadores:    r.n_operadores,
+        peso_total:      r.peso_total,
         obj_individual:  r.obj_individual,
         operadores:      [],
       });
@@ -88,6 +89,14 @@ export async function renderOperadoresMillon(container, periodo) {
   let shownData    = [];
   const expandedSet = new Set();
 
+  // Jornadas vigentes (tabla OperadoresJornada) — pueden diferir de las
+  // persistidas en el último cálculo si se cambiaron sin recalcular.
+  const jornadasActuales = {};
+  try {
+    const js = await api.get('/operadores/jornadas');
+    for (const j of js) jornadasActuales[j.usuario.toUpperCase()] = j.jornada;
+  } catch { /* sin bloquear la página */ }
+
   function renderSummary(rows) {
     const comisionan = rows.filter(r => r.comisiona).length;
     const totalMonto = rows.reduce((s, r) => s + (+r.monto || 0), 0);
@@ -120,6 +129,16 @@ export async function renderOperadoresMillon(container, periodo) {
     renderSummary(rows);
     const grupos = agruparPorSucursal(rows);
 
+    // Formato viejo (sin ponderación por jornada) → pedir recálculo
+    const formatoViejo = rows.some(r => r.peso == null);
+    const aviso = formatoViejo ? `
+      <div class="card" style="margin-bottom:8px;border-left:4px solid var(--color-warning,#f59e0b)">
+        <div class="card-body" style="padding:8px 14px;font-size:12px">
+          ⚠️ Este cálculo es anterior a la ponderación por jornada (part-time = 0.5 al dividir el objetivo).
+          Presioná <strong>⟳ Calcular</strong> para actualizarlo.
+        </div>
+      </div>` : '';
+
     const html = grupos.map(g => {
       const expanded    = expandedSet.has(g.sucursal_id);
       const comisionan  = g.operadores.filter(o => o.comisiona).length;
@@ -127,10 +146,25 @@ export async function renderOperadoresMillon(container, periodo) {
 
       const trs = g.operadores.map(op => {
         const zero = 'opacity:.4';
+        const esPart = op.jornada === 'part';
+        const jornadaActual = jornadasActuales[(op.usuario || '').toUpperCase()] || op.jornada || 'full';
+        const desincronizada = jornadaActual !== (op.jornada || 'full');
+        const vtaCell = esPart && op.vta_equivalente != null
+          ? `$ ${fmtMoney(op.vta_efectivo)}<div style="font-size:10px;color:var(--color-muted)" title="Venta ×2 (part-time) para comparar contra el objetivo full-equivalente">×2 = $ ${fmtMoney(op.vta_equivalente)}</div>`
+          : `$ ${fmtMoney(op.vta_efectivo)}`;
         return `
           <tr>
             <td style="padding:8px 14px">${op.nombre || op.usuario}</td>
-            <td style="padding:8px 8px;text-align:right;font-size:12px">$ ${fmtMoney(op.vta_efectivo)}</td>
+            <td style="padding:8px 8px;text-align:center;white-space:nowrap">
+              <select class="sel-jornada-opm" data-usuario="${op.usuario}"
+                style="padding:3px 6px;border:1px solid var(--color-border);border-radius:6px;
+                       background:var(--color-input);color:var(--color-text);font-size:11px">
+                <option value="full" ${jornadaActual !== 'part' ? 'selected' : ''}>Full</option>
+                <option value="part" ${jornadaActual === 'part' ? 'selected' : ''}>Part</option>
+              </select>
+              ${desincronizada ? '<span style="cursor:help" title="La jornada cambió después del último cálculo — recalculá para aplicarla">⚠️</span>' : ''}
+            </td>
+            <td style="padding:8px 8px;text-align:right;font-size:12px">${vtaCell}</td>
             <td style="padding:8px 8px;text-align:right;font-size:12px">$ ${fmtMoney(op.obj_individual)}</td>
             <td style="padding:8px 8px;text-align:center">${fmtRatio(op.ratio)}</td>
             <td style="padding:8px 8px;text-align:center">${escalonBadge(op.escalon)}</td>
@@ -152,7 +186,9 @@ export async function renderOperadoresMillon(container, periodo) {
             <span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px">
               <span style="color:var(--color-muted)">
                 Obj: <strong>$ ${fmtMoney(g.obj_sucursal)}</strong>
-                <span style="font-size:10px;color:var(--color-muted)"> ÷${g.n_operadores} = $ ${fmtMoney(g.obj_individual)}</span>
+                <span style="font-size:10px;color:var(--color-muted)"
+                      title="El objetivo se divide por la suma de pesos: full=1, part=0.5 (${g.n_operadores} operadores)">
+                  ÷${g.peso_total != null ? (+g.peso_total).toLocaleString('es-AR') : g.n_operadores} = $ ${fmtMoney(g.obj_individual)}</span>
               </span>
               <span class="badge badge-b">${comisionan}/${g.operadores.length} comisionan</span>
               <span style="font-weight:700">$ ${fmtMoney(totalMonto)}</span>
@@ -161,16 +197,17 @@ export async function renderOperadoresMillon(container, periodo) {
           <div class="acc-body" style="display:${expanded ? 'block' : 'none'}">
             <table style="width:100%;border-top:1px solid var(--color-border)">
               <colgroup>
-                <col><col style="width:110px"><col style="width:120px">
+                <col><col style="width:78px"><col style="width:110px"><col style="width:120px">
                 <col style="width:70px"><col style="width:56px"><col style="width:80px">
                 <col style="width:110px"><col style="width:100px">
               </colgroup>
               <thead style="background:var(--color-bg)">
                 <tr>
                   <th style="padding:6px 14px;text-align:left;font-size:11px">Operador</th>
-                  <th style="padding:6px 8px;text-align:right;font-size:11px;cursor:help" title="Ventas efectivo del operador según REPORTE">Vta Ef $</th>
-                  <th style="padding:6px 8px;text-align:right;font-size:11px;cursor:help" title="Objetivo de la sucursal dividido entre los operadores activos">Obj Individual $</th>
-                  <th style="padding:6px 8px;text-align:center;font-size:11px;cursor:help" title="Ventas / Objetivo. ≥96% pasa por tolerancia, ≥100% estricto.">Ratio</th>
+                  <th style="padding:6px 8px;text-align:center;font-size:11px;cursor:help" title="Full pesa 1 y Part 0.5 al dividir el objetivo de la sucursal. Al cambiarla, recalculá para aplicar.">Jornada</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:11px;cursor:help" title="Ventas efectivo del operador según REPORTE. Part-time: se muestra también ×2 (full-equivalente).">Vta Ef $</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:11px;cursor:help" title="Objetivo de la sucursal dividido por la suma de pesos (full=1, part=0.5) — objetivo full-equivalente">Obj Individual $</th>
+                  <th style="padding:6px 8px;text-align:center;font-size:11px;cursor:help" title="Venta (×2 si part-time) / Objetivo. ≥96% pasa por tolerancia, ≥100% estricto.">Ratio</th>
                   <th style="padding:6px 8px;text-align:center;font-size:11px">Esc.</th>
                   <th style="padding:6px 8px;text-align:center;font-size:11px">Comisiona</th>
                   <th style="padding:6px 8px;text-align:right;font-size:11px;cursor:help" title="Monto fijo de la tabla Préstamos (tipo suc) según escalón y categoría de la sucursal. Pasá el mouse sobre cada monto para ver la fila usada.">Full $</th>
@@ -183,7 +220,26 @@ export async function renderOperadoresMillon(container, periodo) {
         </div>`;
     }).join('');
 
-    wrap.innerHTML = html;
+    wrap.innerHTML = aviso + html;
+
+    // Selects de jornada — persisten en OperadoresJornada (global por usuario)
+    wrap.querySelectorAll('.sel-jornada-opm').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        const usuario = sel.dataset.usuario;
+        const jornada = sel.value;
+        sel.disabled = true;
+        try {
+          await api.patch(`/operadores/${encodeURIComponent(usuario)}/jornada`, { jornada });
+          jornadasActuales[usuario.toUpperCase()] = jornada;
+          showToast(`Jornada de ${usuario} → ${jornada === 'part' ? 'Part-time' : 'Full-time'}. Presioná ⟳ Calcular para aplicar.`, 'success');
+        } catch (err) {
+          showToast(err.message || 'Error al guardar jornada', 'error');
+          sel.value = jornada === 'part' ? 'full' : 'part';
+        } finally {
+          sel.disabled = false;
+        }
+      });
+    });
 
     wrap.querySelectorAll('.acc-header').forEach(header => {
       header.addEventListener('click', () => {

@@ -83,7 +83,7 @@ Funciones puras — reciben `ctx` con datos ya cargados (sin acceso a DB):
 | `calcularTotal(ctx)` | Por sucursal (Retail + Millón) | Escalones, semáforo, ratios de consumo y efectivo — **base para todo lo demás** |
 | `calcularCajeros(ctx, sucResultados)` | Por cajero | `ratio_particip > 0.96` — tolerancia 4% igual que escalones/G-O-R (agregada 2026-07-02) |
 | `calcularOperadores(ctx, sucResultados)` | Por operador (Retail) | Indicadores G/O/R; G es puerta de O y R |
-| `calcularOperadoresMillon(ctx)` | Por operador (Millón) | Solo efectivo; objetivo individual = objetivo sucursal / n operadores activos |
+| `calcularOperadoresMillon(ctx)` | Por operador (Millón) | Solo efectivo; jornada pondera la división del objetivo (full=1, part=0.5): `obj_individual = obj_sucursal / peso_total` (full-equivalente); part-time compara `venta × 2` contra ese objetivo; part-time cobra 50% del monto (2026-07-06) |
 | `calcularEncargados(ctx, sucResultados)` | Por sucursal Retail (id<100) | Escalón consumo + participación (G) — **componentes independientes** |
 | `calcularEncargadosMillon(ctx, sucResultados)` | Por sucursal Millón (id≥100) | Solo escalón efectivo — **sin** participación |
 | `calcularSupervisores(ctx, sucResultados)` | Por supervisor | Suma por sucursales asignadas (solo las que llegaron) + bono por plaza (por provincia, monto fijo) — ver detalle abajo |
@@ -133,11 +133,11 @@ La versión anterior (2026-06-30) pagaba un solo bono de "plaza" por supervisor 
 
 | Sección sidebar | Ruta | Estado |
 |---|---|---|
-| Principal | `dashboard` | KPIs + botón "Ejecutar cálculo completo" |
-| DATOS | `visor-sucursales`, `millon`, `visor-montos`, `visor-ranking`, `visor-objetivos`, `visor-ventas`, `supervisores` (ABM, label "Supervisores") | Datos maestros — **blindado, no tocar** |
-| Cálculos | `cajeros`, `operadores-retail`, `operadores-millon` | Resultado de cálculo individual — **blindado, no tocar** |
-| Cálculos | `encargados`, `encargados-millon` | Resultado por sucursal, sin nombres de personas — 2026-06-30 |
-| Cálculos | `resultado-supervisores` | Resultado por supervisor, fila expandible con detalle por sucursal — 2026-06-30 |
+| Principal | `dashboard` | KPIs (el botón "Ejecutar cálculo completo" se quitó el 2026-07-06; el cálculo se dispara desde la página Total) — **blindado, no tocar** |
+| DATOS | `visor-sucursales` (con toggle Habilitada/Deshabilitada), `millon`, `visor-montos`, `visor-ranking`, `visor-objetivos`, `visor-ventas`, `supervisores` (ABM, label "Supervisores") | Datos maestros — **blindado, no tocar** |
+| Cálculos | `cajeros`, `operadores-retail`, `operadores-millon` (con ponderación por jornada 2026-07-06) | Resultado de cálculo individual — **blindado, no tocar** |
+| Cálculos | `encargados`, `encargados-millon` | Resultado por sucursal, sin nombres de personas — **blindado, no tocar** |
+| Cálculos | `resultado-supervisores` | Resultado por supervisor, fila expandible con detalle por sucursal — **ÚNICO módulo abierto** (2026-07-06) |
 
 El ABM de Supervisores (`pages/supervisores.js`) vive en "DATOS" (se movió desde "Cálculos" sin tocar su lógica); la página de resultado (`resultado-supervisores.js`) es la que reemplaza ese rol en "Cálculos".
 
@@ -168,4 +168,5 @@ Restart-Service dashcomisionesindo.exe
 - **Operadores Retail** (`calcularOperadores`): revisar con el mismo criterio de no-doble-multiplicación — hoy ignora las filas reales A/B cargadas en `OPER_CON_EFECT`/`OPER_SIN_EFECT` y reconstruye desde `'C'` × `mult`. Decisión explícita del usuario: dejarlo para otra sesión.
 - **Encargados INDO** (sucursales con efectivo): aclarado por el usuario que para estas solo cuenta EFECTIVO — sin resolver si va dentro de Encargados Retail o es una sección aparte.
 - ~~Sucursal id 1 cerrada~~ → resuelto 2026-07-03: `activa=0` en el ABM y el motor filtra `activa=1` al cargar sucursales (`calculo.js`, `operadores.js`, `millon.js`). Limpieza opcional pendiente: quitar la asignación de suc01 al supervisor Eric Vidable en `tbl_CoVenAppINDO_SupervisorSucursales` (hoy el motor la saltea sola).
-- **Supervisores no está blindado todavía** — el usuario está validando la lógica nueva (por provincia/plaza) sesión por sesión. Ver `RETOMAR.md` para el detalle de lo cambiado el 2026-07-01.
+- 2026-07-06: las sucursales `activa=0` se ocultan también en TODO el front: `GET /sucursales` filtra activas por defecto (`?todas=1` para el ABM), y filtran inactivas los GET de `datos.js` (consumo/efectivo/reporte), `objetivos.js`, `ranking.js` y `millon.js` (`buildResponse`). Toggle Habilitada/Deshabilitada en la página Sucursales (`PATCH /sucursales/:id/activa`). Los resultados ya persistidos conservan la sucursal hasta recalcular.
+- **Supervisores es el ÚNICO módulo abierto** (confirmado por el usuario el 2026-07-06: "el resto está todo OK, blindar hasta mi próximo aviso"). Todo lo demás — Cajeros, Operadores Retail/Millón, Encargados Retail/Millón, Dashboard, Total, visores de DATOS — está cerrado y no se toca sin pedido explícito. Ver `RETOMAR.md` para el detalle de Supervisores (lógica por provincia/plaza, 2026-07-01).

@@ -513,10 +513,14 @@ export function calcularEncargados(ctx, sucResultados) {
 //
 //   Lógica simplificada frente a Retail:
 //     - Solo efectivo: vta = total_importe del cache de REPORTE (sp_ReporteOriginacionesCreditos)
-//     - Objetivo individual = obj_efectivo.primer_escalon / n_operadores_activos (es_operador=true)
-//     - ratio = vta_efectivo / obj_individual
+//     - Jornada pondera la división del objetivo: full=1, part=0.5.
+//       peso_total = Σ pesos de los operadores activos de la sucursal
+//       obj_individual = obj_efectivo.primer_escalon / peso_total  (objetivo full-equivalente)
+//     - Para el escalón, la venta del part-time se lleva a full-equivalente:
+//       vta_equivalente = part ? vta × 2 : vta
+//       ratio = vta_equivalente / obj_individual
 //     - escalon = getEscalon(ratio) — misma tolerancia 4% que retail
-//     - monto = montosPrestamaos[tipo='suc', escalon] × multiplicador categoría
+//     - monto = montosPrestamaos[tipo='suc', escalon]; part-time cobra el 50%
 //     - Sin indicadores G/O/R, sin consumo, sin participación
 //
 //   ctx.cacheRows       = [{sucursal_id, sucursal, operador, total_importe}]  (MillonCache)
@@ -557,10 +561,16 @@ export function calcularOperadoresMillon(ctx) {
     row => !excludedSet.has(`${row.sucursal_id}|${row.operador}`)
   );
 
-  // Conteo de operadores activos por sucursal (para dividir el objetivo)
-  const nOpsBySuc = {};
-  for (const row of baseRows)
+  // Peso por jornada: full=1, part=0.5
+  const pesoDe = (operador) => ((jornadasMap[operador] || 'full') === 'part' ? 0.5 : 1);
+
+  // Conteo de operadores activos por sucursal: crudo (display) y ponderado (divide el objetivo)
+  const nOpsBySuc  = {};
+  const pesoBySuc  = {};
+  for (const row of baseRows) {
     nOpsBySuc[row.sucursal_id] = (nOpsBySuc[row.sucursal_id] || 0) + 1;
+    pesoBySuc[row.sucursal_id] = (pesoBySuc[row.sucursal_id] || 0) + pesoDe(row.operador);
+  }
 
   return baseRows.map(row => {
     const suc = sucursalesMillon.find(s => s.id === row.sucursal_id);
@@ -573,12 +583,20 @@ export function calcularOperadoresMillon(ctx) {
     const objSuc      = objEfectivo.find(o => o.sucursal_id === row.sucursal_id);
     const objSucValor = objSuc?.primer_escalon || 0;
 
+    const jornada   = jornadasMap[row.operador] || 'full';
+    const esParcial = jornada === 'part';
+    const peso      = esParcial ? 0.5 : 1;
+
     // Si no hay marcados como operador, usar 1 para no dividir por cero
     const nOps        = nOpsBySuc[row.sucursal_id] || 1;
-    const objIndiv    = objSucValor > 0 ? objSucValor / nOps : 0;
+    const pesoTotal   = pesoBySuc[row.sucursal_id] || 1;
+    // Objetivo individual full-equivalente: dividido por la suma de pesos
+    const objIndiv    = objSucValor > 0 ? objSucValor / pesoTotal : 0;
 
     const vtaEfectivo = row.total_importe || 0;
-    const ratio       = objIndiv > 0 ? vtaEfectivo / objIndiv : 0;
+    // Part-time compite contra el objetivo full-equivalente con su venta ×2
+    const vtaEquiv    = esParcial ? vtaEfectivo * 2 : vtaEfectivo;
+    const ratio       = objIndiv > 0 ? vtaEquiv / objIndiv : 0;
     const escalon     = getEscalon(ratio);
 
     const prestRow =
@@ -587,9 +605,6 @@ export function calcularOperadoresMillon(ctx) {
     const monto_full = prestRow?.monto ?? 0;
     const monto_part = Math.round(monto_full * 0.5 / 1000) * 1000;
 
-    const jornada   = jornadasMap[row.operador] || 'full';
-    const esParcial = jornada === 'part';
-
     return {
       usuario:         row.operador,
       nombre:          operadorMap[row.operador] || row.operador,
@@ -597,8 +612,11 @@ export function calcularOperadoresMillon(ctx) {
       sucursal_nombre: suc.nombre,
       categoria:       cat,
       vta_efectivo:    +vtaEfectivo.toFixed(2),
+      vta_equivalente: +vtaEquiv.toFixed(2),
       obj_sucursal:    objSucValor,
       n_operadores:    nOps,
+      peso,
+      peso_total:      +pesoTotal.toFixed(2),
       obj_individual:  +objIndiv.toFixed(2),
       ratio:           +ratio.toFixed(4),
       escalon,

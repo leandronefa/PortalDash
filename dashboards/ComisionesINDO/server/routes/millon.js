@@ -21,8 +21,11 @@ async function ensureResultTable(pool) {
       sucursal_nombre VARCHAR(100)  NULL,
       categoria       CHAR(1)       NULL,
       vta_efectivo    DECIMAL(14,2) NOT NULL DEFAULT 0,
+      vta_equivalente DECIMAL(14,2) NULL,
       obj_sucursal    DECIMAL(14,2) NOT NULL DEFAULT 0,
       n_operadores    INT           NOT NULL DEFAULT 1,
+      peso            DECIMAL(4,2)  NULL,
+      peso_total      DECIMAL(6,2)  NULL,
       obj_individual  DECIMAL(14,2) NOT NULL DEFAULT 0,
       ratio           DECIMAL(8,4)  NOT NULL DEFAULT 0,
       escalon         INT           NOT NULL DEFAULT 0,
@@ -34,6 +37,20 @@ async function ensureResultTable(pool) {
       fecha_calculo   DATETIME      NOT NULL DEFAULT GETDATE()
     )
   `);
+  // Migración: columnas de ponderación por jornada (2026-07)
+  for (const [col, def] of [
+    ['vta_equivalente', 'DECIMAL(14,2) NULL'],
+    ['peso',            'DECIMAL(4,2)  NULL'],
+    ['peso_total',      'DECIMAL(6,2)  NULL'],
+  ]) {
+    await pool.request().query(`
+      IF NOT EXISTS (
+        SELECT 1 FROM sys.columns
+        WHERE object_id = OBJECT_ID('dbo.tbl_CoVenAppINDO_ResultadoOpMillon') AND name = '${col}'
+      )
+      ALTER TABLE dbo.tbl_CoVenAppINDO_ResultadoOpMillon ADD ${col} ${def}
+    `);
+  }
 }
 
 async function ensureTables(pool) {
@@ -141,6 +158,10 @@ async function saveCache(pool, periodo, rows) {
 
 // Lee desde cache + flags y devuelve la respuesta combinada
 async function buildResponse(pool, periodo) {
+  const inactivasR = await pool.request()
+    .query('SELECT id FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE activa = 0');
+  const inactivas = new Set(inactivasR.recordset.map(x => x.id));
+
   const [cacheR, flagsR] = await Promise.all([
     pool.request()
       .input('periodo', sql.VarChar(7), periodo)
@@ -162,6 +183,7 @@ async function buildResponse(pool, periodo) {
 
   const bySuc = {};
   for (const r of cacheR.recordset) {
+    if (inactivas.has(r.sucursal_id)) continue;
     if (!bySuc[r.sucursal_id])
       bySuc[r.sucursal_id] = { sucursal_id: r.sucursal_id, sucursal: r.sucursal, operadores: [] };
     bySuc[r.sucursal_id].operadores.push({
@@ -366,8 +388,11 @@ export async function calcularYGuardarOperadoresMillon(pool, periodo) {
         .input('sucursal_nombre', sql.NVarChar(100), op.sucursal_nombre)
         .input('categoria',       sql.Char(1),       op.categoria)
         .input('vta_efectivo',    sql.Decimal(14,2), op.vta_efectivo)
+        .input('vta_equivalente', sql.Decimal(14,2), op.vta_equivalente)
         .input('obj_sucursal',    sql.Decimal(14,2), op.obj_sucursal)
         .input('n_operadores',    sql.Int,           op.n_operadores)
+        .input('peso',            sql.Decimal(4,2),  op.peso)
+        .input('peso_total',      sql.Decimal(6,2),  op.peso_total)
         .input('obj_individual',  sql.Decimal(14,2), op.obj_individual)
         .input('ratio',           sql.Decimal(8,4),  op.ratio)
         .input('escalon',         sql.Int,           op.escalon)
@@ -379,11 +404,13 @@ export async function calcularYGuardarOperadoresMillon(pool, periodo) {
         .query(`
           INSERT INTO dbo.tbl_CoVenAppINDO_ResultadoOpMillon
             (periodo,usuario,nombre,sucursal_id,sucursal_nombre,categoria,
-             vta_efectivo,obj_sucursal,n_operadores,obj_individual,ratio,escalon,
+             vta_efectivo,vta_equivalente,obj_sucursal,n_operadores,peso,peso_total,
+             obj_individual,ratio,escalon,
              comisiona,jornada,monto_full,monto_part,monto,fecha_calculo)
           VALUES
             (@periodo,@usuario,@nombre,@sucursal_id,@sucursal_nombre,@categoria,
-             @vta_efectivo,@obj_sucursal,@n_operadores,@obj_individual,@ratio,@escalon,
+             @vta_efectivo,@vta_equivalente,@obj_sucursal,@n_operadores,@peso,@peso_total,
+             @obj_individual,@ratio,@escalon,
              @comisiona,@jornada,@monto_full,@monto_part,@monto,GETDATE())
         `);
     }

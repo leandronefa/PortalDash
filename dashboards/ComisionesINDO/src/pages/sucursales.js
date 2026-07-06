@@ -13,6 +13,12 @@ function efectivoBadge(v) {
     : '<span class="badge badge-c">SIN efectivo</span>';
 }
 
+function activaBadge(v) {
+  return v
+    ? '<span class="badge badge-d">Habilitada</span>'
+    : '<span class="badge" style="background:var(--sem-red);color:var(--sem-red-t)">Deshabilitada</span>';
+}
+
 
 export async function renderSucursales(container, periodo) {
   container.innerHTML = `
@@ -30,6 +36,13 @@ export async function renderSucursales(container, periodo) {
             <option value="1">CON efectivo</option>
             <option value="0">SIN efectivo</option>
           </select>
+          <select id="suc-filter-activa"
+            style="padding:6px 10px;border:1px solid var(--color-border);border-radius:6px;
+                   background:var(--color-input);color:var(--color-text);font-size:13px">
+            <option value="">Habilitadas y no</option>
+            <option value="1">Habilitadas</option>
+            <option value="0">Deshabilitadas</option>
+          </select>
         </div>
       </div>
       <div id="suc-info" style="flex-shrink:0;font-size:12px;color:var(--color-muted);margin-bottom:6px"></div>
@@ -42,10 +55,12 @@ export async function renderSucursales(container, periodo) {
   function filtrar() {
     const q      = container.querySelector('#suc-search').value.toLowerCase();
     const efect  = container.querySelector('#suc-filter-efect').value;
+    const activa = container.querySelector('#suc-filter-activa').value;
     const filt   = allData.filter(s => {
       const matchQ = !q || `${s.id} ${s.nombre} ${s.provincia ?? ''}`.toLowerCase().includes(q);
       const matchE = efect === '' || String(s.con_efectivo ? 1 : 0) === efect;
-      return matchQ && matchE;
+      const matchA = activa === '' || String(s.activa ? 1 : 0) === activa;
+      return matchQ && matchE && matchA;
     });
     renderTabla(filt);
     container.querySelector('#suc-info').textContent =
@@ -62,7 +77,7 @@ export async function renderSucursales(container, periodo) {
     }
 
     const rows = data.map(s => `
-      <tr>
+      <tr style="${s.activa ? '' : 'opacity:.45'}">
         <td style="font-weight:600">${s.id}</td>
         <td>${s.nombre ?? '—'}</td>
         <td>${s.provincia ?? '—'}</td>
@@ -71,6 +86,13 @@ export async function renderSucursales(container, periodo) {
           <button class="btn-efect" data-id="${s.id}" data-val="${s.con_efectivo ? 1 : 0}"
             style="border:none;background:none;cursor:pointer;padding:0">
             ${efectivoBadge(s.con_efectivo)}
+          </button>
+        </td>
+        <td style="text-align:center">
+          <button class="btn-activa" data-id="${s.id}" data-val="${s.activa ? 1 : 0}"
+            style="border:none;background:none;cursor:pointer;padding:0"
+            title="${s.activa ? 'Clic para deshabilitar: desaparece de todas las páginas y del cálculo' : 'Clic para volver a habilitarla'}">
+            ${activaBadge(s.activa)}
           </button>
         </td>
       </tr>
@@ -85,6 +107,7 @@ export async function renderSucursales(container, periodo) {
             <th>Provincia</th>
             <th style="text-align:center">Cat. ${periodo}</th>
             <th style="text-align:center">Efectivo <span style="font-size:10px;color:var(--color-muted)">(clic para cambiar)</span></th>
+            <th style="text-align:center">Estado <span style="font-size:10px;color:var(--color-muted)">(clic para cambiar)</span></th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -116,16 +139,42 @@ export async function renderSucursales(container, periodo) {
         }
       });
     });
+
+    // Toggle activa (habilitar/deshabilitar sucursal)
+    tbl.querySelectorAll('.btn-activa').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id        = parseInt(btn.dataset.id, 10);
+        const valActual = btn.dataset.val === '1';
+        const nuevoVal  = !valActual;
+
+        try {
+          await api.patch(`/sucursales/${id}/activa`, { activa: nuevoVal });
+          const suc = allData.find(s => s.id === id);
+          if (suc) suc.activa = nuevoVal;
+          filtrar();
+          showToast(
+            nuevoVal
+              ? `Sucursal ${id} habilitada — vuelve a verse en las páginas y a entrar en el cálculo`
+              : `Sucursal ${id} deshabilitada — se oculta de las páginas y del cálculo. Los resultados ya guardados la conservan hasta recalcular.`,
+            'success'
+          );
+        } catch (err) {
+          showToast(err.message || 'Error al guardar', 'error');
+        }
+      });
+    });
   }
 
   container.querySelector('#suc-search').addEventListener('input', filtrar);
   container.querySelector('#suc-filter-efect').addEventListener('change', filtrar);
+  container.querySelector('#suc-filter-activa').addEventListener('change', filtrar);
 
   try {
-    allData = await api.get(`/sucursales?periodo=${periodo}`);
-    const conEfecto = allData.filter(s => s.con_efectivo).length;
+    allData = await api.get(`/sucursales?periodo=${periodo}&todas=1`);
+    const conEfecto  = allData.filter(s => s.con_efectivo).length;
+    const inactivas  = allData.filter(s => !s.activa).length;
     container.querySelector('#suc-info').textContent =
-      `${allData.length} sucursales · ${conEfecto} CON efectivo · Período: ${periodo}`;
+      `${allData.length} sucursales · ${conEfecto} CON efectivo · ${inactivas} deshabilitadas · Período: ${periodo}`;
     filtrar();
   } catch (err) {
     container.querySelector('#suc-table').innerHTML =

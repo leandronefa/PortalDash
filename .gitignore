@@ -36,6 +36,7 @@ dashboards/ValidacionCobranzas/archivos/
 dashboards/EstadoResultado/sap-inbox/
 dashboards/EstadoResultado/SAPResultProcesado/
 dashboards/EstadoResultado/data-cache/
+dashboards/sucursal-user-visualizer/layout-state.json
 
 # Scripts temporales de exploración
 dashboards/ComisionesINDO/tmp*.cjs

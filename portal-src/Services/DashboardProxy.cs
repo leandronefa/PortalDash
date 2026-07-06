@@ -39,7 +39,9 @@ public static class DashboardProxy
     public static void Map(WebApplication app)
     {
         app.Map("/d/{id:int}/{**rest}", HandleEntry).RequireAuthorization();
-        app.MapFallback(HandleFallback).RequireAuthorization();
+        // Patrón explícito: el default de MapFallback es {*path:nonfile}, que
+        // excluye URLs con extensión (.js/.css) y rompía los assets de las SPAs.
+        app.MapFallback("{**path}", HandleFallback).RequireAuthorization();
     }
 
     /// <summary>Entrada explícita: /d/{id}/... (la URL que usa el iframe del portal).</summary>

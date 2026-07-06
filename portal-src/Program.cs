@@ -57,6 +57,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IUrlBuilder, UrlBuilder>();
 
+// Proxy inverso hacia los dashboards Node (ver Services/DashboardProxy.cs).
+builder.Services.AddHttpForwarder();
+
 // ---------------------------------------------------------------------------
 // Autenticacion por cookies + Autorizacion (politica solo Master).
 // ---------------------------------------------------------------------------
@@ -132,5 +135,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
+
+// Rutas del proxy: /d/{id}/... + fallback por cookie de dashboard activo.
+DashboardProxy.Map(app);
 
 app.Run();

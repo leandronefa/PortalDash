@@ -20,6 +20,9 @@
     <!-- Base de datos propia de la aplicacion (SQLite por defecto / SQL Server opcional) -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
+
+    <!-- Proxy inverso hacia los dashboards Node (IHttpForwarder) -->
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>

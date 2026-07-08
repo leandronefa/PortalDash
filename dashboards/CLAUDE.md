@@ -5,13 +5,24 @@
 
 Cada dashboard es una app **Node.js / Express** (sirve un frontend Vite/React desde `dist` y consulta SQL Server con `mssql` vía su propio `.env`). Corren como **servicios de Windows** creados con `node-windows`, con arranque automático y reinicio.
 
+## Acceso de usuarios: SOLO vía el portal (proxy inverso)
+
+Desde jul 2026 los usuarios **no** acceden por `http://10.0.0.118:PUERTO`: el portal (puerto 80) actúa de **proxy inverso** con sesión y permisos, y cada dashboard se abre en `http://10.0.0.118/d/{id}/` (columna "Proxy" de la tabla). El puerto directo queda solo para diagnóstico local en el server. Cada carpeta tiene su propio `CLAUDE.md` con el detalle de la app.
+
 ## Mapa
 
-| Carpeta | Servicio (Name real) | Puerto | Entrada | Notas |
-|---|---|---|---|---|
-| `comisiones-app` | `dashcomisiones.exe` | 3001 | `server.cjs` | CommonJS; se quitó `"type":"module"` del package.json; requiere `cors`. |
-| `DashPromocionesMP` | `dashpromociones.exe` | 3002 | `server.js` | ESM (usa `import`). Funciona tal cual. |
-| `sucursal-user-visualizer` | `dashsucursal.exe` | 3003 | `dist-server\index.js` | Backend TS compilado con `npm run build:prod`. Trae un `nssm.exe` propio que NO se usa. |
+| Carpeta | Servicio (Name real) | Puerto | Proxy | Entrada | Notas |
+|---|---|---|---|---|---|
+| `comisiones-app` | `dashcomisiones.exe` | 3001 | `/d/5/` | `server.cjs` | CommonJS; se quitó `"type":"module"` del package.json; requiere `cors`. |
+| `DashPromocionesMP` | `dashpromociones.exe` | 3002 | `/d/4/` | `server.js` | ESM (usa `import`). Funciona tal cual. |
+| `sucursal-user-visualizer` | `dashsucursal.exe` | 3003 | `/d/6/` | `dist-server\index.js` | Backend TS compilado con `npm run build:prod`. Los agentes remotos pegan directo a `:3003` (CentralUrl). |
+| `MovimientosCaja` | `dashmovimientoscaja.exe` | 3004 | `/d/7/` | ver package.json | Movimientos de Caja INDO. |
+| `ComisionesINDO` | `dashcomisionesindo.exe` | 3005 | `/d/8/` | `server\index.js` | Qlik ocupa `127.0.0.1:3005` → el portal tiene `Host=10.0.0.118` registrado para este dashboard. |
+| `ConciliacionPunitorios` | `dashconciliacionpunitorios.exe` | 3006 | `/d/9/` | ver package.json | Conciliación de punitorios. |
+| `ValidacionCobranzas` | `dashvalidacioncobranzas.exe` | 3007 | `/d/10/` | `server.cjs` | Concilia 1167 vs Libro Mayor. |
+| `EstadoResultado` | `dashestadoresultado.exe` | 3008 | `/d/11/` | `server.js` | Inbox local `sap-inbox\` (SYSTEM no accede a UNC). |
+| `PassReset` | `dashpassreset.exe` | 3009 | `/d/12/` | `server.cjs` | Rotación de contraseñas Windows; agentes en servidores remotos. |
+| `DashMeLi` | `dashmeli.exe` | 3010 | `/d/13/` | `server.js` | Stock dep. 198/199 + MercadoLibre; tokens OAuth se renuevan solos. |
 
 ## Operación
 

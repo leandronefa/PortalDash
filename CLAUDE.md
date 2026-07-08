@@ -23,6 +23,10 @@ C:\apps\
 - `C:\apps\portal-src\CONTEXT.md` → contexto completo del portal.
 - `C:\apps\dashboards\CLAUDE.md` → operación y particularidades de cada dashboard.
 
+## Acceso a los dashboards: SOLO vía el portal
+
+Desde jul 2026 el portal es **proxy inverso** (YARP): los usuarios entran por `http://10.0.0.118/d/{id}/` con sesión y permisos del portal; **no** se comparte ni se usa `http://10.0.0.118:PUERTO` (queda solo para diagnóstico local). Detalle en `portal-src\CLAUDE.md` y el mapa completo de puertos/IDs en `dashboards\CLAUDE.md`.
+
 ## Servicios (resumen)
 
 | Servicio (Name real) | Puerto | Carpeta |
@@ -31,11 +35,18 @@ C:\apps\
 | `dashcomisiones.exe` | 3001 | `C:\apps\dashboards\comisiones-app` |
 | `dashpromociones.exe` | 3002 | `C:\apps\dashboards\DashPromocionesMP` |
 | `dashsucursal.exe` | 3003 | `C:\apps\dashboards\sucursal-user-visualizer` |
+| `dashmovimientoscaja.exe` | 3004 | `C:\apps\dashboards\MovimientosCaja` |
+| `dashcomisionesindo.exe` | 3005 | `C:\apps\dashboards\ComisionesINDO` |
+| `dashconciliacionpunitorios.exe` | 3006 | `C:\apps\dashboards\ConciliacionPunitorios` |
+| `dashvalidacioncobranzas.exe` | 3007 | `C:\apps\dashboards\ValidacionCobranzas` |
+| `dashestadoresultado.exe` | 3008 | `C:\apps\dashboards\EstadoResultado` |
+| `dashpassreset.exe` | 3009 | `C:\apps\dashboards\PassReset` |
+| `dashmeli.exe` | 3010 | `C:\apps\dashboards\DashMeLi` |
 
 ```powershell
 Get-Service | Where-Object DisplayName -like 'Dash-*' | ft Name,DisplayName,Status
 Get-Service DashboardPortal
-Get-NetTCPConnection -State Listen | ? LocalPort -in 80,3001,3002,3003 | ft LocalPort,OwningProcess
+Get-NetTCPConnection -State Listen | ? LocalPort -in 80,3001,3002,3003,3004,3005,3006,3007,3008,3009,3010 | ft LocalPort,OwningProcess
 ```
 
 ## Reglas de oro

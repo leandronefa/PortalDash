@@ -710,8 +710,10 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
+// Solo loopback: los usuarios entran por el proxy del portal (puerto 80)
+const HOST = process.env.HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => {
+  console.log(`Servidor corriendo en http://${HOST}:${PORT}`);
   // Carga inicial al arrancar
   refreshAllData();
   // Refresh diario a las REFRESH_HOUR (default 6:00 AM)

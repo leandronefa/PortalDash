@@ -25,7 +25,7 @@ C:\apps\
 
 ## Acceso a los dashboards: SOLO vía el portal
 
-Desde jul 2026 el portal es **proxy inverso** (YARP): los usuarios entran por `http://10.0.0.118/d/{id}/` con sesión y permisos del portal; **no** se comparte ni se usa `http://10.0.0.118:PUERTO` (queda solo para diagnóstico local). Detalle en `portal-src\CLAUDE.md` y el mapa completo de puertos/IDs en `dashboards\CLAUDE.md`.
+Desde jul 2026 el portal es **proxy inverso** (YARP): los usuarios entran por `http://10.0.0.118/d/{id}/` con sesión y permisos del portal. Los dashboards escuchan **solo en `127.0.0.1`** (excepto el 3003, que reciben los agentes remotos), así que el acceso directo `http://10.0.0.118:PUERTO` está cerrado; para diagnóstico local usar `http://localhost:PUERTO`. Detalle en `portal-src\CLAUDE.md` y el mapa completo de puertos/IDs en `dashboards\CLAUDE.md`.
 
 ## Servicios (resumen)
 
@@ -36,7 +36,7 @@ Desde jul 2026 el portal es **proxy inverso** (YARP): los usuarios entran por `h
 | `dashpromociones.exe` | 3002 | `C:\apps\dashboards\DashPromocionesMP` |
 | `dashsucursal.exe` | 3003 | `C:\apps\dashboards\sucursal-user-visualizer` |
 | `dashmovimientoscaja.exe` | 3004 | `C:\apps\dashboards\MovimientosCaja` |
-| `dashcomisionesindo.exe` | 3005 | `C:\apps\dashboards\ComisionesINDO` |
+| `dashcomisionesindo.exe` | 3011 | `C:\apps\dashboards\ComisionesINDO` |
 | `dashconciliacionpunitorios.exe` | 3006 | `C:\apps\dashboards\ConciliacionPunitorios` |
 | `dashvalidacioncobranzas.exe` | 3007 | `C:\apps\dashboards\ValidacionCobranzas` |
 | `dashestadoresultado.exe` | 3008 | `C:\apps\dashboards\EstadoResultado` |

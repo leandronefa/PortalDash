@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Producción (servidor 10.0.0.118)
 
-- Servicio de Windows: `dashcomisionesindo.exe` (node-windows), **puerto 3005**, entrada `server/index.js`. Logs: `daemon\dashcomisionesindo.err.log`.
-- **Acceso de usuarios: SOLO vía el portal** → `http://10.0.0.118/d/8/` (proxy inverso con sesión y permisos). El puerto directo queda solo para diagnóstico local.
-- ⚠️ **Colisión de loopback**: el conector de QlikView (`QvOdbcConnectorPackage`) escucha en `127.0.0.1:3005`, por lo que este dashboard tiene `Host = 10.0.0.118` registrado en el portal (entra por el binding `0.0.0.0`). Si algún día se lo mueve de puerto, quitar ese Host.
+- Servicio de Windows: `dashcomisionesindo.exe` (node-windows), **puerto 3011**, entrada `server/index.js`, bind `127.0.0.1` (los usuarios entran solo por el proxy del portal). Logs: `server\daemon\dashcomisionesindo.err.log`.
+- **Acceso de usuarios: SOLO vía el portal** → `http://10.0.0.118/d/8/` (proxy inverso con sesión y permisos). Diagnóstico local: `http://localhost:3011`.
+- ⚠️ **No volver al puerto 3005**: el conector de QlikView (`QvOdbcConnectorPackage`) escucha en `127.0.0.1:3005` (por eso se movió a 3011 en jul 2026; el PORT del servicio vive en `server\daemon\dashcomisionesindo.xml`).
 
 ---
 

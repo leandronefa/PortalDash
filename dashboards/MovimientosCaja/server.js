@@ -165,6 +165,8 @@ app.get('*', (req, res) => {
 
 // ── Inicio ────────────────────────────────────────────────────────────────────
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[MovimientosCaja] Escuchando en http://0.0.0.0:${PORT}`);
+// Solo loopback: los usuarios entran por el proxy del portal (puerto 80)
+const HOST = process.env.HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => {
+  console.log(`[MovimientosCaja] Escuchando en http://${HOST}:${PORT}`);
 });

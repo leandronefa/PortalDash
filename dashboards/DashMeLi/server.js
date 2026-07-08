@@ -795,8 +795,10 @@ function refreshAllMlTokens() {
   }
 }
 
-app.listen(PORT, async () => {
-  console.log(`Dashboard corriendo en http://localhost:${PORT}`);
+// Solo loopback: los usuarios entran por el proxy del portal (puerto 80)
+const HOST = process.env.HOST || '127.0.0.1';
+app.listen(PORT, HOST, async () => {
+  console.log(`Dashboard corriendo en http://${HOST}:${PORT}`);
   refreshAllMlTokens();
   setInterval(refreshAllMlTokens, 5 * 60 * 60 * 1000);
   // Precalentar el cruce artículo↔publicación ML (tarda ~1 min la primera vez)

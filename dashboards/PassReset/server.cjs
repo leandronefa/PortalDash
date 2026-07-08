@@ -137,8 +137,10 @@ async function start() {
     process.exit(1);
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[PassReset] Dashboard en http://0.0.0.0:${PORT}`);
+  // Solo loopback: los usuarios entran por el proxy del portal (puerto 80)
+  const HOST = process.env.HOST || '127.0.0.1';
+  app.listen(PORT, HOST, () => {
+    console.log(`[PassReset] Dashboard en http://${HOST}:${PORT}`);
   });
 }
 

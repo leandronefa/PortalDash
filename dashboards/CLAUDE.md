@@ -17,7 +17,7 @@ Desde jul 2026 los usuarios **no** acceden por `http://10.0.0.118:PUERTO`: el po
 | `DashPromocionesMP` | `dashpromociones.exe` | 3002 | `/d/4/` | `server.js` | ESM (usa `import`). Funciona tal cual. |
 | `sucursal-user-visualizer` | `dashsucursal.exe` | 3003 | `/d/6/` | `dist-server\index.js` | Backend TS compilado con `npm run build:prod`. Los agentes remotos pegan directo a `:3003` (CentralUrl). |
 | `MovimientosCaja` | `dashmovimientoscaja.exe` | 3004 | `/d/7/` | ver package.json | Movimientos de Caja INDO. |
-| `ComisionesINDO` | `dashcomisionesindo.exe` | 3005 | `/d/8/` | `server\index.js` | Qlik ocupa `127.0.0.1:3005` → el portal tiene `Host=10.0.0.118` registrado para este dashboard. |
+| `ComisionesINDO` | `dashcomisionesindo.exe` | 3011 | `/d/8/` | `server\index.js` | Antes 3005; se movió porque Qlik (`QvOdbcConnectorPackage`) ocupa `127.0.0.1:3005`. |
 | `ConciliacionPunitorios` | `dashconciliacionpunitorios.exe` | 3006 | `/d/9/` | ver package.json | Conciliación de punitorios. |
 | `ValidacionCobranzas` | `dashvalidacioncobranzas.exe` | 3007 | `/d/10/` | `server.cjs` | Concilia 1167 vs Libro Mayor. |
 | `EstadoResultado` | `dashestadoresultado.exe` | 3008 | `/d/11/` | `server.js` | Inbox local `sap-inbox\` (SYSTEM no accede a UNC). |
@@ -65,7 +65,7 @@ node install-dashboard-service.js "Dash-Nombre" "C:\apps\dashboards\<carpeta>" <
 - Falta `dist` → pantalla en blanco (correr `npm run build`). Falta `dist-server` (apps con backend TS) → `npm run build:prod`.
 - `Cannot find module 'X'` → `npm install X` en la carpeta de la app.
 - **PM2 no se usa** (en Windows su autostart depende de sesión iniciada). Si reaparece un daemon: `pm2 kill`.
-- Los dashboards escuchan en `0.0.0.0`; el firewall está abierto por puerto; el iframe lo carga el navegador del cliente.
+- **Bind a loopback (jul 2026)**: todos los dashboards escuchan en `127.0.0.1` (env `HOST` en el `listen` de cada entrada; default `127.0.0.1`) — el acceso directo por `10.0.0.118:puerto` está cerrado; solo entra el proxy del portal. **Excepción: `sucursal-user-visualizer` (3003) escucha en `0.0.0.0`** porque los agentes remotos le reportan directo (`CENTRAL_URL`). El Firewall de Windows está deshabilitado en este server; el cierre es por binding, no por firewall.
 
 ## Regla
 

@@ -30,7 +30,9 @@ app.get('/{*path}', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+// Solo loopback: los usuarios entran por el proxy del portal (puerto 80)
+const HOST = process.env.HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => {
     console.log(`\n  Comisiones Admin Panel`);
     console.log(`  =====================`);
     console.log(`  Server running at http://localhost:${PORT}`);

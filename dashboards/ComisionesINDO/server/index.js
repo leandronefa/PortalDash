@@ -42,5 +42,8 @@ const distPath = path.join(__dirname, '../dist');
 app.use(express.static(distPath));
 app.get('*', (_req, res) => res.sendFile(path.join(distPath, 'index.html')));
 
-const PORT = process.env.PORT || 3005;
-app.listen(PORT, '0.0.0.0', () => console.log(`[ComisionesINDO] Puerto ${PORT}`));
+const PORT = process.env.PORT || 3011;
+// Solo loopback: los usuarios entran por el proxy del portal (puerto 80).
+// Puerto 3011 (no 3005): el conector de QlikView ocupa 127.0.0.1:3005.
+const HOST = process.env.HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => console.log(`[ComisionesINDO] ${HOST}:${PORT}`));

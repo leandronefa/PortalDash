@@ -112,6 +112,8 @@ app.post('/api/recalcular/:periodo', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log('Conciliacion Punitorios corriendo en http://localhost:' + PORT);
+// Solo loopback: los usuarios entran por el proxy del portal (puerto 80)
+const HOST = process.env.HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => {
+  console.log('Conciliacion Punitorios corriendo en http://' + HOST + ':' + PORT);
 });

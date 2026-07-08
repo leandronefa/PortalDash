@@ -63,7 +63,7 @@ Get-Content C:\apps\dashboards\<carpeta>\daemon\<servicio>.err.log -Tail 30
 
 ## PassReset — sistema de reset automático de contraseñas Windows
 
-Dashboard en `http://10.0.0.118:3009` (servicio `dashpassreset.exe`). Gestiona el ciclo de cambio de contraseñas Windows en los servidores remotos monitoreados.
+Dashboard en `http://10.0.0.118/d/12/` vía portal (servicio `dashpassreset.exe`, puerto 3009 solo loopback). Gestiona el ciclo de cambio de contraseñas Windows en los servidores remotos monitoreados.
 
 ### Arquitectura
 

@@ -1,6 +1,8 @@
 # Dashboards Node.js como servicios de Windows
 
-Tus dashboards son apps **Node.js (Express + Vite/React)** tipo `DashPromocionesMP`: un `server.js` que escucha en `0.0.0.0:PORT`, sirve la carpeta `dist` y consulta SQL Server (`mssql`). Ya están listos para el iframe del portal (escuchan en todas las interfaces y no bloquean el framing).
+> **ACTUALIZACIÓN jul 2026**: el portal es **proxy inverso** (`/d/{id}/`) — los dashboards nuevos deben escuchar en **`127.0.0.1`** (`app.listen(PORT, process.env.HOST || '127.0.0.1')`), NO en `0.0.0.0`, y **no** hay que abrir el firewall por puerto. Probarlos vía el portal (`http://10.0.0.118/d/{id}/`) o `http://localhost:PUERTO` desde el server, no desde otra PC. Las menciones a `0.0.0.0` / firewall / URL directa de abajo son del esquema anterior.
+
+Tus dashboards son apps **Node.js (Express + Vite/React)** tipo `DashPromocionesMP`: un `server.js` que escucha en `PORT` (hoy solo loopback), sirve la carpeta `dist` y consulta SQL Server (`mssql`).
 
 Esta carpeta los registra como **servicios de Windows** con **arranque automático** (sin depender de que alguien inicie sesión) y **reinicio ante caídas** — el mismo modelo que el portal.
 

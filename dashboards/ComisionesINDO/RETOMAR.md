@@ -1,7 +1,7 @@
 # Retomar — ComisionesINDO — actualizado 2026-07-03
 
 ## Estado general
-Servicio `dashcomisionesindo.exe` corriendo en puerto 3005. Build hecho y servicio reiniciado con todos los cambios de hoy. **Falta que el usuario presione ⟳ Calcular (o el cálculo completo del Dashboard) para regenerar 2026-06** con el desglose nuevo y sin la suc01.
+Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 desde 08/07/2026 (antes 3005; bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho y servicio reiniciado con todos los cambios de hoy. **Falta que el usuario presione ⟳ Calcular (o el cálculo completo del Dashboard) para regenerar 2026-06** con el desglose nuevo y sin la suc01.
 
 ---
 

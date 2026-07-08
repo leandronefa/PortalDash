@@ -12,7 +12,7 @@ Stack: React 19 + Vite + TypeScript (frontend) y Express + TypeScript (`server/i
 
 - **Servicio de Windows**: `dashsucursal.exe` (node-windows), puerto **3003**, entrada `dist-server\index.js` (NO usa `server.js`; el `nssm.exe` que trae la carpeta NO se usa).
 - **Usuarios**: SOLO vía el portal → `http://10.0.0.118/d/6/` (proxy inverso con sesión y permisos).
-- **Agentes remotos**: le pegan directo a `http://10.0.0.118:3003` (`CentralUrl`); el puerto 3003 NO puede cerrarse en el firewall sin contemplar esas IPs.
+- **Agentes remotos**: le pegan directo a `http://10.0.0.118:3003` (`CentralUrl`, solo push; el server nunca les inicia conexión). Por eso este es el ÚNICO dashboard que escucha en `0.0.0.0` — todos los demás bindean `127.0.0.1` (jul 2026). No cambiarle el bind sin migrar los agentes.
 - Logs del servicio: `daemon\dashsucursal.err.log`.
 - Diagnóstico en primer plano:
   ```powershell

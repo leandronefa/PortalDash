@@ -127,6 +127,8 @@ Los 3 de ejemplo que vienen cargados podés **editarlos** (cambiar nombre/puerto
 
 ## 6. ⚠️ IMPORTANTE: que los dashboards se vean dentro del portal
 
+> **OBSOLETO desde jul 2026** — el portal ahora es **proxy inverso** (`/d/{id}/`): el navegador ya NO va directo al puerto del dashboard y el modelo actual es el inverso al descripto abajo: **los dashboards escuchan solo en `127.0.0.1`** y no se abren puertos en el firewall. Ver `deploy/OPERATIONS-10.0.0.118.md` (puntos 6–8). Se conserva esta sección solo como referencia histórica del esquema anterior.
+
 El iframe lo carga **el navegador del usuario**, no el servidor del portal. La petición va **directo** desde la PC del usuario a `10.0.0.118:8501`. Por eso, cada uno de tus 3 dashboards debe cumplir:
 
 1. **Escuchar en `0.0.0.0` (todas las interfaces), no solo en `127.0.0.1`/`localhost`.**

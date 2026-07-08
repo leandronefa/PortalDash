@@ -55,7 +55,8 @@ node install-dashboard-service.js "Dash-Nombre" "C:\apps\dashboards\<carpeta>" <
 - **`sucursal-user-visualizer`** compila el backend a `dist-server\index.js` (`npm run build:prod`); no usa `server.js`.
 - **PM2 descartado** en Windows (su autostart depende de sesión). Si reaparece: `pm2 kill`.
 - **Kestrel**: el puerto 80 vive en `appsettings.Production.json` (no en el base) porque `Kestrel:Endpoints` pisa a `--urls`. No reintroducir `Kestrel` en `appsettings.json`.
-- **Proxy inverso (jul 2026)**: el iframe usa `/d/{id}/` — el portal proxya hacia `127.0.0.1:{puerto}` con sesión + permisos (`Services/DashboardProxy.cs`, YARP). Rutas absolutas de las apps (`/api`, `/assets`) se rutean por la cookie `DashboardPortal.ActiveDash`. Comisiones INDO (3005) tiene `Host=10.0.0.118` registrado porque Qlik ocupa `127.0.0.1:3005`.
+- **Proxy inverso (jul 2026)**: el iframe usa `/d/{id}/` — el portal proxya hacia `127.0.0.1:{puerto}` con sesión + permisos (`Services/DashboardProxy.cs`, YARP). Rutas absolutas de las apps (`/api`, `/assets`) se rutean por la cookie `DashboardPortal.ActiveDash`.
+- **Los dashboards escuchan solo en `127.0.0.1`** (08/07/2026) — el acceso directo `10.0.0.118:puerto` está cerrado por binding (el firewall del server está deshabilitado). Excepción: 3003 en `0.0.0.0` (agentes remotos). Comisiones INDO corre en el **3011** (Qlik ocupa `127.0.0.1:3005`).
 
 ## Reglas
 

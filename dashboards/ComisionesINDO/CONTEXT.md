@@ -12,7 +12,7 @@ Aplicación web interna para calcular y liquidar comisiones del personal de sucu
 | Runtime | Node.js v24, ES Modules |
 | Backend | Express 4 + `mssql` (`server/index.js`) |
 | Frontend | Vite 6 SPA vanilla JS (sin framework), router simple en `src/app.js` |
-| Puerto | **3005** (servicio Windows `dashcomisionesindo.exe`) |
+| Puerto | **3011** desde 08/07/2026 (servicio Windows `dashcomisionesindo.exe`; antes 3005 — Qlik ocupa `127.0.0.1:3005`). Bind `127.0.0.1`; acceso vía portal `/d/8/` |
 | Auth | JWT (`jsonwebtoken`), middleware en todas las rutas excepto `/api/auth` |
 | Dev | `npm run dev` (server + client en paralelo), `npm run server` (solo backend, `--watch`), `npm run client` (solo Vite) |
 
@@ -24,8 +24,9 @@ DB_USER=...
 DB_PASSWORD=...
 DB_PORT=1433
 JWT_SECRET=...
-PORT=3005
+PORT=3011
 ```
+> El `PORT` real lo inyecta el servicio (`server\daemon\dashcomisionesindo.xml`); el default en código también es 3011.
 
 ---
 
@@ -157,7 +158,7 @@ Restart-Service dashcomisionesindo.exe
 
 ## Gotchas
 
-- **`localhost:3005` no llega al dashboard** en este servidor (10.0.0.118): un conector ODBC de Qlik (proceso `dotnet`, gateway) escucha en `127.0.0.1:3005` y tiene prioridad sobre el bind `0.0.0.0:3005` de Node. Para probar la API desde el propio servidor, usar `10.0.0.118:3005`, no `localhost`.
+- **Puerto 3011, no 3005** (desde 08/07/2026): el dashboard escucha en `127.0.0.1:3011`. El 3005 quedó libre de este dashboard porque un conector ODBC de Qlik (proceso `dotnet`, gateway) ocupa `127.0.0.1:3005` — no volver a ese puerto. Para probar la API desde el servidor: `http://localhost:3011`.
 - El JWT se firma con `JWT_SECRET` del `.env` — para pruebas manuales de API se puede generar un token propio con `jsonwebtoken` sin pasar por `/login`.
 - Cualquier dashboard nuevo, atención a no colisionar `PORT` con el `.env` — el servicio Windows lo pisa.
 

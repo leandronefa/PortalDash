@@ -243,45 +243,46 @@ function pct(num: number, den: number, decimals = 0): string {
   return `${((num / den) * 100).toFixed(decimals)}%`
 }
 
-function MatrixCell({ value, bold = false, negative = false }: { value: number; bold?: boolean; negative?: boolean }) {
-  const isNeg = value < 0
-  return (
-    <td className={`px-3 py-1.5 text-right font-mono text-xs whitespace-nowrap border-l border-slate-200 dark:border-slate-700 ${
-      negative && isNeg
-        ? 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 font-semibold'
-        : isNeg
-          ? 'text-red-500 dark:text-red-400'
-          : 'text-slate-700 dark:text-slate-200'
-    } ${bold ? 'font-semibold' : ''}`}>
-      {nfAR0.format(Math.round(value))}
-    </td>
-  )
+// Semáforo para G/V% (menor = mejor). El valor SIEMPRE está impreso en la celda:
+// el color es refuerzo, no la única codificación.
+function heatClass(value: number, min: number, max: number): string {
+  const t = max > min ? (value - min) / (max - min) : 0
+  if (t < 0.2) return 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300'
+  if (t < 0.4) return 'bg-lime-100 dark:bg-lime-900/40 text-lime-800 dark:text-lime-300'
+  if (t < 0.6) return 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300'
+  if (t < 0.8) return 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300'
+  return 'bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-300'
 }
 
 function MatrixView({ matrix, periodoStr }: { matrix: MatrixPL; periodoStr: string | null }) {
-  const { columnas, totales } = matrix
+  const { totales } = matrix
   const t = totales
 
-  const labelCls = 'sticky left-0 z-10 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap border-r-2 border-slate-300 dark:border-slate-600'
-  const pctCls = 'px-3 py-1 text-right font-mono text-[0.68rem] text-slate-500 dark:text-slate-400 whitespace-nowrap border-l border-slate-200 dark:border-slate-700'
+  // Sucursales como filas, ordenadas por ventas desc (como el Excel de contabilidad)
+  const filas = useMemo(
+    () => [...matrix.columnas].sort((a, b) => b.ventas - a.ventas),
+    [matrix]
+  )
+  const gvRatios = filas.map(f => (f.ventas !== 0 ? f.directos / f.ventas : 0))
+  const gvMin = Math.min(...gvRatios)
+  const gvMax = Math.max(...gvRatios)
 
-  function PctRow({ label, get }: { label: string; get: (c: typeof columnas[number]) => string }) {
-    return (
-      <tr className="border-b border-slate-200 dark:border-slate-700">
-        <td className={`${labelCls} font-normal text-slate-400 dark:text-slate-500`}>{label}</td>
-        {columnas.map(c => <td key={c.sucursal} className={pctCls}>{get(c)}</td>)}
-      </tr>
-    )
-  }
+  const th = 'px-3 py-2 text-right text-[0.68rem] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 whitespace-nowrap border-l border-slate-300 dark:border-slate-600'
+  const num = 'px-3 py-1.5 text-right font-mono text-xs whitespace-nowrap border-l border-slate-200 dark:border-slate-700'
+  const pctCell = `${num} text-slate-500 dark:text-slate-400`
 
-  function ValRow({ label, get, bold = false, negative = false, topBorder = false }: {
-    label: string; get: (c: typeof columnas[number]) => number; bold?: boolean; negative?: boolean; topBorder?: boolean
-  }) {
+  function Money({ value, bold = false, highlightNeg = false }: { value: number; bold?: boolean; highlightNeg?: boolean }) {
+    const isNeg = value < 0
     return (
-      <tr className={`border-b border-slate-200 dark:border-slate-700 ${topBorder ? 'border-t-2 border-t-slate-400 dark:border-t-slate-500' : ''} ${bold ? 'bg-slate-50 dark:bg-slate-700/40' : ''}`}>
-        <td className={`${labelCls} ${bold ? 'uppercase' : ''}`}>{label}</td>
-        {columnas.map(c => <MatrixCell key={c.sucursal} value={get(c)} bold={bold} negative={negative} />)}
-      </tr>
+      <td className={`${num} ${bold ? 'font-semibold' : ''} ${
+        isNeg
+          ? highlightNeg
+            ? 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 font-semibold'
+            : 'text-red-500 dark:text-red-400'
+          : 'text-slate-700 dark:text-slate-200'
+      }`}>
+        {nfAR0.format(Math.round(value))}
+      </td>
     )
   }
 
@@ -292,70 +293,102 @@ function MatrixView({ matrix, periodoStr }: { matrix: MatrixPL; periodoStr: stri
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-slate-200 dark:bg-slate-700 border-b-2 border-slate-400 dark:border-slate-500">
-                <th className="sticky left-0 z-10 bg-slate-200 dark:bg-slate-700 px-3 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 capitalize border-r-2 border-slate-300 dark:border-slate-600 whitespace-nowrap">
-                  {periodoStr ?? ''}
+                <th className="px-3 py-2 text-left text-[0.68rem] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 capitalize whitespace-nowrap border-r-2 border-slate-300 dark:border-slate-600">
+                  {periodoStr ?? 'Sucursal'}
                 </th>
-                {columnas.map(c => (
-                  <th key={c.sucursal} className="px-3 py-2 text-right text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap border-l border-slate-300 dark:border-slate-600">
-                    {sucLabel(c.sucursal)}
-                  </th>
-                ))}
+                <th className={th}>Ventas</th>
+                <th className={th}>%</th>
+                <th className={th}>Costo de Ventas</th>
+                <th className={th}>Margen Bruto</th>
+                <th className={th}>Mg %</th>
+                <th className={th}>Gastos Directos</th>
+                <th className={th}>Contribución</th>
+                <th className={th}>%</th>
+                <th className={th}>G/V %</th>
               </tr>
             </thead>
             <tbody>
-              <ValRow label="Ventas" get={c => c.ventas} bold />
-              <PctRow label="%" get={c => pct(c.ventas, t.ventas)} />
-              <ValRow label="Costo de Ventas" get={c => c.costo} />
-              <ValRow label="Margen Bruto" get={c => c.margen} bold topBorder />
-              <PctRow label="%" get={c => pct(c.margen, c.ventas, 1)} />
-              <ValRow label="Gastos Directos" get={c => c.directos} />
-              <ValRow label="Contribución" get={c => c.contribucion} bold topBorder />
-              <PctRow label="%" get={c => pct(c.contribucion, c.ventas)} />
-              <ValRow label="Gastos Indirectos" get={c => c.indirectos} />
-              <ValRow label="Utilidad Neta" get={c => c.utilidad} bold negative topBorder />
-              <PctRow label="%" get={c => pct(c.utilidad, c.ventas)} />
+              {filas.map((f, i) => {
+                const gv = f.ventas !== 0 ? f.directos / f.ventas : 0
+                const contrPct = f.ventas !== 0 ? f.contribucion / f.ventas : 0
+                return (
+                  <tr key={f.sucursal} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td className="px-3 py-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap border-r-2 border-slate-200 dark:border-slate-600">
+                      {sucLabel(f.sucursal)}
+                    </td>
+                    <Money value={f.ventas} bold />
+                    <td className={pctCell}>{pct(f.ventas, t.ventas)}</td>
+                    <Money value={f.costo} />
+                    <Money value={f.margen} />
+                    <td className={pctCell}>{pct(f.margen, f.ventas, 1)}</td>
+                    <Money value={f.directos} />
+                    <Money value={f.contribucion} bold highlightNeg />
+                    <td className={`${num} ${f.contribucion < 0 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {pct(f.contribucion, f.ventas)}
+                    </td>
+                    <td className={`${num} font-semibold ${heatClass(gvRatios[i], gvMin, gvMax)}`}>
+                      {(gv * 100).toFixed(0)}%
+                    </td>
+                  </tr>
+                )
+              })}
+              {/* TOTAL */}
+              <tr className="border-t-2 border-slate-400 dark:border-slate-500 bg-slate-100 dark:bg-slate-700 font-bold">
+                <td className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100 border-r-2 border-slate-300 dark:border-slate-600">Total</td>
+                <Money value={t.ventas} bold />
+                <td className={pctCell}>100%</td>
+                <Money value={t.costo} bold />
+                <Money value={t.margen} bold />
+                <td className={`${pctCell} font-bold text-slate-700 dark:text-slate-200`}>{pct(t.margen, t.ventas, 1)}</td>
+                <Money value={t.directos} bold />
+                <Money value={t.contribucion} bold highlightNeg />
+                <td className={`${num} font-bold ${t.contribucion < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                  {pct(t.contribucion, t.ventas)}
+                </td>
+                <td className={`${num} font-bold text-slate-700 dark:text-slate-200`}>{pct(t.directos, t.ventas)}</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </Card>
 
       {/* Cuadro de totales (como el Excel) */}
-      <div className="flex justify-end">
-        <Card className="w-full sm:w-[26rem]">
-          <table className="w-full text-sm">
-            <tbody>
-              {([
-                { label: 'Total Ventas', value: t.ventas, bold: true },
-                { label: 'Total costo de ventas', value: t.costo },
-                { label: 'Margen Bruto', value: t.margen, bold: true, extra: pct(t.margen, t.ventas, 1) },
-                { label: 'Total gastos directos', value: t.directos },
-                { label: 'Total gastos indirectos', value: t.indirectos, extra: nfAR0.format(Math.round(t.totalGastos)) },
-                { label: 'Utilidad neta', value: t.utilidad, bold: true },
-              ] as { label: string; value: number; bold?: boolean; extra?: string }[]).map(row => (
-                <tr key={row.label} className={`border-b border-slate-100 dark:border-slate-700 ${row.bold ? 'bg-slate-100 dark:bg-slate-700/50' : ''}`}>
-                  <td className={`px-3 py-1.5 text-xs ${row.bold ? 'font-bold' : 'font-medium'} text-slate-700 dark:text-slate-200`}>{row.label}</td>
-                  <td className={`px-3 py-1.5 text-right font-mono text-xs whitespace-nowrap ${row.bold ? 'font-bold' : ''} ${row.value < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                    {nfAR0.format(Math.round(row.value))}
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-mono text-[0.68rem] text-slate-400 dark:text-slate-500 whitespace-nowrap w-20">
-                    {row.extra ?? ''}
-                  </td>
-                </tr>
-              ))}
-              <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700">
-                <td className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">Resultado</td>
-                <td className={`px-3 py-2 text-right font-mono text-xs font-bold whitespace-nowrap ${t.utilidad < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {nfAR0.format(Math.round(t.utilidad))}
+      <Card className="w-full sm:w-[30rem]">
+        <table className="w-full text-sm">
+          <tbody>
+            {([
+              { label: 'Total Ventas', value: t.ventas, bold: true },
+              { label: 'Total costo de ventas', value: t.costo },
+              { label: 'Margen Bruto', value: t.margen, bold: true, extra: pct(t.margen, t.ventas, 1) },
+              { label: 'Total gastos directos', value: t.directos },
+              { label: 'Total gastos indirectos', value: t.indirectos, extra: nfAR0.format(Math.round(t.totalGastos)) },
+            ] as { label: string; value: number; bold?: boolean; extra?: string }[]).map(row => (
+              <tr key={row.label} className={`border-b border-slate-100 dark:border-slate-700 ${row.bold ? 'bg-slate-100 dark:bg-slate-700/50' : ''}`}>
+                <td className={`px-3 py-1.5 text-xs ${row.bold ? 'font-bold' : 'font-medium'} text-slate-700 dark:text-slate-200`}>{row.label}</td>
+                <td className={`px-3 py-1.5 text-right font-mono text-xs whitespace-nowrap ${row.bold ? 'font-bold' : ''} ${row.value < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                  {nfAR0.format(Math.round(row.value))}
                 </td>
-                <td />
+                <td className="px-2 py-1.5 text-right font-mono text-[0.68rem] text-slate-400 dark:text-slate-500 whitespace-nowrap w-20">
+                  {row.extra ?? ''}
+                </td>
               </tr>
-            </tbody>
-          </table>
-          <p className="px-3 py-2 text-[0.65rem] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700">
-            Gastos indirectos = centros de costo + servicios centrales + resultados financieros, prorrateados por participación en ventas.
-          </p>
-        </Card>
-      </div>
+            ))}
+            <tr className={`border-t-2 border-slate-300 dark:border-slate-600 ${t.utilidad < 0 ? 'bg-red-50 dark:bg-red-950/40' : 'bg-emerald-50 dark:bg-emerald-950/40'}`}>
+              <td className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">Utilidad neta</td>
+              <td className={`px-3 py-2 text-right font-mono text-xs font-bold whitespace-nowrap ${t.utilidad < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                {nfAR0.format(Math.round(t.utilidad))}
+              </td>
+              <td className="px-2 py-2 text-right font-mono text-[0.68rem] text-slate-400 dark:text-slate-500 w-20">
+                {pct(t.utilidad, t.ventas)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="px-3 py-2 text-[0.65rem] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700">
+          Gastos indirectos = centros de costo + servicios centrales + resultados financieros, prorrateados por participación en ventas.
+          G/V % = gastos directos sobre ventas (verde = menor, rojo = mayor).
+        </p>
+      </Card>
     </div>
   )
 }

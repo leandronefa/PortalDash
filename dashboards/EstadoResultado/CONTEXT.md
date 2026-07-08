@@ -18,9 +18,9 @@ Estado de Resultado (**P&L mensual**) para TESI y PUEBLO. Lee archivos exportado
 - **Caché local**: `data-cache/latest.json`
 
 ## Vistas (tabs)
-- **Resumen** (default): matriz P&L por sucursal estilo Excel contable — Ventas / Costo de Ventas / Margen Bruto / Gastos Directos / Contribución / Gastos Indirectos / Utilidad Neta, con filas de % y cuadro de totales.
-  - Criterio de asignación (`buildMatrixPL` en `src/lib/data-processing.ts`): columnas = sucursales con ventas ≠ 0. **Gastos indirectos** = gastos de centros de costo (sucursales sin ventas) + registros sin sucursal + servicios centrales (4.2.002.02/03) + resultados financieros (4.2.004), **prorrateados por participación en ventas**. La suma de utilidades por sucursal cierra exacto con el resultado global.
-  - Referencia visual: `foto.jpeg` (Excel de contabilidad). Los números del Excel no coinciden 1:1 porque contabilidad aplica ajustes manuales.
+- **Resumen** (default): P&L por sucursal estilo Excel contable, **sucursales como filas** ordenadas por ventas desc. Columnas: Ventas / % participación / Costo de Ventas / Margen Bruto / Mg % / Gastos Directos / Contribución (negativa resaltada en rojo) / % / **G/V %** (gastos directos sobre ventas, con semáforo verde→rojo relativo al rango del mes). Fila TOTAL + cuadro de totales abajo (ventas, costo, margen, gastos directos/indirectos, utilidad neta).
+  - Criterio de asignación (`buildMatrixPL` en `src/lib/data-processing.ts`): filas = sucursales con ventas ≠ 0. **Gastos indirectos** = gastos de centros de costo (sucursales sin ventas) + registros sin sucursal + servicios centrales (4.2.002.02/03) + resultados financieros (4.2.004), **prorrateados por participación en ventas**. La suma de utilidades por sucursal cierra exacto con el resultado global.
+  - Referencia visual: `new.jpeg` (Excel de contabilidad, jul 2026; reemplaza el layout transpuesto de `foto.jpeg`). Los números del Excel no coinciden 1:1 porque contabilidad aplica ajustes manuales. Las columnas **stock $ / Contr/Stock** del Excel NO están implementadas: el stock no viene en los archivos SAP (haría falta otra fuente de datos).
 - **Estado de Resultado**: P&L por grupos de cuentas (colapsable).
 - **Por Sucursal**: resumen por sucursal con desglose expandible.
 - **Gráficos**: top gastos + ingresos vs gastos.

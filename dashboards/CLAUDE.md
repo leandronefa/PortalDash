@@ -23,6 +23,7 @@ Desde jul 2026 los usuarios **no** acceden por `http://10.0.0.118:PUERTO`: el po
 | `EstadoResultado` | `dashestadoresultado.exe` | 3008 | `/d/11/` | `server.js` | Inbox local `sap-inbox\` (SYSTEM no accede a UNC). |
 | `PassReset` | `dashpassreset.exe` | 3009 | `/d/12/` | `server.cjs` | Rotación de contraseñas Windows; agentes en servidores remotos. |
 | `DashMeLi` | `dashmeli.exe` | 3010 | `/d/13/` | `server.js` | Stock dep. 198/199 + MercadoLibre; tokens OAuth se renuevan solos. |
+| `ControlAcceso` | `dashcontrolacceso.exe` | 3012 | (registrar en el portal) | `server.cjs` | Portería: ingreso/egreso de vehículos. Login propio con roles PORTERO/ADMIN. |
 
 ## Operación
 

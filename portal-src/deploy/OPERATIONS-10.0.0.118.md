@@ -20,7 +20,8 @@ C:\apps\
     ├── ValidacionCobranzas\         Node/Express  → servicio "dashvalidacioncobranzas.exe", puerto 3007
     ├── EstadoResultado\             Node/Express  → servicio "dashestadoresultado.exe",     puerto 3008
     ├── PassReset\                   Node/Express  → servicio "dashpassreset.exe",           puerto 3009
-    └── DashMeLi\                    Node/Express  → servicio "dashmeli.exe",                puerto 3010
+    ├── DashMeLi\                    Node/Express  → servicio "dashmeli.exe",                puerto 3010
+    └── ControlAcceso\               Node/Express  → servicio "dashcontrolacceso.exe",       puerto 3012
 ```
 
 > `\\10.0.0.118\apps` es el recurso compartido que apunta a `C:\apps`. En el server SIEMPRE usar la ruta **local `C:\apps\...`** (los servicios no deben referenciar rutas UNC).
@@ -37,6 +38,7 @@ C:\apps\
 | `dashestadoresultado.exe` | Dash-EstadoResultado | EstadoResultado / **3008** | `server.js` |
 | `dashpassreset.exe` | Dash-PassReset | PassReset / **3009** | `server.cjs` |
 | `dashmeli.exe` | Dash-MeLi | DashMeLi / **3010** | `server.js` |
+| `dashcontrolacceso.exe` | Dash-ControlAcceso | ControlAcceso / **3012** | `server.cjs` |
 
 ⚠️ **node-windows registra los servicios con sufijo `.exe`** en el Name real. `Get-Service Dash-*` **no** los encuentra. Usar:
 ```powershell
@@ -51,7 +53,7 @@ Restart-Service dashpromociones.exe
 ```powershell
 # Estado de todo
 Get-Service DashboardPortal, dash* | Format-Table Name, Status
-Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010 | Format-Table LocalPort, OwningProcess
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012 | Format-Table LocalPort, OwningProcess
 
 # Reiniciar / detener (nombre real con .exe)
 Restart-Service dashcomisiones.exe
@@ -134,6 +136,16 @@ El chequeo automático diario (01:00 hs) también procesa si hay archivos en el 
 Los archivos originales en `\\10.0.0.115\Cegid\` no se tocan (copiar, no mover desde UNC).
 
 ---
+
+## ControlAcceso — portería, ingreso/egreso de vehículos (jul 2026)
+
+Servicio `dashcontrolacceso.exe`, puerto **3012** (solo loopback), carpeta `C:\apps\dashboards\ControlAcceso`.
+Registrar en el portal (Administración → Dashboards, puerto 3012) para acceder vía `/d/{id}/`.
+
+- Reemplaza la planilla `R RH O8-0 INGRESO Y EGRESO DE VEHÍCULOS.xlsx` (propios y no propios).
+- **Login propio de la app** (además de la sesión del portal): tabla `tbl_CtrlAcceso_Usuarios` en `db_Cegid` @ 10.0.0.115, roles **PORTERO** (carga) y **ADMIN** (KPIs + ABM de vehículos/conductores/usuarios). Seed inicial `admin/admin` si la tabla está vacía — **cambiar la contraseña**.
+- Tablas `tbl_CtrlAcceso_*` se crean solas al arrancar el servicio (idempotente).
+- Gotcha: el SQL de 10.0.0.115 no soporta `LEAD` → los KPIs usan `CROSS APPLY` (detalle en el CLAUDE.md del dashboard).
 
 ## Particularidades / problemas resueltos (importante)
 

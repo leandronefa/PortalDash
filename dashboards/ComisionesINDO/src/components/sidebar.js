@@ -14,6 +14,7 @@ const MENU = [
   { route: 'supervisores',     icon: '👤', label: 'Supervisores' },
 
   { section: 'Cálculos' },
+  { route: 'total',               icon: '🧮', label: 'Total' },
   { route: 'cajeros',             icon: '🧾', label: 'Cajeros' },
   { route: 'operadores-retail',   icon: '👥', label: 'Operadores Retail' },
   { route: 'operadores-millon',   icon: '👥', label: 'Operadores Millón' },

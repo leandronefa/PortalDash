@@ -1,7 +1,41 @@
-# Retomar — ComisionesINDO — actualizado 2026-07-03
+# Retomar — ComisionesINDO — actualizado 2026-07-14
 
 ## Estado general
-Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 desde 08/07/2026 (antes 3005; bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho y servicio reiniciado con todos los cambios de hoy. **Falta que el usuario presione ⟳ Calcular (o el cálculo completo del Dashboard) para regenerar 2026-06** con el desglose nuevo y sin la suc01.
+Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 (bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho, servicio reiniciado y **cálculo completo 2026-06 re-ejecutado** (historial id 35) con las reglas nuevas de Supervisores.
+
+---
+
+## Sesión 2026-07-14
+
+### 1. Visor Ventas → Originaciones: filtros + CSV
+`src/pages/visor-ventas.js`: en la pestaña Originaciones se agregaron filtros por Operador, Sucursal y rango de fechas (client-side, sobre los datos ya cargados del período) y botón de descarga CSV (solo filas filtradas; formato es-AR: `;`, coma decimal, BOM UTF-8). Fecha ahora se muestra `dd/mm/yyyy`. Consumo/Efectivo sin cambios.
+
+### 2. Supervisores — reglas corregidas (VERSIÓN FINAL del día, iterada 4 veces con el usuario)
+⚠ El negocio cambió el cálculo el mismo 14/07. Regla vigente (implementada en `calcularSupervisores()`, `server/services/calcEngine.js`):
+- **RETAIL (id < 100), SOLO consumo**:
+  - **$ por sucursal**: si `escalon_consumo >= 1` paga el monto ABM `consumo`/`por_sucursal` de su categoría **SIN factor** (A=$10.000, B=$9.000, C=$8.000). No varía por escalón (el usuario aclaró: "me equivoqué, no era escalón, es categoría").
+  - **Plus por plaza**: plaza = provincia. Si TODAS las Retail asignadas de esa provincia llegaron por consumo → plus = **(suma de lo pagado por las sucursales de esa plaza) × factor_plaza (0.5)**, redondeado a miles (`Math.round`). Si una no llega, sin plus.
+- **MILLÓN (id >= 100), SOLO efectivo**: no paga por sucursal. Si TODAS las Millón asignadas de la provincia llegaron por efectivo (`escalon_efectivo >= 1`) → la plaza paga **UNA sola vez** el monto ABM `efectivo`/`por_plaza` (**$23.000**), **SIN factor**.
+- Retail y Millón forman **plazas separadas** aunque compartan provincia (ej. MENDOZA aparece como plaza Retail y plaza Millón).
+- El `factor_plaza` se lee de la fila `consumo`/`por_sucursal` categoría C.
+- Cada plaza retorna `tipo ('retail'|'millon')`, `cant_sucursales` y `suma_sucursales` (null en Millón); cada sucursal del detalle lleva `tipo`.
+- `src/pages/resultado-supervisores.js`: tabla Plazas en **una sola línea por provincia** con bloques Retail (Suc/¿Cumple?/$ Sucursales/$ Plus ×0,5) y Millón (Suc/¿Cumple?/$ Plaza) + columna Total plaza (suma de ambos premios; el $ Sucursales Retail NO entra, va al total por Sucursales). Provincia sin uno de los dos tipos → "—". El detalle de Sucursales quedó como estaba. Cambio solo de presentación (agrupa el array `plazas` por provincia al renderizar) — sirve para cálculos ya guardados sin recalcular.
+
+### 3b. Página Total conectada al menú (estaba huérfana)
+`src/pages/total.js` (con el botón "▶ Ejecutar cálculo", único disparador del cálculo completo desde que se quitó del Dashboard el 2026-07-06) existía pero **no estaba registrada en el router ni en el sidebar** — no había forma de ejecutar el cálculo desde la UI. Fix: import + ruta `total` en `src/app.js` y entrada "🧮 Total" primera en la sección Cálculos del sidebar (`src/components/sidebar.js`). Flujo para calcular un período: sidebar → período → Cálculos → Total → ▶ Ejecutar cálculo (Cajeros sigue aparte con botón propio por los overrides de jornada).
+
+### 3. MontosSupervisor — limpieza (pedido del usuario)
+Borradas las 6 filas en cero que no corresponden: `consumo`/`por_plaza` (A/B/C) y `efectivo`/`por_sucursal` (A/B/C). Quedan solo `consumo`/`por_sucursal` (A=10000, B=9000, C=8000) y `efectivo`/`por_plaza` (23000 en A/B/C, factor_plaza=0.5). No hay seed que las re-inserte; el motor ya no lee los conceptos borrados (`_getMontoSup` eliminada, ahora usa `filaSup` local).
+
+### 4. Resultado 2026-06 con reglas finales (a validar por el usuario)
+- **Eric Vidable: $219.000** = $169.000 por sucursales (18/21 Retail: 10 A + 5 B + 3 C) + $27.000 plaza Retail MENDOZA (suma $53.000 × 0.5 = 26.500 → ↑ 27.000) + $23.000 plaza Millón MENDOZA (suc 105 ok). No cumplen: Retail SAN JUAN/SAN LUIS, Millón SAN JUAN (110)/SAN LUIS (104).
+- **Josefina Rossini: $118.000** = $69.000 por sucursales (8/11 Retail: 5 B + 3 C) + plazas Retail CATAMARCA $13.000 y LA RIOJA ($25.000 × 0.5 = 12.500 → ↑ $13.000) + $23.000 plaza Millón TUCUMAN (suc 108 ok). No cumplen: Retail SGO. DEL ESTERO/TUCUMAN, Millón CATAMARCA (101)/LA RIOJA (103, 106)/SGO. DEL ESTERO (107).
+
+### Pendiente para mañana
+- **Validar los números contra la planilla** (`comisiones 03-2026 REFINADA.xlsx`) y, si cierran, blindar el módulo Supervisores (agregarlo a la lista de blindados).
+- El redondeo del plus Retail usa `Math.round` (convención del módulo): 26.500 → 27.000 y 12.500 → 13.000. Si el negocio redondea para abajo, cambiar `redondeoMil` a `Math.floor`.
+- Limpieza opcional: quitar asignación de suc01 a Eric Vidable en el ABM de Supervisores (ya no afecta el cálculo).
+- Todo desplegado y corriendo: build hecho, servicio reiniciado, cálculo 2026-06 regenerado con estas reglas (último historial del período).
 
 ---
 

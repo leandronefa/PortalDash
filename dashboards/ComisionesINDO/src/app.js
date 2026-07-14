@@ -9,6 +9,7 @@ import { renderOperadoresMillon } from './pages/operadores-millon.js';
 import { renderEncargados } from './pages/encargados.js';
 import { renderEncargadosMillon } from './pages/encargados-millon.js';
 import { renderResultadoSupervisores } from './pages/resultado-supervisores.js';
+import { renderTotal } from './pages/total.js';
 import { renderSucursales } from './pages/sucursales.js';
 import { renderVisorMontos } from './pages/visor-montos.js';
 import { renderRanking } from './pages/ranking.js';
@@ -26,6 +27,7 @@ const ROUTES = {
   encargados:             renderEncargados,
   'encargados-millon':    renderEncargadosMillon,
   'resultado-supervisores': renderResultadoSupervisores,
+  total:                  renderTotal,
   'visor-sucursales':     renderSucursales,
   'visor-montos':         renderVisorMontos,
   'visor-ranking':        renderRanking,

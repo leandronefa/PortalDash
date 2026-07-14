@@ -67,8 +67,8 @@ SQL Server 2012 — sin `DATEFROMPARTS`; construir fechas con `CAST(CAST(@yr AS 
 |---|---|---|
 | `calcularEncargados` (Retail) | categoría real | No (fix 2026-06-30) |
 | `calcularEncargadosMillon` | categoría real | No (implementado 2026-06-30) |
-| `calcularSupervisores` (`por_sucursal`) | categoría real | No (fix 2026-06-30) |
-| `calcularSupervisores` (`por_plaza`) | siempre `categoria_suc='C'` (monto único en A/B/C) | No (usa `factor_plaza` propio, sin relación con `mult`) |
+| `calcularSupervisores` (`por_sucursal`, solo Retail) | categoría real | No (fix 2026-06-30; sin factor desde 2026-07-14) |
+| `calcularSupervisores` (plaza Retail / plaza Millón) | fila `categoria_suc='C'` | No (plus Retail usa `factor_plaza`; plaza Millón sin factor) |
 | `calcularOperadores` (Retail) | siempre `'C'` | **Sí** — único caso correcto hoy; pendiente de unificar criterio |
 | `calcularOperadoresMillon` | categoría real (`MontosPrestamos`) | No |
 | `calcularCajeros` | categoría real (`MontosCajero`) | No (cajeros nunca llevan multiplicador) |
@@ -87,20 +87,23 @@ Funciones puras — reciben `ctx` con datos ya cargados (sin acceso a DB):
 | `calcularOperadoresMillon(ctx)` | Por operador (Millón) | Solo efectivo; jornada pondera la división del objetivo (full=1, part=0.5): `obj_individual = obj_sucursal / peso_total` (full-equivalente); part-time compara `venta × 2` contra ese objetivo; part-time cobra 50% del monto (2026-07-06) |
 | `calcularEncargados(ctx, sucResultados)` | Por sucursal Retail (id<100) | Escalón consumo + participación (G) — **componentes independientes** |
 | `calcularEncargadosMillon(ctx, sucResultados)` | Por sucursal Millón (id≥100) | Solo escalón efectivo — **sin** participación |
-| `calcularSupervisores(ctx, sucResultados)` | Por supervisor | Suma por sucursales asignadas (solo las que llegaron) + bono por plaza (por provincia, monto fijo) — ver detalle abajo |
+| `calcularSupervisores(ctx, sucResultados)` | Por supervisor | Retail: $ por sucursal que llega (consumo) + plus por plaza completa (suma × 0.5) · Millón: $23.000 por plaza completa (efectivo) — ver detalle abajo |
 
 **Escalones**: umbrales E1=100%, E2=110%, E3=110%×1.15=126.5%; tolerancia: shortfall < 4% del umbral cuenta como alcanzado (`getEscalon()`).
 
-### Lógica de cálculo — Supervisores (reescrita 2026-07-01)
+### Lógica de cálculo — Supervisores (reglas del negocio 2026-07-14, reemplazan a las del 01/07)
 
-La versión anterior (2026-06-30) pagaba un solo bono de "plaza" por supervisor usando la mejor categoría entre TODAS sus sucursales asignadas — no correspondía a la lógica real de negocio. Reescrita con la regla confirmada por el usuario:
+El negocio redefinió el cálculo el 14/07 (iterado 4 veces con el usuario ese día). Regla vigente:
 
-- **"Llegar a comisionar"** en una sucursal = `escalon_efectivo >= 1` si `tiene_efectivo`, sino `escalon_consumo >= 1` (reutiliza el campo que ya calcula `calcularTotal()`, sin recalcular nada de cero).
-- **$ por sucursal**: se paga por cada sucursal asignada al supervisor **solo si esa sucursal llegó**. Antes se pagaba siempre — bug corregido.
-- **$ por plaza = por PROVINCIA** (campo `sucursal.provincia`, no la categoría). Se paga un monto **fijo único** por cada provincia donde **TODAS** las sucursales asignadas al supervisor en esa provincia llegaron. Si al menos una no llegó, esa plaza no paga nada (las demás plazas del mismo supervisor pueden pagar igual si están completas). El monto se lee siempre de la fila `categoria_suc='C'` de `MontosSupervisor` (`tipo='por_plaza'`) porque en la data real A/B/C tienen el mismo valor — no hace falta diferenciar por categoría.
-- El resultado por supervisor incluye un array `plazas` (`provincia`, `cumplida`, `monto`) además del array `sucursales` (ahora con `provincia`, `escalon`, `llego`).
+- **RETAIL (id < 100), mirando SOLO consumo**:
+  - **$ por sucursal**: si `escalon_consumo >= 1`, paga el monto ABM `consumo`/`por_sucursal` de su categoría **SIN factor** (A=$10.000, B=$9.000, C=$8.000). No varía por escalón.
+  - **Plus por plaza** (= PROVINCIA): si TODAS las Retail asignadas de la provincia llegaron por consumo → plus = **(suma de lo pagado por las sucursales de esa plaza) × `factor_plaza` (0.5)**, redondeado a miles (`Math.round`). Si una no llega, sin plus.
+- **MILLÓN (id >= 100), mirando SOLO efectivo**: no paga por sucursal. Si TODAS las Millón asignadas de la provincia llegaron por efectivo (`escalon_efectivo >= 1`) → la plaza paga **UNA sola vez** el monto ABM `efectivo`/`por_plaza` (**$23.000**), **SIN factor**.
+- Retail y Millón forman **plazas separadas** aunque compartan provincia.
+- `MontosSupervisor` quedó con 6 filas (limpieza 2026-07-14: se borraron las 6 filas en cero de `consumo`/`por_plaza` y `efectivo`/`por_sucursal`): `consumo`/`por_sucursal` A/B/C y `efectivo`/`por_plaza` A/B/C (mismo valor, se lee la C). El `factor_plaza` se lee de la fila `consumo`/`por_sucursal` C.
+- Resultado por supervisor: `plazas` (`provincia`, `tipo` retail|millon, `cumplida`, `cant_sucursales`, `suma_sucursales` — null en Millón, `monto`) + `sucursales` (con `tipo`, `provincia`, `escalon`, `llego`, `monto_por_suc`). La página muestra las plazas en una sola línea por provincia (bloques Retail y Millón + Total plaza).
 
-**Pendiente**: sucursal id 1 (VALLEJO CALZADOS 01) está cerrada según el usuario pero sigue asignada a un supervisor sin `provincia` cargada — cae en un grupo "SIN PROVINCIA" ficticio. Falta decidir si se desactiva o se le quita la asignación (ver `RETOMAR.md`).
+Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpieza opcional de su asignación vieja en el ABM.
 
 ---
 
@@ -115,7 +118,7 @@ La versión anterior (2026-06-30) pagaba un solo bono de "plaza" por supervisor 
 | `sucursales.js`, `ranking.js`, `objetivos.js` | `/api/*` | ABM de datos maestros |
 | `operadores.js`, `millon.js`, `datos.js` | `/api/*` | Datos auxiliares (jornadas, sucursales Millón, cache de originaciones) |
 
-`GET /calculo/encargados`, `/encargados-millon` y `/supervisores` leen del **último `CalculoHistorial` guardado** — no recalculan al vuelo. Si se agrega un campo nuevo al resultado de `/ejecutar`, hay que re-ejecutar el cálculo completo desde el Dashboard para que el historial lo tenga.
+`GET /calculo/encargados`, `/encargados-millon` y `/supervisores` leen del **último `CalculoHistorial` guardado** — no recalculan al vuelo. Si se agrega un campo nuevo al resultado de `/ejecutar`, hay que re-ejecutar el cálculo completo desde la página **Total** para que el historial lo tenga.
 
 ### Botón "Ejecutar cálculo completo" (2026-07-01) — qué corre realmente
 
@@ -138,7 +141,8 @@ La versión anterior (2026-06-30) pagaba un solo bono de "plaza" por supervisor 
 | DATOS | `visor-sucursales` (con toggle Habilitada/Deshabilitada), `millon`, `visor-montos`, `visor-ranking`, `visor-objetivos`, `visor-ventas`, `supervisores` (ABM, label "Supervisores") | Datos maestros — **blindado, no tocar** |
 | Cálculos | `cajeros`, `operadores-retail`, `operadores-millon` (con ponderación por jornada 2026-07-06) | Resultado de cálculo individual — **blindado, no tocar** |
 | Cálculos | `encargados`, `encargados-millon` | Resultado por sucursal, sin nombres de personas — **blindado, no tocar** |
-| Cálculos | `resultado-supervisores` | Resultado por supervisor, fila expandible con detalle por sucursal — **ÚNICO módulo abierto** (2026-07-06) |
+| Cálculos | `total` | Ejecuta el cálculo completo (botón "▶ Ejecutar cálculo") + pestañas de resultado y CSV. **Conectada al menú el 2026-07-14** — existía huérfana (sin ruta ni link) desde que se quitó el botón del Dashboard |
+| Cálculos | `resultado-supervisores` | Resultado por supervisor, plazas en una línea por provincia (Retail + Millón), detalle por sucursal — **ÚNICO módulo abierto** (2026-07-06) |
 
 El ABM de Supervisores (`pages/supervisores.js`) vive en "DATOS" (se movió desde "Cálculos" sin tocar su lógica); la página de resultado (`resultado-supervisores.js`) es la que reemplaza ese rol en "Cálculos".
 

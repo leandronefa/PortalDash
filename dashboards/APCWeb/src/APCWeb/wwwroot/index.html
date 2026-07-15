@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Actualizar Precios y Costos — Web</title>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--border:#d7dce2;--txt:#1c2733;--mut:#5b6b7c;--acc:#0b5cad;--ok:#1a7f37;--err:#c62828;--warn:#e65100}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt)}
+header{background:#12314f;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:16px;margin:0}
+header .who{font-size:12px;opacity:.85}
+main{padding:14px 18px;max-width:1500px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px}
+.tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--border);background:#e9edf2;padding:7px 14px;border-radius:6px 6px 0 0;cursor:pointer}
+.tabs button.act{background:var(--panel);border-bottom-color:var(--panel);font-weight:600;color:var(--acc)}
+label{font-size:12px;color:var(--mut);display:block;margin-bottom:2px}
+select,input[type=text],input[type=password],input[type=number]{padding:6px 8px;border:1px solid var(--border);border-radius:5px;min-width:220px}
+.fila{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
+button.b{background:var(--acc);color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer}
+button.b:disabled{background:#9fb2c4;cursor:not-allowed}
+button.b.sec{background:#5b6b7c}
+button.b.peligro{background:var(--err)}
+.contadores{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.contadores button{border:1px solid var(--border);background:#fff;padding:6px 12px;border-radius:16px;cursor:pointer;font-size:12px}
+.contadores button.act{border-color:var(--acc);color:var(--acc);font-weight:600}
+.avisoReglas{font-size:12px;font-weight:600}
+.avisoReglas.ok{color:var(--ok)} .avisoReglas.mal{color:var(--warn)}
+.grillaWrap{overflow:auto;max-height:60vh;border:1px solid var(--border);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{border-bottom:1px solid var(--border);padding:4px 8px;white-space:nowrap;text-align:left}
+thead th{position:sticky;top:0;background:#eef2f6}
+tr.estOK td{background:#eaf6ec} tr.estERR td{background:#fdecea} tr.estNI td{background:#fff8e1}
+#login{max-width:360px;margin:10vh auto}
+.msg{margin:8px 0;font-size:13px}
+.msg.err{color:var(--err)} .msg.ok{color:var(--ok)}
+.oculto{display:none!important}
+.sel{font-weight:600;color:var(--acc)}
+footer{padding:8px 18px;color:var(--mut);font-size:11px}
+</style>
+</head>
+<body>
+
+<div id="login" class="panel">
+  <h2>Actualizar Precios y Costos — Web</h2>
+  <div class="fila"><div><label>Usuario</label><input type="text" id="lUsuario" autocomplete="username"></div></div>
+  <div class="fila"><div><label>Contraseña</label><input type="password" id="lPass" autocomplete="current-password"></div></div>
+  <button class="b" id="btnLogin">Ingresar</button>
+  <div class="msg err" id="lMsg"></div>
+</div>
+
+<div id="appUI" class="oculto">
+<header>
+  <h1>Actualizar Precios y Costos — Web</h1>
+  <div class="who"><span id="hUsuario"></span> · <span id="hPerfil"></span> · v<span id="hVersion"></span>
+    <button class="b sec" id="btnLogout" style="margin-left:10px;padding:4px 10px;font-size:11px">Salir</button></div>
+</header>
+<main>
+  <div class="panel">
+    <div class="tabs" id="tabs">
+      <button data-tab="tabProveedor" class="act">Por Proveedor</button>
+      <button data-tab="tabMarca">Por Marca</button>
+      <!-- Multimarca eliminada de la UI: la Desktop también la oculta (tabMultimarca.PageVisible = False) -->
+      <button data-tab="tabLiquidación" id="tabLiquiBtn">Liquidación</button>
+      <button data-tab="tabRebaja" id="tabRebajaBtn">Rebaja</button>
+    </div>
+
+    <div id="selProveedor" class="selPanel">
+      <div class="fila">
+        <div><label>Proveedor</label><select id="cmbProveedoresP"></select></div>
+        <div><label>Marca</label><select id="cmbMarcaP"></select></div>
+        <button class="b" id="btnSeleccionarP">Seleccionar</button>
+      </div>
+    </div>
+    <div id="selMarca" class="selPanel oculto">
+      <div class="fila">
+        <div><label>Marca</label><select id="cmbMarcaM"></select></div>
+        <div><label>Proveedor</label><select id="cmbProveedoresM"></select></div>
+        <button class="b" id="btnSeleccionarM">Seleccionar</button>
+      </div>
+    </div>
+    <div id="selLiqui" class="selPanel oculto">
+      <div class="fila">
+        <div><label>Alcance</label>
+          <select id="rgbLiqui">
+            <option value="0">Grupo</option>
+            <option value="1">Empresa</option>
+            <option value="2">Sucursal</option>
+          </select></div>
+        <div id="liquiValorBox" class="oculto"><label id="liquiValorLbl">Empresa</label><select id="cmbLiqui"></select></div>
+      </div>
+    </div>
+
+    <div class="fila">
+      <span>Selección: <span class="sel" id="lblSeleccion">SIN SELECCION</span></span>
+      <span class="avisoReglas" id="lblReglas"></span>
+    </div>
+
+    <div class="fila">
+      <div><label>Archivo Excel (.xlsx)</label><input type="file" id="fArchivo" accept=".xlsx"></div>
+      <div id="chkNoInfBox"><label>&nbsp;</label>
+        <label style="display:inline"><input type="checkbox" id="swtNoInformados"> Obtener No Informados</label></div>
+      <button class="b" id="btnImportar" disabled>Importar</button>
+      <button class="b sec" id="btnCancel">Cancelar</button>
+    </div>
+    <div class="msg" id="mImportar"></div>
+  </div>
+
+  <div class="panel">
+    <div class="contadores" id="filtros">
+      <button data-f="0">Articulos OK: <b id="cOk">0</b></button>
+      <button data-f="1">Articulos Error: <b id="cFail">0</b></button>
+      <button data-f="2">Sin Articulos: <b id="cNotFound">0</b></button>
+      <button data-f="3">Sin Informar: <b id="cNoInf">0</b></button>
+      <button data-f="4">Sin Cambio: <b id="cSinCambio">0</b></button>
+      <button data-f="5" class="act">TOTAL: <b id="cTotal">0</b></button>
+    </div>
+    <div class="contadores oculto" id="filtrosLiqui">
+      <button data-f="0" class="act">Articulos OK: <b id="cOkL">0</b></button>
+      <button data-f="1">Articulos ERROR: <b id="cErrL">0</b></button>
+    </div>
+
+    <div class="fila">
+      <button class="b" id="btnExportar" disabled>Exportar CSV</button>
+      <button class="b sec" id="btnMasivo" disabled>Cambio Masivo</button>
+      <button class="b sec" id="btnNoInformados" disabled>Enviar No Informados</button>
+      <button class="b sec" id="btnLiquiLista" disabled>Enviar LIQUIs</button>
+      <button class="b sec" id="btnEnviarFail" disabled>Enviar Errores</button>
+      <button class="b sec" id="btnEnviarTodo" disabled>Enviar TODO</button>
+    </div>
+    <div class="msg" id="mAccion"></div>
+
+    <div class="grillaWrap">
+      <table id="grilla"><thead></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<footer>APCWeb — convive con la versión Desktop sin interferir. Los CSV se generan idénticos en \\vmapp.sportotal.com.ar\importar\PRECIOS.</footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

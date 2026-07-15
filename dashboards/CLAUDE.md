@@ -23,7 +23,8 @@ Desde jul 2026 los usuarios **no** acceden por `http://10.0.0.118:PUERTO`: el po
 | `EstadoResultado` | `dashestadoresultado.exe` | 3008 | `/d/11/` | `server.js` | Inbox local `sap-inbox\` (SYSTEM no accede a UNC). |
 | `PassReset` | `dashpassreset.exe` | 3009 | `/d/12/` | `server.cjs` | Rotación de contraseñas Windows; agentes en servidores remotos. |
 | `DashMeLi` | `dashmeli.exe` | 3010 | `/d/13/` | `server.js` | Stock dep. 198/199 + MercadoLibre; tokens OAuth se renuevan solos. |
-| `ControlAcceso` | `dashcontrolacceso.exe` | 3012 | (registrar en el portal) | `server.cjs` | Portería: ingreso/egreso de vehículos. Login propio con roles PORTERO/ADMIN. |
+| `ControlAcceso` | `dashcontrolacceso.exe` | 3012 | `/d/14/` | `server.cjs` | Portería: ingreso/egreso de vehículos. Login propio con roles PORTERO/ADMIN. |
+| `APCWeb` | `dashapcweb` | 3013 | `/d/15/` | `publish\APCWeb.exe` | **ASP.NET Core 9** (no Node). Versión web de `C:\apps\ActualizarPreciosCostos` (Desktop intocable; objetos SQL propios `APCWeb_`). Login contra `SP_VALIDAR_INICIO_SESION_APPS`. Exports UNC requieren cuenta de servicio con permisos (LocalSystem no escribe en `\\vmapp...`). Ver `APCWeb\CLAUDE.md`. |
 
 ## Operación
 

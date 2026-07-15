@@ -21,7 +21,8 @@ C:\apps\
     ├── EstadoResultado\             Node/Express  → servicio "dashestadoresultado.exe",     puerto 3008
     ├── PassReset\                   Node/Express  → servicio "dashpassreset.exe",           puerto 3009
     ├── DashMeLi\                    Node/Express  → servicio "dashmeli.exe",                puerto 3010
-    └── ControlAcceso\               Node/Express  → servicio "dashcontrolacceso.exe",       puerto 3012
+    ├── ControlAcceso\               Node/Express  → servicio "dashcontrolacceso.exe",       puerto 3012
+    └── APCWeb\                      ASP.NET Core 9 → servicio "dashapcweb",                  puerto 3013
 ```
 
 > `\\10.0.0.118\apps` es el recurso compartido que apunta a `C:\apps`. En el server SIEMPRE usar la ruta **local `C:\apps\...`** (los servicios no deben referenciar rutas UNC).
@@ -39,6 +40,7 @@ C:\apps\
 | `dashpassreset.exe` | Dash-PassReset | PassReset / **3009** | `server.cjs` |
 | `dashmeli.exe` | Dash-MeLi | DashMeLi / **3010** | `server.js` |
 | `dashcontrolacceso.exe` | Dash-ControlAcceso | ControlAcceso / **3012** | `server.cjs` |
+| `dashapcweb` | Dash-APCWeb | APCWeb / **3013** | `publish\APCWeb.exe` (ASP.NET Core, sin sufijo `.exe` en el Name: se creó con `sc.exe`, no con node-windows) |
 
 ⚠️ **node-windows registra los servicios con sufijo `.exe`** en el Name real. `Get-Service Dash-*` **no** los encuentra. Usar:
 ```powershell
@@ -53,7 +55,7 @@ Restart-Service dashpromociones.exe
 ```powershell
 # Estado de todo
 Get-Service DashboardPortal, dash* | Format-Table Name, Status
-Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012 | Format-Table LocalPort, OwningProcess
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012,3013 | Format-Table LocalPort, OwningProcess
 
 # Reiniciar / detener (nombre real con .exe)
 Restart-Service dashcomisiones.exe

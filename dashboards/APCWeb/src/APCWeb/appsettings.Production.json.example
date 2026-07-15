@@ -1,0 +1,19 @@
+{
+  "//": "Copiar como appsettings.Production.json y completar. NO commitear el archivo real.",
+  "ConnectionStrings": {
+    "db_cegid": "Server=10.0.0.115;Database=db_cegid;User Id=USUARIO;Password=CLAVE;TrustServerCertificate=True;Connect Timeout=30"
+  },
+  "//Shares": "Credenciales por share UNC (cada servidor puede usar una cuenta distinta). La app se conecta con WNetAddConnection2 antes de escribir.",
+  "Shares": [
+    {
+      "Ruta": "\\\\vmapp.sportotal.com.ar\\importar",
+      "Usuario": "DOMINIO\\usuario1",
+      "Password": "CLAVE1"
+    },
+    {
+      "Ruta": "\\\\10.0.0.115\\Actualizar Precios y Costos",
+      "Usuario": "DOMINIO\\usuario2",
+      "Password": "CLAVE2"
+    }
+  ]
+}

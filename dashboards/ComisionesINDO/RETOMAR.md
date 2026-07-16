@@ -1,7 +1,7 @@
 # Retomar — ComisionesINDO — actualizado 2026-07-16
 
 ## Estado general
-Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 (bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho y servicio reiniciado con las reglas 2026-07-16 de Supervisores. **Falta re-ejecutar el cálculo 2026-06** (el historial guardado, id 35, es de las reglas del 14/07 — la página lo detecta y muestra aviso amarillo).
+Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 (bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho y servicio reiniciado con las reglas 2026-07-16 de Supervisores. **Cálculo 2026-06 re-ejecutado el 16/07 vía API** con las reglas nuevas — resultado: **Eric Vidable $159.000** ($136.000 sucursales + $23.000 plaza Millón MENDOZA), **Josefina Rossini $128.000** ($69.000 sucursales + $59.000 plazas: Retail CATAMARCA $13.000 + LA RIOJA $13.000 + SGO. DEL ESTERO $5.000 + TUCUMAN $5.000 + Millón TUCUMAN $23.000). **Falta que el usuario valide contra la planilla** `comisiones 03-2026 REFINADA.xlsx`; si cierran → blindar Supervisores.
 
 ---
 
@@ -19,7 +19,7 @@ Implementado con spec + plan + subagentes (spec: `docs/superpowers/specs/2026-07
 - Commits: `143052a` (tests), `049d8ca` (motor), `9506e1d` (página). Deploy hecho (build + restart + smoke 200).
 
 ### Pendiente
-- **Re-ejecutar el cálculo 2026-06** desde Total (portal `/d/8/`) y validar Eric Vidable / Josefina Rossini contra la planilla `comisiones 03-2026 REFINADA.xlsx` (los totales van a diferir de $219.000/$118.000, que eran de las reglas del 14/07). Si cierran → blindar Supervisores.
+- ~~Re-ejecutar el cálculo 2026-06~~ → **HECHO 16/07 vía API** (`POST /calculo/ejecutar`, usuario `claude-api`). Falta **validar contra la planilla** `comisiones 03-2026 REFINADA.xlsx`: Eric Vidable $159.000, Josefina Rossini $128.000 (detalle en Estado general). Si cierran → blindar Supervisores.
 - Limpieza opcional: quitar asignación de suc01 a Eric Vidable en el ABM.
 
 ---

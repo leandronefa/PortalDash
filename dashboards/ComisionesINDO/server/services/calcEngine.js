@@ -677,22 +677,26 @@ export function calcularEncargadosMillon(ctx, sucResultados) {
 //   ctx.supervisorSucursales = [{ supervisor_id, sucursal_id }]
 //   sucResultados            = output de calcularTotal()
 //
-//   Reglas (confirmadas por el usuario 2026-07-14):
-//   RETAIL (id < 100), mirando SOLO consumo:
-//     $ por sucursal → si la sucursal llegó (escalon_consumo >= 1) paga el
-//       monto 'consumo'/'por_sucursal' de su categoría (ABM), SIN factor.
-//     Plus por plaza → la plaza es la PROVINCIA. Si TODAS las Retail asignadas
-//       de esa provincia llegaron por consumo, paga un plus = (suma de lo
-//       pagado por las sucursales de esa plaza) × factor_plaza, redondeado a
-//       miles. Si al menos una no llegó, esa plaza no paga plus.
-//   MILLÓN (id >= 100), mirando SOLO efectivo:
+//   Reglas (confirmadas por el usuario 2026-07-16):
+//   RETAIL (id < 100), mirando SOLO consumo — dos indicadores por sucursal:
+//     PESOS:         llega_pesos    = escalon_consumo >= 1  (tolerancia 4% via getEscalon)
+//     PARTICIPACIÓN: llega_particip = G > -0.04, con
+//       G = (vta_vta_tot/100 - objConsumo.participacion) / objConsumo.participacion
+//       (mismo indicador que Encargados; sin objetivo → G = -1, no llega)
+//     $ por sucursal → pesos y particip: monto ABM 'consumo'/'por_sucursal' de su
+//       categoría completo; pesos sin particip: la MITAD redondeada a miles;
+//       sin pesos: $0 (los pesos son condición necesaria). SIN factor, sin mult.
+//     Plus por plaza → plaza = PROVINCIA. Si TODAS las Retail asignadas llegan a
+//       PARTICIPACIÓN (sin importar pesos) → plus = (suma de lo efectivamente
+//       pagado por esas sucursales) × factor_plaza (0.5), redondeado a miles.
+//   MILLÓN (id >= 100), mirando SOLO efectivo (sin cambios 2026-07-14):
 //     No paga por sucursal. Si TODAS las Millón asignadas de la provincia
 //     llegaron por efectivo (escalon_efectivo >= 1), la plaza paga UNA sola
 //     vez el monto 'efectivo'/'por_plaza' del ABM, SIN factor.
 //   Retail y Millón forman plazas SEPARADAS aunque compartan provincia.
 // ------------------------------------------------------------------
 export function calcularSupervisores(ctx, sucResultados) {
-  const { supervisores, supervisorSucursales, montosSupervisor } = ctx;
+  const { supervisores, supervisorSucursales, montosSupervisor, datosConsumo, objConsumo } = ctx;
 
   const redondeoMil = v => Math.round(v / 1000) * 1000;
   const filaSup = (concepto, tipo, cat) =>
@@ -724,6 +728,7 @@ export function calcularSupervisores(ctx, sucResultados) {
         const provincia = sucRes.provincia || 'SIN PROVINCIA';
 
         let escalon, llego, subtotal;
+        let indicadorG = null, llegaPesos = null, llegaParticip = null, pago = null;
         if (esMillon) {
           // Millón: no paga por sucursal; solo cuenta para su plaza (por efectivo).
           escalon  = sucRes.escalon_efectivo;
@@ -732,16 +737,31 @@ export function calcularSupervisores(ctx, sucResultados) {
           const plaza = (millonPorProvincia[provincia] ??= { llegadas: [] });
           plaza.llegadas.push(llego);
         } else {
-          // Retail: paga por sucursal mirando SOLO consumo, monto ABM por categoría SIN factor.
-          // Los montos de MontosSupervisor (tipo='por_sucursal') ya están guardados por
-          // categoría — no se multiplica de nuevo por `mult` (mismo fix que Encargados).
-          escalon = sucRes.escalon_consumo;
-          llego   = escalon >= 1;
-          const fila = filaSup('consumo', 'por_sucursal', cat);
-          subtotal = llego ? redondeoMil(fila?.monto || 0) : 0;
+          // Retail (reglas 2026-07-16): dos indicadores — pesos (escalón consumo)
+          // y participación (G, igual que Encargados). Montos ABM ya por categoría,
+          // NO multiplicar por mult.
+          escalon    = sucRes.escalon_consumo;
+          llegaPesos = escalon >= 1;
+
+          const datCon = datosConsumo?.find(d => d.sucursal_id === sucRes.sucursal_id);
+          const objCon = objConsumo?.find(d => d.sucursal_id === sucRes.sucursal_id);
+          const G = (objCon?.participacion > 0)
+            ? ((datCon?.vta_vta_tot ?? 0) / 100 - objCon.participacion) / objCon.participacion
+            : -1;
+          indicadorG    = +G.toFixed(4);
+          llegaParticip = G > -0.04;
+
+          const fila       = filaSup('consumo', 'por_sucursal', cat);
+          const montoPleno = redondeoMil(fila?.monto || 0);
+          if (!llegaPesos)          { subtotal = 0;                        pago = 'nada'; }
+          else if (llegaParticip)   { subtotal = montoPleno;               pago = 'completo'; }
+          else                      { subtotal = redondeoMil(montoPleno / 2); pago = 'mitad'; }
+
+          llego = llegaPesos;
           totalPorSucursales += subtotal;
+          // La plaza cumple por PARTICIPACIÓN (no por pesos); suma lo efectivamente pagado.
           const plaza = (llegadasPorProvincia[provincia] ??= { llegadas: [], suma: 0 });
-          plaza.llegadas.push(llego);
+          plaza.llegadas.push(llegaParticip);
           plaza.suma += subtotal;
         }
 
@@ -753,6 +773,10 @@ export function calcularSupervisores(ctx, sucResultados) {
           provincia,
           escalon,
           llego,
+          indicador_g:     indicadorG,
+          llega_pesos:     llegaPesos,
+          llega_particip:  llegaParticip,
+          pago,
           monto_por_suc:   subtotal
         });
       }

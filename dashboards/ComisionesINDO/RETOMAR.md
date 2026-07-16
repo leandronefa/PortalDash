@@ -1,7 +1,26 @@
-# Retomar — ComisionesINDO — actualizado 2026-07-14
+# Retomar — ComisionesINDO — actualizado 2026-07-16
 
 ## Estado general
-Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 (bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho, servicio reiniciado y **cálculo completo 2026-06 re-ejecutado** (historial id 35) con las reglas nuevas de Supervisores.
+Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 (bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho y servicio reiniciado con las reglas 2026-07-16 de Supervisores. **Falta re-ejecutar el cálculo 2026-06** (el historial guardado, id 35, es de las reglas del 14/07 — la página lo detecta y muestra aviso amarillo).
+
+---
+
+## Sesión 2026-07-16
+
+### Supervisores — componente consumo con DOS indicadores (reemplaza las reglas del 14/07)
+Implementado con spec + plan + subagentes (spec: `docs/superpowers/specs/2026-07-16-supervisores-consumo-reglas-design.md`, plan: `docs/superpowers/plans/2026-07-16-supervisores-consumo-reglas.md`):
+
+- **$ por sucursal Retail (solo consumo)**: pesos (`escalon_consumo >= 1`) **y** participación (G > −0.04, mismo indicador que Encargados) → monto ABM completo; pesos sin participación → **mitad** redondeada a miles (`Math.round`: A→5.000, B→5.000, C→4.000); sin pesos → $0. Sin objetivo de participación → G = −1 (no llega → mitad si tiene pesos).
+- **Plus de plaza Retail**: cumple si TODAS las Retail de la provincia llegan a **participación** (sin importar pesos); plus = suma de lo efectivamente pagado × 0.5, redondeado a miles.
+- **Millón intacto** (efectivo, $23.000 por plaza completa).
+- Tolerancia 4% en todo (el "0.4%" del pedido original era la tolerancia estándar 0.04, confirmado).
+- **Primer archivo de tests del repo**: `server/services/calcEngine.supervisores.test.js` — `node --test`, 10 tests que fijan el contrato (TDD: 8 RED → 10/10 GREEN).
+- Página `resultado-supervisores.js`: columnas ¿Pesos? / Particip. (con G en %) / Pago (Completo/Mitad/—) en el detalle de Sucursales, tooltip de ¿Cumple? por participación, y aviso amarillo si el cálculo guardado es de formato viejo (retail sin `llega_particip`).
+- Commits: `143052a` (tests), `049d8ca` (motor), `9506e1d` (página). Deploy hecho (build + restart + smoke 200).
+
+### Pendiente
+- **Re-ejecutar el cálculo 2026-06** desde Total (portal `/d/8/`) y validar Eric Vidable / Josefina Rossini contra la planilla `comisiones 03-2026 REFINADA.xlsx` (los totales van a diferir de $219.000/$118.000, que eran de las reglas del 14/07). Si cierran → blindar Supervisores.
+- Limpieza opcional: quitar asignación de suc01 a Eric Vidable en el ABM.
 
 ---
 

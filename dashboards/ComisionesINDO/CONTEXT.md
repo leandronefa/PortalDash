@@ -87,21 +87,24 @@ Funciones puras — reciben `ctx` con datos ya cargados (sin acceso a DB):
 | `calcularOperadoresMillon(ctx)` | Por operador (Millón) | Solo efectivo; jornada pondera la división del objetivo (full=1, part=0.5): `obj_individual = obj_sucursal / peso_total` (full-equivalente); part-time compara `venta × 2` contra ese objetivo; part-time cobra 50% del monto (2026-07-06) |
 | `calcularEncargados(ctx, sucResultados)` | Por sucursal Retail (id<100) | Escalón consumo + participación (G) — **componentes independientes** |
 | `calcularEncargadosMillon(ctx, sucResultados)` | Por sucursal Millón (id≥100) | Solo escalón efectivo — **sin** participación |
-| `calcularSupervisores(ctx, sucResultados)` | Por supervisor | Retail: $ por sucursal que llega (consumo) + plus por plaza completa (suma × 0.5) · Millón: $23.000 por plaza completa (efectivo) — ver detalle abajo |
+| `calcularSupervisores(ctx, sucResultados)` | Por supervisor | Retail: $ por sucursal según pesos+participación (completo/mitad/nada) + plus por plaza con participación en todas (suma pagada × 0.5) · Millón: $23.000 por plaza completa (efectivo) — ver detalle abajo |
 
 **Escalones**: umbrales E1=100%, E2=110%, E3=110%×1.15=126.5%; tolerancia: shortfall < 4% del umbral cuenta como alcanzado (`getEscalon()`).
 
-### Lógica de cálculo — Supervisores (reglas del negocio 2026-07-14, reemplazan a las del 01/07)
+### Lógica de cálculo — Supervisores (reglas del negocio 2026-07-16, reemplazan a las del 14/07)
 
-El negocio redefinió el cálculo el 14/07 (iterado 4 veces con el usuario ese día). Regla vigente:
+El negocio volvió a cambiar el componente consumo el 16/07 (Retail pasa a mirar DOS indicadores). Regla vigente:
 
-- **RETAIL (id < 100), mirando SOLO consumo**:
-  - **$ por sucursal**: si `escalon_consumo >= 1`, paga el monto ABM `consumo`/`por_sucursal` de su categoría **SIN factor** (A=$10.000, B=$9.000, C=$8.000). No varía por escalón.
-  - **Plus por plaza** (= PROVINCIA): si TODAS las Retail asignadas de la provincia llegaron por consumo → plus = **(suma de lo pagado por las sucursales de esa plaza) × `factor_plaza` (0.5)**, redondeado a miles (`Math.round`). Si una no llega, sin plus.
-- **MILLÓN (id >= 100), mirando SOLO efectivo**: no paga por sucursal. Si TODAS las Millón asignadas de la provincia llegaron por efectivo (`escalon_efectivo >= 1`) → la plaza paga **UNA sola vez** el monto ABM `efectivo`/`por_plaza` (**$23.000**), **SIN factor**.
+- **RETAIL (id < 100), mirando SOLO consumo — dos indicadores por sucursal**:
+  - **Pesos**: `llega_pesos = escalon_consumo >= 1` (tolerancia 4% vía `getEscalon`).
+  - **Participación**: mismo indicador G de Encargados — `G = (vta_vta_tot/100 − objConsumo.participacion) / objConsumo.participacion`, llega si `G > −0.04`; sin objetivo → `G = −1` (no llega).
+  - **$ por sucursal**: pesos + participación → monto ABM `consumo`/`por_sucursal` de su categoría completo, **SIN factor** (A=$10.000, B=$9.000, C=$8.000); pesos sin participación → la **MITAD** redondeada a miles (`Math.round`: A→$5.000, B→$5.000, C→$4.000); sin pesos → **$0** (los pesos son condición necesaria).
+  - **Plus por plaza** (= PROVINCIA): si TODAS las Retail asignadas de la provincia llegan a **PARTICIPACIÓN** (sin importar pesos) → plus = **(suma de lo efectivamente pagado por esas sucursales) × `factor_plaza` (0.5)**, redondeado a miles. Si una falla participación, sin plus.
+- **MILLÓN (id >= 100), mirando SOLO efectivo (sin cambios desde el 14/07)**: no paga por sucursal. Si TODAS las Millón asignadas de la provincia llegaron por efectivo (`escalon_efectivo >= 1`) → la plaza paga **UNA sola vez** el monto ABM `efectivo`/`por_plaza` (**$23.000**), **SIN factor**.
 - Retail y Millón forman **plazas separadas** aunque compartan provincia.
 - `MontosSupervisor` quedó con 6 filas (limpieza 2026-07-14: se borraron las 6 filas en cero de `consumo`/`por_plaza` y `efectivo`/`por_sucursal`): `consumo`/`por_sucursal` A/B/C y `efectivo`/`por_plaza` A/B/C (mismo valor, se lee la C). El `factor_plaza` se lee de la fila `consumo`/`por_sucursal` C.
-- Resultado por supervisor: `plazas` (`provincia`, `tipo` retail|millon, `cumplida`, `cant_sucursales`, `suma_sucursales` — null en Millón, `monto`) + `sucursales` (con `tipo`, `provincia`, `escalon`, `llego`, `monto_por_suc`). La página muestra las plazas en una sola línea por provincia (bloques Retail y Millón + Total plaza).
+- Resultado por supervisor: `plazas` (`provincia`, `tipo` retail|millon, `cumplida`, `cant_sucursales`, `suma_sucursales` — null en Millón, `monto`) + `sucursales` (con `tipo`, `provincia`, `escalon`, `llego`, y en Retail `indicador_g`, `llega_pesos`, `llega_particip`, `pago` completo|mitad|nada, `monto_por_suc`). La página muestra las plazas en una sola línea por provincia (bloques Retail y Millón + Total plaza) y avisa si el cálculo guardado es de formato viejo (sin `llega_particip`).
+- **Tests**: `server/services/calcEngine.supervisores.test.js` (`node --test`, 10 tests) fija el contrato de estas reglas — primer archivo de tests del repo.
 
 Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpieza opcional de su asignación vieja en el ABM.
 

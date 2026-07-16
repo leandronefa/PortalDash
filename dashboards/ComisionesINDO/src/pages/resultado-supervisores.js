@@ -65,6 +65,18 @@ export async function renderResultadoSupervisores(container, periodo) {
     return;
   }
 
+  // Formato viejo (reglas < 2026-07-16): las filas retail no traen llega_particip.
+  const formatoViejo = supervisores.some(s =>
+    (s.sucursales || []).some(suc => suc.tipo === 'retail' && suc.llega_particip === undefined));
+  if (formatoViejo) {
+    document.getElementById('rsup-alert').innerHTML = `
+      <div style="background:var(--badge-e-bg,#fef9c3);color:var(--badge-e-t,#854d0e);
+                  border:1px solid var(--badge-e-t,#854d0e);border-radius:6px;
+                  padding:8px 14px;font-size:13px">
+        ⚠️ Este cálculo es anterior a las reglas de participación (2026-07-16). Re-ejecutá el cálculo del período desde la página Total para ver pesos/participación y los montos vigentes.
+      </div>`;
+  }
+
   // ── Resumen ───────────────────────────────────────────────────────
   const totalMonto = supervisores.reduce((s, e) => s + (e.monto || 0), 0);
   const fechaStr    = data.fecha_calculo
@@ -124,13 +136,13 @@ export async function renderResultadoSupervisores(container, periodo) {
             ${expandido === s.id ? `
               <tr>
                 <td colspan="6" style="padding:0 10px 10px 30px;background:var(--color-surface-2,rgba(127,127,127,.06))">
-                  <div style="font-size:11px;font-weight:600;color:var(--color-muted);margin:8px 0 4px">Plazas (provincia) — Retail: si TODAS llegaron por consumo, plus = suma de la plaza × factor (0,5) · Millón: si TODAS llegaron por efectivo, monto fijo del ABM (sin factor, uno por plaza)</div>
+                  <div style="font-size:11px;font-weight:600;color:var(--color-muted);margin:8px 0 4px">Plazas (provincia) — Retail: si TODAS llegan a PARTICIPACIÓN, plus = suma pagada de la plaza × factor (0,5) · Millón: si TODAS llegaron por efectivo, monto fijo del ABM (sin factor, uno por plaza)</div>
                   <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px">
                     <thead>
                       <tr>
                         <th style="text-align:left;padding:4px 8px;color:var(--color-muted)">Provincia</th>
                         <th style="text-align:center;padding:4px 8px;color:var(--color-muted)">Suc Retail</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)">¿Cumple?</th>
+                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="TODAS las Retail de la plaza llegan a PARTICIPACIÓN (sin importar pesos)">¿Cumple?</th>
                         <th style="text-align:right;padding:4px 8px;color:var(--color-muted)" title="Lo pagado por las sucursales Retail de la plaza (va al total por Sucursales)">$ Sucursales</th>
                         <th style="text-align:right;padding:4px 8px;color:var(--color-muted)">$ Plus (×0,5)</th>
                         <th style="text-align:center;padding:4px 8px;color:var(--color-muted);border-left:1px solid var(--color-border)">Suc Millón</th>
@@ -165,7 +177,7 @@ export async function renderResultadoSupervisores(container, periodo) {
                       })()}
                     </tbody>
                   </table>
-                  <div style="font-size:11px;font-weight:600;color:var(--color-muted);margin:8px 0 4px">Sucursales — Retail paga por consumo (monto ABM por categoría); Millón no paga por sucursal, solo cuenta para su plaza (efectivo)</div>
+                  <div style="font-size:11px;font-weight:600;color:var(--color-muted);margin:8px 0 4px">Sucursales — Retail paga por consumo: completo con pesos+participación, mitad con pesos sin participación, nada sin pesos · Millón no paga por sucursal, solo cuenta para su plaza (efectivo)</div>
                   <table style="width:100%;border-collapse:collapse;font-size:12px">
                     <thead>
                       <tr>
@@ -175,23 +187,35 @@ export async function renderResultadoSupervisores(container, periodo) {
                         <th style="text-align:left;padding:4px 8px;color:var(--color-muted)">Provincia</th>
                         <th style="text-align:center;padding:4px 8px;color:var(--color-muted)">Cat</th>
                         <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Retail: escalón consumo · Millón: escalón efectivo">Esc</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)">¿Llegó?</th>
+                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Retail: llegó a los pesos (escalón consumo ≥ 1) · Millón: llegó por efectivo">¿Pesos?</th>
+                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Indicador G vs objetivo de participación (tolerancia 4%) — solo Retail">Particip.</th>
+                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Completo (pesos+particip) · Mitad (pesos sin particip) · — (sin pesos)">Pago</th>
                         <th style="text-align:right;padding:4px 8px;color:var(--color-muted)">$ Sucursal</th>
                       </tr>
                     </thead>
                     <tbody>
-                      ${(s.sucursales || []).map(suc => `
+                      ${(s.sucursales || []).map(suc => {
+                        const esRetail = suc.tipo === 'retail';
+                        const dash = '<span style="color:var(--color-muted)">—</span>';
+                        const particip = esRetail && suc.llega_particip !== undefined
+                          ? `${suc.llega_particip ? '✔' : '✘'} <span style="color:var(--color-muted)">(${suc.indicador_g != null ? (suc.indicador_g * 100).toFixed(1) + '%' : 's/obj'})</span>`
+                          : dash;
+                        const pagoLbl = { completo: 'Completo', mitad: 'Mitad', nada: dash }[suc.pago]
+                          ?? (esRetail ? dash : '<span style="color:var(--color-muted)" title="Millón no paga por sucursal">n/a</span>');
+                        return `
                         <tr>
                           <td style="padding:3px 8px;color:var(--color-muted)">${suc.sucursal_id}</td>
                           <td style="padding:3px 8px">${suc.sucursal_nombre}</td>
-                          <td style="padding:3px 8px;text-align:center">${suc.tipo === 'millon' ? 'Millón' : (suc.tipo === 'retail' ? 'Retail' : '—')}</td>
+                          <td style="padding:3px 8px;text-align:center">${suc.tipo === 'millon' ? 'Millón' : (esRetail ? 'Retail' : '—')}</td>
                           <td style="padding:3px 8px">${suc.provincia ?? '—'}</td>
                           <td style="padding:3px 8px;text-align:center">${suc.categoria}</td>
                           <td style="padding:3px 8px;text-align:center">${suc.escalon ?? '—'}</td>
-                          <td style="padding:3px 8px;text-align:center">${suc.llego ? '✔' : '✘'}</td>
+                          <td style="padding:3px 8px;text-align:center">${(esRetail ? (suc.llega_pesos ?? suc.llego) : suc.llego) ? '✔' : '✘'}</td>
+                          <td style="padding:3px 8px;text-align:center">${particip}</td>
+                          <td style="padding:3px 8px;text-align:center">${pagoLbl}</td>
                           <td style="padding:3px 8px;text-align:right">${suc.tipo === 'millon' ? '<span style="color:var(--color-muted)" title="Millón no paga por sucursal">n/a</span>' : fmtMoney(suc.monto_por_suc)}</td>
-                        </tr>
-                      `).join('')}
+                        </tr>`;
+                      }).join('')}
                     </tbody>
                   </table>
                 </td>

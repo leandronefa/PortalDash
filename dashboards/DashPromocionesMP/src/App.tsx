@@ -342,7 +342,7 @@ function App() {
   }, [mpTargetTx, crossFilter, promoFilter, detalleCuotasFilter, detalleIssuerFilter]);
 
   const downloadCruceCsv = () => {
-    const headers = ['Sucursal','Promo','Medio','Importe Vta','Fecha','Estado','Cuotas','QR/POINT','Issuer','Neto MP','Costo MP','Desc Financiacion'];
+    const headers = ['Sucursal','Promo','Medio','Importe Vta','Fecha','Estado','Cuotas','QR/POINT','Issuer','Neto MP','Costo MP','Desc Financiacion','DNI Cliente','Apellido','Nombre'];
     const rows = filteredCrossTx.map(tx => [
       `SUC_${tx.suc}`,
       tx.nombre_cond ?? '',
@@ -356,6 +356,9 @@ function App() {
       tx.tesiMatch?.net_received_amount ?? '',
       tx.tesiMatch?.mercadopago_fee ?? '',
       tx.tesiMatch?.financing_fee ?? '',
+      tx.dniCliente ?? '',
+      tx.apeCliente ?? '',
+      tx.nomCliente ?? '',
     ]);
     const csv = [headers, ...rows].map(r => r.join(';')).join('\r\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -856,6 +859,7 @@ function App() {
                     <th className="pb-3 px-2 font-medium border-b border-zinc-800">Método</th>
                     <th className="pb-3 px-2 font-medium border-b border-zinc-800 text-right">Importe Vta</th>
                     <th className="pb-3 px-2 font-medium border-b border-zinc-800">Fecha</th>
+                    <th className="pb-3 px-2 font-medium border-b border-zinc-800">Cliente</th>
                     <th className="pb-3 px-2 font-medium border-b border-zinc-800 text-center">Estado</th>
                     <th className="pb-3 px-2 font-medium border-b border-zinc-800 text-center">Cuotas</th>
                     <th className="pb-3 px-2 font-medium border-b border-zinc-800 text-center">QR/POINT</th>
@@ -872,8 +876,12 @@ function App() {
                       <td className="py-2.5 px-2 font-bold text-indigo-400">{tx.cod_MP}</td>
                       <td className="py-2.5 px-2 text-right font-mono">${tx.IMPORTE.toLocaleString('es-AR')}</td>
                       <td className="py-2.5 px-2 whitespace-nowrap">{tx.FECHA.split('.')[0]}</td>
+                      <td className="py-2.5 px-2 text-zinc-400 max-w-[160px] truncate" title={`${tx.dniCliente ?? ''} ${tx.apeCliente ?? ''} ${tx.nomCliente ?? ''}`.trim()}>
+                        {(tx.apeCliente || tx.nomCliente) ? `${tx.apeCliente ?? ''} ${tx.nomCliente ?? ''}`.trim() : '—'}
+                        {tx.dniCliente ? <span className="text-zinc-600"> ({tx.dniCliente})</span> : null}
+                      </td>
                       <td className="py-2.5 px-2 text-center">
-                        {tx.tesiMatch ? 
+                        {tx.tesiMatch ?
                           <span className="inline-flex px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded font-medium text-[10px]">COINCIDE</span> 
                           : 
                           <span className="inline-flex px-1.5 py-0.5 bg-red-400/10 text-red-400 border border-red-400/20 rounded font-medium text-[10px]">SIN MATCH</span>
@@ -894,7 +902,7 @@ function App() {
                   ))}
                   {filteredCrossTx.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-10 text-center text-zinc-500">
+                      <td colSpan={12} className="py-10 text-center text-zinc-500">
                         No hay transacciones registradas para los medios de pago configurados.
                       </td>
                     </tr>

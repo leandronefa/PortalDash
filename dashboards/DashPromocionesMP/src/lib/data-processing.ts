@@ -16,6 +16,9 @@ export interface Venta {
   cod_MP: string;
   nom_MP: string;
   CUOTA: number;
+  dniCliente: string;
+  apeCliente: string;
+  nomCliente: string;
   // Parsed real date
   parsedDate: Date | null;
 }
@@ -75,6 +78,9 @@ export function parseVentas(csv: string): Promise<Venta[]> {
             cod_MP: row.cod_MP,
             nom_MP: row.nom_MP,
             CUOTA: parseInt(row.CUOTA, 10) || 1,
+            dniCliente: row.DNI_CLIENTE ?? '',
+            apeCliente: row.APE_CLIENTE ?? '',
+            nomCliente: row.NOM_CLIENTE ?? '',
             parsedDate: pDate,
           };
         });

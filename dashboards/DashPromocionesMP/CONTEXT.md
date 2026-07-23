@@ -10,9 +10,18 @@ Cruce de **ventas vs liquidaciones de MercadoPago** (TESI y PUEBLO). Muestra pro
 - **Servicio Windows**: `dashpromociones.exe`
 
 ## Fuentes de datos
-- **SQL Server**: `10.0.0.115` / base `db_Cegid` — ventas
+- **SQL Server**: `10.0.0.115` / base `db_Cegid` — ventas (SP `sp_GrillaPromosMP`, sobre tabla `CGD_CONDCOM_OPERACION`)
 - **FTP**: `c2490045.ferozo.com` — archivos de liquidación MercadoPago (descarga automática)
 - **Credenciales**: en `.env` (no commitear)
+
+## Datos de cliente en ventas (2026-07-23)
+El CSV `CONDCOMER_OPERACIONES.CSV` (cargado por el SP `spCapturaCSVcegid` en la base `dw_vallejo`, server `10.0.0.115`) sumó 3 columnas: `DNI_CLIENTE`, `APE_CLIENTE`, `NOM_CLIENTE`. Se agregaron a:
+- `tmpCGD_CONDCOM_OPERACION` y `CGD_CONDCOM_OPERACION` (ALTER TABLE, varchar nullable) — `spCapturaCSVcegid` usa `SELECT *` así que no necesitó cambios.
+- `sp_GrillaPromosMP` (ALTER PROC) — ahora expone `DNI_CLIENTE`, `APE_CLIENTE`, `NOM_CLIENTE` al final del recordset.
+- Frontend (`src/lib/data-processing.ts`): `Venta.dniCliente/apeCliente/nomCliente`, parseados en `parseVentas`.
+- `App.tsx`: columna **"Cliente"** en la tabla de cruce (pestaña "cruce") y en el CSV exportable (`downloadCruceCsv`).
+
+`server.js` no necesitó cambios: `/api/ventas` vuelca `Object.keys(rows[0])` dinámicamente, así que cualquier columna nueva del SP pasa sola al CSV.
 
 ## Endpoints API
 | Método | Ruta | Descripción |

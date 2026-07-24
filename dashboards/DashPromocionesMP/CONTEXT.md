@@ -23,6 +23,12 @@ El CSV `CONDCOMER_OPERACIONES.CSV` (cargado por el SP `spCapturaCSVcegid` en la 
 
 `server.js` no necesitó cambios: `/api/ventas` vuelca `Object.keys(rows[0])` dinámicamente, así que cualquier columna nueva del SP pasa sola al CSV.
 
+## Datos de cliente en Reporte Ventas Histórico (2026-07-24)
+`sp_ReporteVentasHistorico` (usado por `/api/reporte-ventas-historico`) lee de `dw_vallejo.f_vta_cabecera`, que **no tiene datos de cliente**. Se agregó `DNI_CLIENTE`/`APE_CLIENTE`/`NOM_CLIENTE` vía dos `LEFT JOIN` (por sucursal+ticket, normalizando `l_sucursal.desc_sucursal` sin ceros a la izquierda contra `SUC`/`SUCURSAL` con padding a 6 dígitos, con `COLLATE Modern_Spanish_CI_AS` por conflicto de collation entre bases):
+- `CGD_CONDCOM_OPERACION` (deduplicado por `SUCURSAL+NUMERO` con `ROW_NUMBER()`, ya que ~117 tickets tienen más de una fila por varias promos aplicadas — siempre mismo DNI) → aporta DNI/Apellido/Nombre **solo si la venta tuvo una condición comercial aplicada** (~1.5% de las filas en la muestra probada).
+- `Vta_cab_HORA` (`CODCLIENTE`/`NOMCLIENTE`, sin DNI, nombre completo sin separar) → fallback para `NOM_CLIENTE` cuando no hubo promo (cubre ~94% de las filas).
+Verificado que el join no duplica filas (mismo conteo y mismo total de venta antes/después). `server.js` no necesitó cambios (misma lógica dinámica de columnas).
+
 ## Endpoints API
 | Método | Ruta | Descripción |
 |--------|------|-------------|

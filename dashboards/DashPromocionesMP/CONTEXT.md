@@ -29,6 +29,15 @@ El CSV `CONDCOMER_OPERACIONES.CSV` (cargado por el SP `spCapturaCSVcegid` en la 
 - `Vta_cab_HORA` (`CODCLIENTE`/`NOMCLIENTE`, sin DNI, nombre completo sin separar) → fallback para `NOM_CLIENTE` cuando no hubo promo (cubre ~94% de las filas).
 Verificado que el join no duplica filas (mismo conteo y mismo total de venta antes/después). `server.js` no necesitó cambios (misma lógica dinámica de columnas).
 
+## DNI en ventas WEB/MercadoLibre (2026-07-24)
+Las ventas WEB/ML no tenían DNI: en `dw_vallejo.f_vta_cabecera` esas ventas se agrupan bajo 3 "sucursales virtuales" (`WEB Tesi`/`WEB Pueblo`/`WEB FK`, `id_sucursal` 63/64/74) que **no existen** como `SUC` en `db_Cegid` (0 filas siempre, ni en `Vta_cab_HORA` ni en `CGD_CONDCOM_OPERACION`). La venta real sí está en `Vta_cab_HORA`, pero registrada bajo la **sucursal física** que la despachó, con `ORIGEN='ECO'` y `NROTICKET` vacío (solo `NRO` poblado).
+
+Se agregó a `sp_ReporteVentasHistorico` un tercer LEFT JOIN (`EcoDedup`) contra `Vta_cab_HORA` filtrado a `ORIGEN='ECO'`, cruzando **solo por `NRO` (ticket) + fecha, sin filtrar por `SUC`**, deduplicado con `ROW_NUMBER()` (mismo patrón que `CondComDedup`) para evitar fan-out. Se usa como último fallback: `ISNULL(C.DNI_CLIENTE, ISNULL(V.CODCLIENTE, VE.CODCLIENTE))`.
+
+Motivo de no filtrar por SUC en este join: el `NRO` de operación **no es único globalmente** (hay ~4000-7000 colisiones NRO+fecha entre sucursales distintas en 6-12 meses), así que no se puede aplicar como reemplazo general del join existente — solo es seguro restringido a `ORIGEN='ECO'` (34 colisiones en 180 días entre sí, riesgo mínimo aceptado). Verificado: cobertura de DNI en ventas WEB/ML pasó de 0% a ~99.8% (751/752 en muestra de 10 días), sin duplicar filas.
+
+Investigado y descartado como fuente: tablas viejas de ecommerce (`TBL_TICKETS_ECOM_CAB`/`_HISTORICOS`, `OrdenesMercadoLibre`, `TBL_VTEX_ORDENES`) — todas abandonadas desde ~2022, no sirven para ventas actuales.
+
 ## Endpoints API
 | Método | Ruta | Descripción |
 |--------|------|-------------|

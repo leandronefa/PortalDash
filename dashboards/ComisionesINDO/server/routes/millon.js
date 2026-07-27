@@ -2,10 +2,14 @@ import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { getPoolBC } from '../config/dbBeClever.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
+import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 import { calcularOperadoresMillon } from '../services/calcEngine.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 // ── Setup de tablas ────────────────────────────────────────────────────────────
 
@@ -223,7 +227,9 @@ router.get('/sucursales', async (req, res) => {
       await saveCache(pool, periodo, rows);
     }
 
-    res.json(await buildResponse(pool, periodo));
+    const resp = await buildResponse(pool, periodo);
+    resp.sucursales = filtrarPorSucursal(resp.sucursales, req.sucursalesPermitidas);
+    res.json(resp);
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
@@ -284,10 +290,10 @@ router.get('/operadores/resultado', async (req, res) => {
       `);
     if (!r.recordset.length)
       return res.status(404).json({ error: 'Sin cálculo guardado para este período' });
-    const rows = r.recordset;
+    const rows = filtrarPorSucursal(r.recordset, req.sucursalesPermitidas);
     res.json({
       periodo,
-      fecha_calculo: rows[0].fecha_calculo,
+      fecha_calculo: rows[0]?.fecha_calculo,
       total:         rows.length,
       comisionan:    rows.filter(r => r.comisiona).length,
       total_monto:   rows.reduce((s, r) => s + (+r.monto || 0), 0),
@@ -448,7 +454,7 @@ router.get('/', async (req, res) => {
         sucursal_id: r.IdSucursalEntidad,
         sucursal:    r.SucDes, id_plan:     r.IdPlan,
       }));
-    res.json(rows);
+    res.json(filtrarPorSucursal(rows, req.sucursalesPermitidas));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 
@@ -474,7 +480,7 @@ router.get('/resumen', async (req, res) => {
               FROM dbo.tbl_CoVenAppINDO_MillonCache
               WHERE periodo = @periodo
               ORDER BY sucursal_id, operador`);
-    res.json(r.recordset);
+    res.json(filtrarPorSucursal(r.recordset, req.sucursalesPermitidas));
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 

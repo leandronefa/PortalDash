@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
+import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 // GET /api/cajeros  — cajeros con sucursal asignada (desde VendedoresDetalleDiaria, estado actual)
 router.get('/', async (req, res) => {
@@ -25,7 +29,7 @@ router.get('/', async (req, res) => {
         AND ISNUMERIC(dd.Sucursal) = 1
       ORDER BY dd.Sucursal, v.APELLIDO, v.NOMBRE
     `);
-    res.json(r.recordset);
+    res.json(filtrarPorSucursal(r.recordset, req.sucursalesPermitidas));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 

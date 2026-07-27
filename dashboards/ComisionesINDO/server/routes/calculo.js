@@ -9,6 +9,7 @@ import { calcularYGuardarRanking } from './ranking.js';
 import { sincronizarObjetivos } from './objetivos.js';
 import { calcularYGuardarOperadores } from './operadores.js';
 import { calcularYGuardarOperadoresMillon } from './millon.js';
+import { cargarMontosDelPeriodo } from '../services/montosHistorial.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -100,23 +101,18 @@ async function cargarContexto(pool, periodo) {
 
   // Queries de db_Cegid (paralelo) y BeClever (secuencial para evitar conflictos de pool)
   const [
-    sucursalesR, rankingR, multR,
+    sucursalesR, rankingR,
     objConsumoR, objEfectivoR,
-    montosR, montosVendR, montoSupR, montosPresR, montosCajR,
+    montosDelPeriodo,
     encargadosR, vendedoresR, cakerosR,
     supervisoresR, supSucursalesR,
     qlikUsuariosR, jornadasR
   ] = await Promise.all([
     pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 AND activa=1 ORDER BY id'),
     p('SELECT * FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo=@periodo'),
-    pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_RankingMultiplicador'),
     p('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjConsumo WHERE periodo=@periodo'),
     p('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjEfectivo WHERE periodo=@periodo'),
-    pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Montos'),
-    pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_MontosVendedor'),
-    pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_MontosSupervisor'),
-    pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_MontosPrestamos'),
-    pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_MontosCajero'),
+    cargarMontosDelPeriodo(pool, periodo),
     pool.request().query('SELECT idEncargado, apellido_nombre, codSucursal FROM dbo.tbl_CoVenApp_encargados'),
     pool.request().query("SELECT NRO_VENDEDOR, LTRIM(RTRIM(ISNULL(APELLIDO,'')+' '+ISNULL(NOMBRE,''))) as nombre, TIPO, GCL_TEMPSPARTIEL as gclTemps FROM dbo.tbl_CoVenApp_Vendedores WHERE COMISIONA=1"),
     // Cajeros: sucursal actual desde VendedoresDetalleDiaria
@@ -184,17 +180,17 @@ async function cargarContexto(pool, periodo) {
   return {
     sucursales:           sucursalesR.recordset,
     rankingMap,
-    multiplicadores:      multR.recordset,
+    multiplicadores:      montosDelPeriodo.multiplicadores,
     datosConsumo:         ventasBC.datosConsumo,
     datosEfectivo:        ventasBC.datosEfectivo,
     datosReporte:         reporteBC,
     objConsumo:           objConsumoR.recordset,
     objEfectivo:          objEfectivoR.recordset,
-    montos:               montosR.recordset,
-    montosVendedor:       montosVendR.recordset,
-    montosSupervisor:     montoSupR.recordset,
-    montosPrestamaos:     montosPresR.recordset,
-    montosCajero:         montosCajR.recordset,
+    montos:               montosDelPeriodo.montos,
+    montosVendedor:       montosDelPeriodo.montosVendedor,
+    montosSupervisor:     montosDelPeriodo.montosSupervisor,
+    montosPrestamaos:     montosDelPeriodo.montosPrestamaos,
+    montosCajero:         montosDelPeriodo.montosCajero,
     encargados:           encargadosR.recordset,
     grilla:               grillaR.recordset,
     operadorMap,

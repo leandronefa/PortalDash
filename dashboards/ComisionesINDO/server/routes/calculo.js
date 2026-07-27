@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { getPoolBC } from '../config/dbBeClever.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
+import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 import { calcularTotal, calcularCajeros, calcularOperadores, calcularEncargados, calcularEncargadosMillon, calcularSupervisores } from '../services/calcEngine.js';
 import { calcularYGuardarRanking } from './ranking.js';
 import { sincronizarObjetivos } from './objetivos.js';
@@ -10,6 +12,8 @@ import { calcularYGuardarOperadoresMillon } from './millon.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 // Llama a sp_ReporteVentasCobrosObjetivos en BeClever y devuelve
 // arrays separados para consumo y efectivo con el formato del motor
@@ -335,10 +339,10 @@ router.get('/cajeros', async (req, res) => {
         ORDER BY sucursal_id, nombre
       `);
     if (!r.recordset.length) return res.status(404).json({ error: 'Sin cálculo guardado para este período' });
-    const rows = r.recordset;
+    const rows = filtrarPorSucursal(r.recordset, req.sucursalesPermitidas);
     res.json({
       periodo,
-      fecha_calculo: rows[0].fecha_calculo,
+      fecha_calculo: r.recordset[0].fecha_calculo,
       total:         rows.length,
       comisionan:    rows.filter(c => c.comisiona).length,
       no_comisionan: rows.filter(c => !c.comisiona).length,
@@ -419,12 +423,24 @@ router.get('/ultimo', async (req, res) => {
       `);
     if (!r.recordset.length) return res.status(404).json({ error: 'Sin cálculo guardado' });
     const row = r.recordset[0];
+    const resultado = JSON.parse(row.resultado_json);
+    const filtrado = {
+      ...resultado,
+      sucursales:      filtrarPorSucursal(resultado.sucursales || [], req.sucursalesPermitidas),
+      cajeros:         filtrarPorSucursal(resultado.cajeros || [], req.sucursalesPermitidas),
+      operadores:      filtrarPorSucursal(resultado.operadores || [], req.sucursalesPermitidas),
+      encargados:      filtrarPorSucursal(resultado.encargados || [], req.sucursalesPermitidas),
+      encargadosMillon: filtrarPorSucursal(resultado.encargadosMillon || [], req.sucursalesPermitidas),
+      supervisores: req.user.perfil === 8
+        ? (resultado.supervisores || []).filter(s => req.supervisorId && s.id === req.supervisorId)
+        : (resultado.supervisores || []),
+    };
     res.json({
       id:            row.id,
       periodo:       row.periodo,
       fecha_calculo: row.fecha_calculo,
       usuario:       row.usuario,
-      resultado:     JSON.parse(row.resultado_json)
+      resultado:     filtrado
     });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
@@ -446,7 +462,7 @@ router.get('/encargados', async (req, res) => {
     if (!r.recordset.length) return res.status(404).json({ error: 'Sin cálculo guardado para este período' });
     const row     = r.recordset[0];
     const res_obj = JSON.parse(row.resultado_json);
-    const encargados = res_obj.encargados || [];
+    const encargados = filtrarPorSucursal(res_obj.encargados || [], req.sucursalesPermitidas);
     res.json({
       periodo,
       fecha_calculo: row.fecha_calculo,
@@ -475,7 +491,7 @@ router.get('/encargados-millon', async (req, res) => {
     if (!r.recordset.length) return res.status(404).json({ error: 'Sin cálculo guardado para este período' });
     const row     = r.recordset[0];
     const res_obj = JSON.parse(row.resultado_json);
-    const encargadosMillon = res_obj.encargadosMillon || [];
+    const encargadosMillon = filtrarPorSucursal(res_obj.encargadosMillon || [], req.sucursalesPermitidas);
     res.json({
       periodo,
       fecha_calculo: row.fecha_calculo,
@@ -504,7 +520,12 @@ router.get('/supervisores', async (req, res) => {
     if (!r.recordset.length) return res.status(404).json({ error: 'Sin cálculo guardado para este período' });
     const row     = r.recordset[0];
     const res_obj = JSON.parse(row.resultado_json);
-    const supervisores = res_obj.supervisores || [];
+    let supervisores = res_obj.supervisores || [];
+    if (req.user.perfil === 8) {
+      supervisores = req.supervisorId
+        ? supervisores.filter(s => s.id === req.supervisorId)
+        : [];
+    }
     res.json({
       periodo,
       fecha_calculo: row.fecha_calculo,

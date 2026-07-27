@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 const TABLAS = {
   base:        'dbo.tbl_CoVenAppINDO_Montos',

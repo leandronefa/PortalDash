@@ -2,9 +2,13 @@ import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { getPoolBC } from '../config/dbBeClever.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
+import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 // ── Helper: parsear periodo "YYYY-MM" → { year, month } ──────────
 function parsePeriodo(periodo) {
@@ -75,7 +79,7 @@ router.get('/consumo', async (req, res) => {
     const [rows, inactivas] = await Promise.all([
       getVentasSP(pm.year, pm.month, 'CONSUMO'), getInactivasSet(),
     ]);
-    res.json(rows.filter(r => !inactivas.has(r.sucursal_id)));
+    res.json(filtrarPorSucursal(rows.filter(r => !inactivas.has(r.sucursal_id)), req.sucursalesPermitidas));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 
@@ -161,7 +165,7 @@ router.get('/efectivo', async (req, res) => {
     const [rows, inactivas] = await Promise.all([
       getVentasSP(pm.year, pm.month, 'EFECTIVO'), getInactivasSet(),
     ]);
-    res.json(rows.filter(r => !inactivas.has(r.sucursal_id)));
+    res.json(filtrarPorSucursal(rows.filter(r => !inactivas.has(r.sucursal_id)), req.sucursalesPermitidas));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 
@@ -265,7 +269,7 @@ router.get('/reporte', async (req, res) => {
       id_plan:            r.IdPlan,
     }));
 
-    res.json(rows);
+    res.json(filtrarPorSucursal(rows, req.sucursalesPermitidas, 'id_sucursal'));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 

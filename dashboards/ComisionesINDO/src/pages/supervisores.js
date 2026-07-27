@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 
 // ─── Supervisores: gestión (crear, editar, asignar sucursales) ───────────────
@@ -7,7 +7,7 @@ export async function renderSupervisores(container) {
   container.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <h2 style="font-size:20px;font-weight:700">Supervisores</h2>
-      <button class="btn btn-primary" id="btn-nuevo-sup">+ Nuevo supervisor</button>
+      <button class="btn btn-primary" id="btn-nuevo-sup" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>+ Nuevo supervisor</button>
     </div>
     <div class="card">
       <div class="card-body">
@@ -70,8 +70,9 @@ export async function renderSupervisores(container) {
               </td>
               <td><span class="badge ${s.activo ? 'badge-a' : 'badge-c'}">${s.activo ? 'Sí' : 'No'}</span></td>
               <td>
+                ${isSupervisorReadonly() ? '' : `
                 <button class="btn btn-sm btn-secondary btn-edit-sup" data-id="${s.id}">Editar</button>
-                <button class="btn btn-sm btn-danger btn-del-sup" data-id="${s.id}">Eliminar</button>
+                <button class="btn btn-sm btn-danger btn-del-sup" data-id="${s.id}">Eliminar</button>`}
               </td>
             </tr>
           `).join('')}

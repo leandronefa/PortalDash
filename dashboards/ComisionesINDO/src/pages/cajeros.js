@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 import { exportToCSV } from '../components/exportExcel.js';
 
@@ -24,7 +24,7 @@ export async function renderCajeros(container, periodo) {
           <input id="caj-search" type="text" placeholder="Buscar nombre o sucursal…"
             style="padding:6px 10px;border:1px solid var(--color-border);border-radius:6px;
                    background:var(--color-input);color:var(--color-text);font-size:13px;width:200px">
-          <button class="btn btn-primary" id="btn-calcular">▶ Calcular comisiones</button>
+          <button class="btn btn-primary" id="btn-calcular" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>▶ Calcular comisiones</button>
           <button class="btn btn-secondary" id="btn-export" disabled>⬇ CSV</button>
         </div>
       </div>
@@ -155,12 +155,14 @@ export async function renderCajeros(container, periodo) {
                   : `<span class="badge ${jornadaDB === 'part' ? 'badge-c' : 'badge-a'}">${jornadaDB === 'part' ? 'Part-time' : 'Full-time'}</span>`}
               </td>
               <td style="padding:6px 10px">
-                <select class="sel-jornada" data-nro="${c.nro_vendedor}"
-                  style="padding:3px 6px;border:1px solid var(--color-border);border-radius:4px;
-                         background:var(--color-input);color:var(--color-text);font-size:12px;cursor:pointer">
-                  <option value="full" ${jornada === 'full' ? 'selected' : ''}>Full-time</option>
-                  <option value="part" ${jornada === 'part' ? 'selected' : ''}>Part-time</option>
-                </select>
+                ${isSupervisorReadonly()
+                  ? `<span class="badge ${jornada === 'part' ? 'badge-c' : 'badge-a'}">${jornada === 'part' ? 'Part-time' : 'Full-time'}</span>`
+                  : `<select class="sel-jornada" data-nro="${c.nro_vendedor}"
+                       style="padding:3px 6px;border:1px solid var(--color-border);border-radius:4px;
+                              background:var(--color-input);color:var(--color-text);font-size:12px;cursor:pointer">
+                       <option value="full" ${jornada === 'full' ? 'selected' : ''}>Full-time</option>
+                       <option value="part" ${jornada === 'part' ? 'selected' : ''}>Part-time</option>
+                     </select>`}
               </td>
               ${comisionCelda}
             </tr>`;

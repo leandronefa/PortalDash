@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 import { exportToCSV } from '../components/exportExcel.js';
 
@@ -8,7 +8,7 @@ export async function renderMillon(container, periodo) {
       <h2 style="font-size:20px;font-weight:700;margin:0">⭐ Sucursales Millón — ${periodo}</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input type="text" id="mill-search" class="search-input" placeholder="Buscar sucursal/operador…" style="width:220px">
-        <button class="btn btn-secondary" id="btn-refresh" title="Actualizar datos desde BeClever">↻ Actualizar</button>
+        <button class="btn btn-secondary" id="btn-refresh" title="Actualizar datos desde BeClever" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>↻ Actualizar</button>
         <button class="btn btn-secondary" id="btn-export-mill">⬇ CSV</button>
       </div>
     </div>
@@ -55,13 +55,15 @@ export async function renderMillon(container, periodo) {
             <td style="text-align:right">${fmt(op.total_operaciones)}</td>
             <td style="text-align:right">${fmt(op.total_importe)}</td>
             <td style="text-align:center">
-              <label class="switch-label">
-                <input type="checkbox" class="op-toggle"
-                  data-suc="${suc.sucursal_id}" data-op="${op.operador}"
-                  ${isOp ? 'checked' : ''}>
-                <span class="switch-track"><span class="switch-thumb"></span></span>
-                <span class="switch-text ${isOp ? 'op-si' : 'op-no'}">${isOp ? 'OPERADOR' : 'NO'}</span>
-              </label>
+              ${isSupervisorReadonly()
+                ? `<span class="switch-text ${isOp ? 'op-si' : 'op-no'}">${isOp ? '✓ OPERADOR' : '✗ NO'}</span>`
+                : `<label class="switch-label">
+                     <input type="checkbox" class="op-toggle"
+                       data-suc="${suc.sucursal_id}" data-op="${op.operador}"
+                       ${isOp ? 'checked' : ''}>
+                     <span class="switch-track"><span class="switch-thumb"></span></span>
+                     <span class="switch-text ${isOp ? 'op-si' : 'op-no'}">${isOp ? 'OPERADOR' : 'NO'}</span>
+                   </label>`}
             </td>
           </tr>
         `;

@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 import { exportToCSV } from '../components/exportExcel.js';
 
@@ -86,7 +86,7 @@ export async function renderOperadores(container, periodo, tipo = 'all') {
             <option value="OPER_CON_EFECT">CON efectivo</option>
             <option value="OPER_SIN_EFECT">SIN efectivo</option>
           </select>
-          <button id="btn-calcular" class="btn btn-primary">⟳ Calcular</button>
+          <button id="btn-calcular" class="btn btn-primary" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>⟳ Calcular</button>
           <button id="btn-export" class="btn btn-secondary">⬇ CSV</button>
         </div>
       </div>

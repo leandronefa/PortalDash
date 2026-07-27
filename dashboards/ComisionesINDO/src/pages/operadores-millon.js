@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 import { exportToCSV } from '../components/exportExcel.js';
 
@@ -70,7 +70,7 @@ export async function renderOperadoresMillon(container, periodo) {
             <option value="si">Comisionan</option>
             <option value="no">No comisionan</option>
           </select>
-          <button id="btn-calcular" class="btn btn-primary">⟳ Calcular</button>
+          <button id="btn-calcular" class="btn btn-primary" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>⟳ Calcular</button>
           <button id="btn-export" class="btn btn-secondary">⬇ CSV</button>
         </div>
       </div>
@@ -156,12 +156,14 @@ export async function renderOperadoresMillon(container, periodo) {
           <tr>
             <td style="padding:8px 14px">${op.nombre || op.usuario}</td>
             <td style="padding:8px 8px;text-align:center;white-space:nowrap">
-              <select class="sel-jornada-opm" data-usuario="${op.usuario}"
-                style="padding:3px 6px;border:1px solid var(--color-border);border-radius:6px;
-                       background:var(--color-input);color:var(--color-text);font-size:11px">
-                <option value="full" ${jornadaActual !== 'part' ? 'selected' : ''}>Full</option>
-                <option value="part" ${jornadaActual === 'part' ? 'selected' : ''}>Part</option>
-              </select>
+              ${isSupervisorReadonly()
+                ? `<span class="badge ${jornadaActual === 'part' ? 'badge-c' : 'badge-a'}">${jornadaActual === 'part' ? 'Part' : 'Full'}</span>`
+                : `<select class="sel-jornada-opm" data-usuario="${op.usuario}"
+                     style="padding:3px 6px;border:1px solid var(--color-border);border-radius:6px;
+                            background:var(--color-input);color:var(--color-text);font-size:11px">
+                     <option value="full" ${jornadaActual !== 'part' ? 'selected' : ''}>Full</option>
+                     <option value="part" ${jornadaActual === 'part' ? 'selected' : ''}>Part</option>
+                   </select>`}
               ${desincronizada ? '<span style="cursor:help" title="La jornada cambió después del último cálculo — recalculá para aplicarla">⚠️</span>' : ''}
             </td>
             <td style="padding:8px 8px;text-align:right;font-size:12px">${vtaCell}</td>

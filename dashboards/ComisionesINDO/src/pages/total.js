@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 import { exportToCSV } from '../components/exportExcel.js';
 
@@ -14,7 +14,7 @@ export async function renderTotal(container, periodo) {
   container.innerHTML = `
     <h2 style="font-size:20px;font-weight:700;margin-bottom:16px">📋 Vista TOTAL — ${periodo}</h2>
     <div class="toolbar" style="margin-bottom:12px">
-      <button class="btn btn-primary" id="btn-calc">▶ Ejecutar cálculo</button>
+      <button class="btn btn-primary" id="btn-calc" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>▶ Ejecutar cálculo</button>
       <button class="btn btn-secondary" id="btn-reload">🔄 Cargar último</button>
       <button class="btn btn-secondary" id="btn-export">⬇ Exportar CSV</button>
       <span id="calc-info" style="font-size:12px;color:var(--color-muted)"></span>

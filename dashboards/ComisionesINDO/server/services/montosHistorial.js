@@ -54,14 +54,27 @@ export async function cargarMontosDelPeriodo(pool, periodo) {
   }
 
   const snapshot = await leerMontosVivos(pool);
-  await pool.request()
-    .input('periodo', sql.VarChar, periodo)
-    .input('json', sql.NVarChar(sql.MAX), JSON.stringify(snapshot))
-    .query(`
-      INSERT INTO dbo.tbl_CoVenAppINDO_MontosHistorial (periodo, montos_json)
-      VALUES (@periodo, @json)
-    `);
-  return snapshot;
+  try {
+    await pool.request()
+      .input('periodo', sql.VarChar, periodo)
+      .input('json', sql.NVarChar(sql.MAX), JSON.stringify(snapshot))
+      .query(`
+        INSERT INTO dbo.tbl_CoVenAppINDO_MontosHistorial (periodo, montos_json)
+        VALUES (@periodo, @json)
+      `);
+    return snapshot;
+  } catch (err) {
+    // Condición de carrera: otro request insertó la foto de este período
+    // entre el SELECT de arriba y este INSERT (periodo es PK). Releemos
+    // y devolvemos la foto que ganó la carrera en vez de fallar.
+    const retry = await pool.request()
+      .input('periodo', sql.VarChar, periodo)
+      .query('SELECT montos_json FROM dbo.tbl_CoVenAppINDO_MontosHistorial WHERE periodo = @periodo');
+    if (retry.recordset.length) {
+      return JSON.parse(retry.recordset[0].montos_json);
+    }
+    throw err;
+  }
 }
 
 // Para cada período que ya tiene algo calculado (en cualquiera de las 4

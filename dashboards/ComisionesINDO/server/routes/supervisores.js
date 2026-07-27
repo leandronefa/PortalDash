@@ -1,16 +1,19 @@
 import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 // GET /api/supervisores  — lista todos con sus sucursales asignadas
 router.get('/', async (req, res) => {
   try {
     const pool = await getPool();
     const sups = await pool.request().query(
-      'SELECT id, nombre, activo FROM dbo.tbl_CoVenAppINDO_Supervisores ORDER BY nombre'
+      'SELECT id, nombre, activo, usuario_login FROM dbo.tbl_CoVenAppINDO_Supervisores ORDER BY nombre'
     );
     const asigs = await pool.request().query(
       'SELECT supervisor_id, sucursal_id FROM dbo.tbl_CoVenAppINDO_SupervisorSucursales'
@@ -20,26 +23,31 @@ router.get('/', async (req, res) => {
       if (!asigMap[a.supervisor_id]) asigMap[a.supervisor_id] = [];
       asigMap[a.supervisor_id].push(a.sucursal_id);
     }
-    res.json(sups.recordset.map(s => ({ ...s, sucursales: asigMap[s.id] || [] })));
+    let lista = sups.recordset.map(s => ({ ...s, sucursales: asigMap[s.id] || [] }));
+    if (req.user.perfil === 8) {
+      lista = req.supervisorId ? lista.filter(s => s.id === req.supervisorId) : [];
+    }
+    res.json(lista);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 
 // POST /api/supervisores  — crear supervisor
 router.post('/', async (req, res) => {
-  const { nombre } = req.body;
+  const { nombre, usuario_login } = req.body;
   if (!nombre?.trim()) return res.status(400).json({ error: 'Nombre requerido' });
   try {
     const pool = await getPool();
     const r = await pool.request()
       .input('nombre', sql.VarChar, nombre.trim())
-      .query('INSERT INTO dbo.tbl_CoVenAppINDO_Supervisores (nombre, activo) OUTPUT INSERTED.id VALUES (@nombre, 1)');
-    res.json({ id: r.recordset[0].id, nombre: nombre.trim(), activo: true, sucursales: [] });
+      .input('usuario_login', sql.VarChar, usuario_login?.trim() || null)
+      .query('INSERT INTO dbo.tbl_CoVenAppINDO_Supervisores (nombre, activo, usuario_login) OUTPUT INSERTED.id VALUES (@nombre, 1, @usuario_login)');
+    res.json({ id: r.recordset[0].id, nombre: nombre.trim(), activo: true, usuario_login: usuario_login?.trim() || null, sucursales: [] });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });
 
 // PUT /api/supervisores/:id  — editar nombre o activo
 router.put('/:id', async (req, res) => {
-  const { nombre, activo } = req.body;
+  const { nombre, activo, usuario_login } = req.body;
   const id = parseInt(req.params.id);
   if (!nombre?.trim()) return res.status(400).json({ error: 'Nombre requerido' });
   try {
@@ -48,7 +56,8 @@ router.put('/:id', async (req, res) => {
       .input('id', sql.Int, id)
       .input('nombre', sql.VarChar, nombre.trim())
       .input('activo', sql.Bit, activo ?? 1)
-      .query('UPDATE dbo.tbl_CoVenAppINDO_Supervisores SET nombre=@nombre, activo=@activo WHERE id=@id');
+      .input('usuario_login', sql.VarChar, usuario_login?.trim() || null)
+      .query('UPDATE dbo.tbl_CoVenAppINDO_Supervisores SET nombre=@nombre, activo=@activo, usuario_login=@usuario_login WHERE id=@id');
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });

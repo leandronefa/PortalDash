@@ -5,6 +5,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
 import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 import { calcularTotal, calcularOperadores } from '../services/calcEngine.js';
+import { cargarMontosDelPeriodo } from '../services/montosHistorial.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -189,21 +190,19 @@ export async function calcularYGuardarOperadores(pool, periodo) {
 
     // Cargar datos necesarios en paralelo
     const [
-      sucursalesR, rankingR, multR,
+      sucursalesR, rankingR,
       objConsumoR, objEfectivoR,
-      montosR, montosPresR,
+      montosDelPeriodo,
       jornadasR, qlikUsuariosR
     ] = await Promise.all([
       pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 AND activa=1 ORDER BY id'),
       pool.request().input('periodo', sql.VarChar, periodo)
            .query('SELECT * FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo=@periodo'),
-      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_RankingMultiplicador'),
       pool.request().input('periodo', sql.VarChar, periodo)
            .query('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjConsumo WHERE periodo=@periodo'),
       pool.request().input('periodo', sql.VarChar, periodo)
            .query('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjEfectivo WHERE periodo=@periodo'),
-      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Montos'),
-      pool.request().query("SELECT * FROM dbo.tbl_CoVenAppINDO_MontosPrestamos WHERE tipo='suc'"),
+      cargarMontosDelPeriodo(pool, periodo),
       pool.request().query('SELECT usuario, jornada FROM dbo.tbl_CoVenAppINDO_OperadoresJornada'),
       pool.request().query("SELECT UPPER(LTRIM(RTRIM(Usuario))) AS id_usuario, LTRIM(RTRIM(Nombre)) AS nombre FROM dbo.tbl_QlikData_Usuarios"),
     ]);
@@ -258,16 +257,16 @@ export async function calcularYGuardarOperadores(pool, periodo) {
     const ctx = {
       sucursales:       sucursalesR.recordset,
       rankingMap,
-      multiplicadores:  multR.recordset,
+      multiplicadores:  montosDelPeriodo.multiplicadores,
       datosConsumo,
       datosEfectivo,
       datosReporte,
       objConsumo:       objConsumoR.recordset,
       objEfectivo:      objEfectivoR.recordset,
-      montos:           montosR.recordset,
+      montos:           montosDelPeriodo.montos,
       montosVendedor:   [],
       montosSupervisor: [],
-      montosPrestamaos: montosPresR.recordset,
+      montosPrestamaos: montosDelPeriodo.montosPrestamaos,
       montosCajero:     [],
       jornadasMap,
       operadorMap,

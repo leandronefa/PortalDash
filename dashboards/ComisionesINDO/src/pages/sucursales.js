@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 
 function catBadge(v) {
@@ -76,6 +76,7 @@ export async function renderSucursales(container, periodo) {
       return;
     }
 
+    const readonly = isSupervisorReadonly();
     const rows = data.map(s => `
       <tr style="${s.activa ? '' : 'opacity:.45'}">
         <td style="font-weight:600">${s.id}</td>
@@ -83,17 +84,19 @@ export async function renderSucursales(container, periodo) {
         <td>${s.provincia ?? '—'}</td>
         <td style="text-align:center">${catBadge(s.categoria)}</td>
         <td style="text-align:center">
+          ${readonly ? efectivoBadge(s.con_efectivo) : `
           <button class="btn-efect" data-id="${s.id}" data-val="${s.con_efectivo ? 1 : 0}"
             style="border:none;background:none;cursor:pointer;padding:0">
             ${efectivoBadge(s.con_efectivo)}
-          </button>
+          </button>`}
         </td>
         <td style="text-align:center">
+          ${readonly ? activaBadge(s.activa) : `
           <button class="btn-activa" data-id="${s.id}" data-val="${s.activa ? 1 : 0}"
             style="border:none;background:none;cursor:pointer;padding:0"
             title="${s.activa ? 'Clic para deshabilitar: desaparece de todas las páginas y del cálculo' : 'Clic para volver a habilitarla'}">
             ${activaBadge(s.activa)}
-          </button>
+          </button>`}
         </td>
       </tr>
     `).join('');

@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 
 const TABS = [
@@ -26,12 +26,16 @@ function inputNum(val, cls, extra = '') {
   const display = (val != null && val !== '' && !isNaN(val))
     ? Number(val).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
     : '0';
+  if (isSupervisorReadonly()) {
+    return `<span style="display:inline-block;width:90px;text-align:center;font-size:12px">${display}</span>`;
+  }
   return `<input type="text" inputmode="numeric" class="${cls} inp-miles" value="${display}" ${extra}
     style="width:90px;padding:3px 6px;border:1px solid var(--color-border);border-radius:4px;
            background:var(--color-input);color:var(--color-text);font-size:12px;text-align:center">`;
 }
 
 function saveBtn(dataAttrs = '') {
+  if (isSupervisorReadonly()) return '';
   return `<button class="btn-save btn" ${dataAttrs}
     style="font-size:12px;padding:3px 10px">💾</button>`;
 }

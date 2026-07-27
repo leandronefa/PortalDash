@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 
 function fmtMoney(v) {
@@ -18,7 +18,7 @@ export async function renderRanking(container, periodo) {
     <div style="display:flex;flex-direction:column;height:calc(100vh - 48px)">
       <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <h2 style="font-size:20px;font-weight:700;margin:0">Ranking de Sucursales — ${periodo}</h2>
-        <button id="btn-calcular" class="btn btn-primary">⟳ Calcular Ranking Automático</button>
+        <button id="btn-calcular" class="btn btn-primary" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>⟳ Calcular Ranking Automático</button>
       </div>
 
       <div id="mult-section" style="flex-shrink:0;margin-bottom:12px"></div>
@@ -155,10 +155,11 @@ function renderGrupoTabla(rows, periodo) {
           ${r.categoria}
         </td>
         <td>
+          ${isSupervisorReadonly() ? '' : `
           <button class="btn-override" data-suc="${r.sucursal_id}" data-cat="${r.categoria}"
             style="background:none;border:none;cursor:pointer;color:var(--color-muted);font-size:11px;
                    padding:2px 6px;border-radius:4px;border:1px solid var(--color-border)"
-            title="Cambiar manualmente">✏</button>
+            title="Cambiar manualmente">✏</button>`}
         </td>
       </tr>
     `;
@@ -199,7 +200,7 @@ async function loadMultiplicadores(container) {
               style="width:80px;padding:4px 8px;border:1px solid var(--color-border);
                      border-radius:6px;background:var(--color-input);color:var(--color-text);font-size:13px"
               data-cat="${m.categoria}" value="${m.multiplicador}">
-            <button class="btn btn-sm btn-primary btn-save-mult" data-cat="${m.categoria}">Guardar</button>
+            <button class="btn btn-sm btn-primary btn-save-mult" data-cat="${m.categoria}" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>Guardar</button>
           </div>
         `).join('')}
       </div>

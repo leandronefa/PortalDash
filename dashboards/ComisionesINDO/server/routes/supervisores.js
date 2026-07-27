@@ -57,7 +57,7 @@ router.put('/:id', async (req, res) => {
       .input('nombre', sql.VarChar, nombre.trim())
       .input('activo', sql.Bit, activo ?? 1)
       .input('usuario_login', sql.VarChar, usuario_login?.trim() || null)
-      .query('UPDATE dbo.tbl_CoVenAppINDO_Supervisores SET nombre=@nombre, activo=@activo, usuario_login=@usuario_login WHERE id=@id');
+      .query('UPDATE dbo.tbl_CoVenAppINDO_Supervisores SET nombre=@nombre, activo=@activo, usuario_login=COALESCE(@usuario_login, usuario_login) WHERE id=@id');
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
 });

@@ -93,7 +93,7 @@ export async function renderOperadoresMillon(container, periodo) {
   // persistidas en el último cálculo si se cambiaron sin recalcular.
   const jornadasActuales = {};
   try {
-    const js = await api.get('/operadores/jornadas');
+    const js = await api.get(`/operadores/jornadas?periodo=${periodo}`);
     for (const j of js) jornadasActuales[j.usuario.toUpperCase()] = j.jornada;
   } catch { /* sin bloquear la página */ }
 

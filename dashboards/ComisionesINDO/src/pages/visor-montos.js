@@ -584,6 +584,8 @@ export async function renderVisorMontos(container) {
         </tr></tbody>
       </table></div></div>`;
 
+    if (isSupervisorReadonly()) return;
+
     wrap.querySelector('.inp-caj-c').addEventListener('input', e => {
       const v = parseNum(e.target.value);
       wrap.querySelector('#caj-b').textContent = fmt(v);

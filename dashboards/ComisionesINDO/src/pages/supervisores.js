@@ -22,6 +22,10 @@ export async function renderSupervisores(container) {
           <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;color:#cbd5e1">Nombre</label>
           <input id="sup-nombre" class="form-control" type="text" placeholder="Nombre del supervisor" style="background:#262c42;color:#e2e8f0;border-color:#3e4a6e">
         </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;color:#cbd5e1">Usuario de login</label>
+          <input id="sup-usuario-login" class="form-control" type="text" placeholder="Usuario de login (ej. EVIDABLE)" style="background:#262c42;color:#e2e8f0;border-color:#3e4a6e">
+        </div>
         <div style="margin-bottom:16px">
           <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;color:#cbd5e1">Sucursales asignadas</label>
           <input id="sup-suc-filter" class="form-control" style="margin-bottom:8px;background:#262c42;color:#e2e8f0;border-color:#3e4a6e" placeholder="Filtrar sucursales…" type="text">
@@ -210,12 +214,14 @@ export async function renderSupervisores(container) {
     const modal  = container.querySelector('#sup-modal');
     const title  = container.querySelector('#sup-modal-title');
     const nombre = container.querySelector('#sup-nombre');
+    const usuarioLogin = container.querySelector('#sup-usuario-login');
     const filterEl = container.querySelector('#sup-suc-filter');
     filterEl.value = '';
 
     const sup = supId ? supervisoresList.find(s => s.id === supId) : null;
     title.textContent = sup ? `Editar: ${sup.nombre}` : 'Nuevo supervisor';
     nombre.value = sup?.nombre || '';
+    usuarioLogin.value = sup?.usuario_login || '';
     getSelectedSucursales = buildSucursalCheckboxes(sup?.sucursales || [], supId);
     modal.style.display = 'flex';
     nombre.focus();
@@ -232,14 +238,15 @@ export async function renderSupervisores(container) {
   container.querySelector('#sup-modal-save').addEventListener('click', async () => {
     const nombre = container.querySelector('#sup-nombre').value.trim();
     if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
+    const usuario_login = container.querySelector('#sup-usuario-login').value.trim() || null;
     const sucursales = getSelectedSucursales();
     try {
       if (editingId) {
-        await api.put(`/supervisores/${editingId}`, { nombre, activo: 1 });
+        await api.put(`/supervisores/${editingId}`, { nombre, activo: 1, usuario_login });
         await api.put(`/supervisores/${editingId}/sucursales`, { sucursales });
         showToast('Supervisor actualizado', 'success');
       } else {
-        const created = await api.post('/supervisores', { nombre });
+        const created = await api.post('/supervisores', { nombre, usuario_login });
         await api.put(`/supervisores/${created.id}/sucursales`, { sucursales });
         showToast('Supervisor creado', 'success');
       }

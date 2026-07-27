@@ -1,6 +1,8 @@
 import { getPool } from '../config/db.js';
 import { ensureUsuarioLoginColumn, resolverSupervisor } from '../services/supervisorLookup.js';
 
+let usuarioLoginColumnEnsured = false;
+
 export async function attachScope(req, res, next) {
   if (req.user?.perfil !== 8) {
     req.sucursalesPermitidas = null;
@@ -9,7 +11,10 @@ export async function attachScope(req, res, next) {
   }
   try {
     const pool = await getPool();
-    await ensureUsuarioLoginColumn(pool);
+    if (!usuarioLoginColumnEnsured) {
+      await ensureUsuarioLoginColumn(pool);
+      usuarioLoginColumnEnsured = true;
+    }
     const info = await resolverSupervisor(pool, req.user.usuario);
     if (!info) {
       req.supervisorId = null;

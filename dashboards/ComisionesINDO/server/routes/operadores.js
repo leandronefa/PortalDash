@@ -105,7 +105,7 @@ router.get('/', async (req, res) => {
     const rows = filtrarPorSucursal(r.recordset, req.sucursalesPermitidas);
     res.json({
       periodo,
-      fecha_calculo: rows[0].fecha_calculo,
+      fecha_calculo: r.recordset[0].fecha_calculo,
       total:         rows.length,
       total_monto:   rows.reduce((s, c) => s + (+c.monto || 0), 0),
       resultado:     rows

@@ -63,3 +63,30 @@ export async function cargarMontosDelPeriodo(pool, periodo) {
     `);
   return snapshot;
 }
+
+// Para cada período que ya tiene algo calculado (en cualquiera de las 4
+// tablas de resultado) y todavía no tiene foto en MontosHistorial, crea una
+// con los montos vivos de HOY (mejor dato disponible — no es retroactivamente
+// exacto, pero evita que a futuro un reproceso tome valores que ni existían
+// cuando ese período se calculó originalmente). Corre en cada arranque del
+// servidor; es barato e idempotente (cargarMontosDelPeriodo no hace nada si
+// la foto ya existe).
+export async function backfillMontosHistorial(pool) {
+  await ensureMontosHistorialTable(pool);
+
+  const r = await pool.request().query(`
+    SELECT periodo FROM dbo.tbl_CoVenAppINDO_CalculoHistorial
+    UNION
+    SELECT periodo FROM dbo.tbl_CoVenAppINDO_ResultadoCajeros
+    UNION
+    SELECT periodo FROM dbo.tbl_CoVenAppINDO_ResultadoOperadores
+    UNION
+    SELECT periodo FROM dbo.tbl_CoVenAppINDO_ResultadoOpMillon
+  `);
+
+  const periodos = [...new Set(r.recordset.map(x => x.periodo))];
+  for (const periodo of periodos) {
+    await cargarMontosDelPeriodo(pool, periodo);
+  }
+  return periodos.length;
+}

@@ -18,6 +18,8 @@ import millonRoutes from './routes/millon.js';
 import supervisoresRoutes from './routes/supervisores.js';
 import cajerosRoutes from './routes/cajeros.js';
 import operadoresRoutes from './routes/operadores.js';
+import { getPool } from './config/db.js';
+import { backfillMontosHistorial } from './services/montosHistorial.js';
 
 const app = express();
 app.use(cors());
@@ -47,3 +49,9 @@ const PORT = process.env.PORT || 3011;
 // Puerto 3011 (no 3005): el conector de QlikView ocupa 127.0.0.1:3005.
 const HOST = process.env.HOST || '127.0.0.1';
 app.listen(PORT, HOST, () => console.log(`[ComisionesINDO] ${HOST}:${PORT}`));
+
+// Fire-and-forget: no bloquea el arranque del servidor.
+getPool()
+  .then(pool => backfillMontosHistorial(pool))
+  .then(n => { if (n) console.log(`[MontosHistorial] backfill: ${n} período(s) revisado(s)`); })
+  .catch(err => console.error('[MontosHistorial backfill]', err));

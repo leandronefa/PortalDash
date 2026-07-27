@@ -5,6 +5,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
 import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 import { calcularOperadoresMillon } from '../services/calcEngine.js';
+import { cargarMontosDelPeriodo } from '../services/montosHistorial.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -331,7 +332,7 @@ export async function calcularYGuardarOperadoresMillon(pool, periodo) {
 
     // 2) Leer datos en paralelo
     const [
-      cacheR, flagsR, objEfR, sucR, multR, rankingR, montosPresR, qlikR, jornadaR
+      cacheR, flagsR, objEfR, sucR, rankingR, montosDelPeriodo, qlikR, jornadaR
     ] = await Promise.all([
       pool.request()
         .input('periodo', sql.VarChar(7), periodo)
@@ -350,11 +351,10 @@ export async function calcularYGuardarOperadoresMillon(pool, periodo) {
                 WHERE periodo = @periodo`),
       pool.request()
         .query(`SELECT id, nombre FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id >= 100 AND activa=1 ORDER BY id`),
-      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_RankingMultiplicador'),
       pool.request()
         .input('periodo', sql.VarChar(7), periodo)
         .query(`SELECT sucursal_id, categoria FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo = @periodo`),
-      pool.request().query(`SELECT * FROM dbo.tbl_CoVenAppINDO_MontosPrestamos WHERE tipo = 'suc'`),
+      cargarMontosDelPeriodo(pool, periodo),
       pool.request().query(`SELECT UPPER(LTRIM(RTRIM(Usuario))) AS id_usuario, LTRIM(RTRIM(Nombre)) AS nombre FROM dbo.tbl_QlikData_Usuarios`),
       pool.request().query(`SELECT usuario, jornada FROM dbo.tbl_CoVenAppINDO_OperadoresJornada`),
     ]);
@@ -371,9 +371,9 @@ export async function calcularYGuardarOperadoresMillon(pool, periodo) {
       objEfectivo:      objEfR.recordset,
       operadoresMillon: flagsR.recordset.map(r => ({ ...r, es_operador: !!r.es_operador })),
       sucursalesMillon: sucR.recordset,
-      montosPrestamaos: montosPresR.recordset,
+      montosPrestamaos: montosDelPeriodo.montosPrestamaos,
       rankingMap,
-      multiplicadores:  multR.recordset,
+      multiplicadores:  montosDelPeriodo.multiplicadores,
       jornadasMap,
       operadorMap,
     };

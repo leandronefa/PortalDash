@@ -34,3 +34,12 @@ export const api = {
   delete: (path)       => request('DELETE', path),
   patch:  (path, body) => request('PATCH',  path, body)
 };
+
+export function isSupervisorReadonly() {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return user?.perfil === 8;
+  } catch {
+    return false;
+  }
+}

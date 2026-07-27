@@ -2,10 +2,14 @@ import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { getPoolBC } from '../config/dbBeClever.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
+import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 import { calcularTotal, calcularOperadores } from '../services/calcEngine.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 // ── Asegurar que existen las tablas necesarias ────────────────────────────────
 async function ensureTables(pool) {
@@ -98,7 +102,7 @@ router.get('/', async (req, res) => {
     if (!r.recordset.length)
       return res.status(404).json({ error: 'Sin cálculo guardado para este período' });
 
-    const rows = r.recordset;
+    const rows = filtrarPorSucursal(r.recordset, req.sucursalesPermitidas);
     res.json({
       periodo,
       fecha_calculo: rows[0].fecha_calculo,
@@ -109,14 +113,31 @@ router.get('/', async (req, res) => {
   } catch (err) { console.error('[OP GET]', err); res.status(500).json({ error: err.message }); }
 });
 
-// ── GET /api/operadores/jornadas — todas las jornadas persistentes ────────────
+// ── GET /api/operadores/jornadas?periodo= — todas las jornadas persistentes ──
+// Sin periodo (o perfil sin restricción): devuelve todas. Con perfil supervisor,
+// requiere periodo para poder resolver a qué sucursal pertenece cada operador
+// (jornada no tiene sucursal propia) y filtrar por sus sucursales asignadas.
 router.get('/jornadas', async (req, res) => {
   try {
     const pool = await getPool();
     await ensureTables(pool);
     const r = await pool.request()
       .query('SELECT usuario, jornada, fecha_modificacion, usuario_modificacion FROM dbo.tbl_CoVenAppINDO_OperadoresJornada ORDER BY usuario');
-    res.json(r.recordset);
+
+    if (req.sucursalesPermitidas === null) return res.json(r.recordset);
+
+    const { periodo } = req.query;
+    if (!periodo) return res.json([]);
+
+    const sucPorUsuario = await pool.request()
+      .input('periodo', sql.VarChar, periodo)
+      .query(`SELECT usuario, sucursal_id FROM dbo.tbl_CoVenAppINDO_ResultadoOperadores WHERE periodo = @periodo`);
+    const permitidos = new Set(
+      sucPorUsuario.recordset
+        .filter(x => req.sucursalesPermitidas.includes(x.sucursal_id))
+        .map(x => x.usuario.toUpperCase())
+    );
+    res.json(r.recordset.filter(j => permitidos.has(j.usuario.toUpperCase())));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

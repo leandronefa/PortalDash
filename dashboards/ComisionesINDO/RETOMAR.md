@@ -1,7 +1,19 @@
-# Retomar — ComisionesINDO — actualizado 2026-07-16
+# Retomar — ComisionesINDO — actualizado 2026-07-27
 
 ## Estado general
 Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 (bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho y servicio reiniciado con las reglas 2026-07-16 de Supervisores. **Cálculo 2026-06 re-ejecutado el 16/07 vía API** con las reglas nuevas — resultado: **Eric Vidable $159.000** ($136.000 sucursales + $23.000 plaza Millón MENDOZA), **Josefina Rossini $128.000** ($69.000 sucursales + $59.000 plazas: Retail CATAMARCA $13.000 + LA RIOJA $13.000 + SGO. DEL ESTERO $5.000 + TUCUMAN $5.000 + Millón TUCUMAN $23.000). **Falta que el usuario valide contra la planilla** `comisiones 03-2026 REFINADA.xlsx`; si cierran → blindar Supervisores.
+
+---
+
+## Sesión 2026-07-27 — Acceso restringido para usuarios Supervisor (EVIDABLE / JROSSINI)
+
+Implementado con spec + plan + 16 tareas vía subagentes (spec: `docs/superpowers/specs/2026-07-27-acceso-supervisores-design.md`, plan: `docs/superpowers/plans/2026-07-27-acceso-supervisores.md`):
+
+- **Vínculo usuario↔supervisor**: columna nueva `usuario_login` en `tbl_CoVenAppINDO_Supervisores` (migración self-healing en `server/services/supervisorLookup.js`, corre una sola vez por proceso). Cargada en producción: `id=4 Eric Vidable → EVIDABLE`, `id=5 Josefina Rossini → JROSSINI`. Confirmado que ambos usuarios existen en `TBL_USUARIOS_APPS` con `idPerfil=8`, `activo=1` (la comparación es case-insensitive por la collation de SQL Server, así que no importa que `descUsuario` esté en minúsculas ahí).
+- **Backend**: middleware `attachScope` + `blockWriteIfSupervisor` (`server/middleware/supervisorScope.js`) montado en los 10 routers — perfil 8 filtra cada GET con granularidad de sucursal (`filtrarPorSucursal`, `server/utils/scopeFiltro.js`) y bloquea con 403 cualquier método no-GET. Caso especial: los endpoints de resultado de Supervisores (`GET /api/supervisores`, `GET /api/calculo/supervisores`, la clave `supervisores` de `GET /api/calculo/ultimo`) devuelven solo el propio registro del supervisor logueado, no un filtro por sucursal.
+- **Frontend**: helper `isSupervisorReadonly()` (`src/api/client.js`) oculta/reemplaza controles de escritura en 8 páginas (visor-montos, ranking, sucursales, supervisores ABM, total, cajeros, operadores-millon, operadores, millon) sin recortar el sidebar — el supervisor ve todo el tablero, solo lectura.
+- **Deploy y verificación (27/07)**: build hecho, servicio reiniciado, migración corrida contra la DB real (columna creada, vínculo confirmado). Verificado con tokens JWT de prueba (sin login real, usando `JWT_SECRET` del `.env` como indica el gotcha de este archivo): perfil 8 (EVIDABLE) ve 26 sucursales (recortado) y un único registro en `/api/supervisores` (el suyo), `POST /api/ranking/calcular` devuelve 403; perfil normal ve las 42 sucursales completas, los 2 supervisores, y el `POST` corre normal (200) — sin regresión.
+- **Pendiente**: login real de EVIDABLE/JROSSINI en el navegador (vía portal `/d/8/`) para confirmar visualmente que ningún botón de escritura queda visible en ninguna página — la verificación funcional se hizo por API, no se probó la UI renderizada en un navegador real. El ABM de Supervisores ahora tiene un campo `usuario_login` editable (antes solo se podía cargar por SQL directo).
 
 ---
 

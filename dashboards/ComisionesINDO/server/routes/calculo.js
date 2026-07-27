@@ -212,14 +212,13 @@ router.post('/cajeros', async (req, res) => {
     const [yr, mo] = periodo.split('-').map(Number);
 
     const [
-      sucursalesR, rankingR, multR,
-      objConsumoR, montosCajR, cakerosR
+      sucursalesR, rankingR,
+      objConsumoR, montosDelPeriodo, cakerosR
     ] = await Promise.all([
       pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 AND activa=1 ORDER BY id'),
       pool.request().input('periodo', sql.VarChar, periodo).query('SELECT * FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo=@periodo'),
-      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_RankingMultiplicador'),
       pool.request().input('periodo', sql.VarChar, periodo).query('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjConsumo WHERE periodo=@periodo'),
-      pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_MontosCajero'),
+      cargarMontosDelPeriodo(pool, periodo),
       pool.request()
         .query(`
           SELECT v.NRO_VENDEDOR,
@@ -256,7 +255,7 @@ router.post('/cajeros', async (req, res) => {
     const ctx = {
       sucursales:       sucursalesR.recordset,
       rankingMap,
-      multiplicadores:  multR.recordset,
+      multiplicadores:  montosDelPeriodo.multiplicadores,
       datosConsumo:     ventasBC.datosConsumo,
       datosEfectivo:    [],
       datosReporte:     [],
@@ -266,7 +265,7 @@ router.post('/cajeros', async (req, res) => {
       montosVendedor:   [],
       montosSupervisor: [],
       montosPrestamaos: [],
-      montosCajero:     montosCajR.recordset,
+      montosCajero:     montosDelPeriodo.montosCajero,
       cajerosSucursal,
     };
 

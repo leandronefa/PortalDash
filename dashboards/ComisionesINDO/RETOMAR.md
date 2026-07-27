@@ -1,5 +1,23 @@
 # Retomar — ComisionesINDO — actualizado 2026-07-27
 
+## Sesión 2026-07-27 (2) — Historización de montos por período (foto congelada)
+
+Implementado con spec + plan + 6 tareas vía subagentes (spec: `docs/superpowers/specs/2026-07-27-historizacion-montos-design.md`, plan: `docs/superpowers/plans/2026-07-27-historizacion-montos.md`).
+
+**Regla de negocio**: la primera vez que se calcula un período (desde Total, Cajeros, Operadores Retail u Operadores Millón), se congela una foto de los 6 valores de montos vigentes en ese momento (`Montos`, `MontosVendedor`, `MontosSupervisor`, `MontosPrestamos`, `MontosCajero`, `RankingMultiplicador`) en la tabla nueva `tbl_CoVenAppINDO_MontosHistorial` (un JSON por período). Reprocesar ese mismo período SIEMPRE usa esa foto, sin importar qué se edite después en el ABM de Montos. El ABM sigue editando el valor "actual" (vivo) sin cambios — la foto es solo un insumo del motor de cálculo.
+
+**Backend**: `server/services/montosHistorial.js` (`ensureMontosHistorialTable`, `cargarMontosDelPeriodo`, `backfillMontosHistorial`) consumido por los 4 puntos que cargan montos para un cálculo: `calculo.js::cargarContexto()` (motor completo), `calculo.js::POST /cajeros`, `operadores.js::calcularYGuardarOperadores()`, `millon.js::calcularYGuardarOperadoresMillon()`. `cargarMontosDelPeriodo` tiene guard contra condición de carrera (dos requests concurrentes calculando el mismo período nuevo — el que pierde el INSERT relee la foto del ganador en vez de tirar 500).
+
+**Backfill**: al arrancar el servidor, crea la foto (con los montos de HOY) para todo período que ya tenía algo calculado y no tenía foto. Desplegado y confirmado: **6 períodos backfilleados** (2025-07, 2026-03, 2026-04, 2026-05, 2026-06, 2026-07).
+
+**Verificado (27/07) directamente contra la DB real**: congelé una foto de prueba para un período ficticio (`2099-01`), edité en vivo `MontosCajero` (+12345), volví a pedir la foto del mismo período → siguió devolviendo el valor viejo (no el editado). Confirmado el mecanismo funciona. Limpieza hecha (valor revertido, fila de prueba borrada) — quedan 6 fotos reales en la tabla, ninguna de prueba.
+
+**Nota operativa — cómo "descongelar" un período** (no hay UI para esto, es deliberado): si hace falta forzar que un período tome montos nuevos (ej. se calculó por error antes de terminar de cargar los montos correctos), hay que borrar su fila a mano: `DELETE FROM dbo.tbl_CoVenAppINDO_MontosHistorial WHERE periodo='YYYY-MM'` — el próximo cálculo de ese período va a generar una foto nueva con los valores vigentes en ese momento.
+
+**Deferred (no bloqueante, del review final)**: el backfill es una sola query `UNION` sobre las 4 tablas de resultado — si alguna no existiera (entorno nuevo/dev) el backfill completo loguea error y no hace nada ese arranque; en producción las 4 tablas ya existen, así que es cosmético. El log dice "período(s) revisado(s)" (cuenta encontrados, no creados). Ninguno requiere acción.
+
+---
+
 ## Estado general
 Servicio `dashcomisionesindo.exe` corriendo en puerto 3011 (bind `127.0.0.1`, acceso vía portal `/d/8/`). Build hecho y servicio reiniciado con las reglas 2026-07-16 de Supervisores. **Cálculo 2026-06 re-ejecutado el 16/07 vía API** con las reglas nuevas — resultado: **Eric Vidable $159.000** ($136.000 sucursales + $23.000 plaza Millón MENDOZA), **Josefina Rossini $128.000** ($69.000 sucursales + $59.000 plazas: Retail CATAMARCA $13.000 + LA RIOJA $13.000 + SGO. DEL ESTERO $5.000 + TUCUMAN $5.000 + Millón TUCUMAN $23.000). **Falta que el usuario valide contra la planilla** `comisiones 03-2026 REFINADA.xlsx`; si cierran → blindar Supervisores.
 

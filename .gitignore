@@ -45,6 +45,9 @@ dashboards/ComisionesINDO/tmp*.cjs
 .claude/
 **/.claude/
 
+# Worktrees de trabajo aislado (superpowers)
+.worktrees/
+
 # Miscelánea
 *.user
 .DS_Store

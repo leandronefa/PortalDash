@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
+import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 // ── Migración: agregar con_efectivo si no existe y poblar desde objetivos ──────
 async function ensureConEfectivo(pool) {
@@ -52,7 +56,7 @@ router.get('/', async (req, res) => {
       WHERE s.id < 300 ${todas === '1' ? '' : 'AND s.activa = 1'}
       ORDER BY s.id
     `);
-    res.json(r.recordset);
+    res.json(filtrarPorSucursal(r.recordset, req.sucursalesPermitidas, 'id'));
   } catch (err) {
     console.error('[SUC GET]', err);
     res.status(500).json({ error: err.message });

@@ -2,9 +2,13 @@ import { Router } from 'express';
 import { getPoolBC, sql } from '../config/dbBeClever.js';
 import { getPool } from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
+import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 function parsePeriodo(p) {
   if (!p) return null;
@@ -116,7 +120,7 @@ router.get('/consumo', async (req, res) => {
   try {
     const rows = await fetchConsumoBC(pm);
     const inactivas = await getInactivasSet();
-    res.json(rows.filter(r => !inactivas.has(r.sucursal_id)));
+    res.json(filtrarPorSucursal(rows.filter(r => !inactivas.has(r.sucursal_id)), req.sucursalesPermitidas));
     cacheConsumo(req.query.periodo, rows)
       .catch(e => console.error('[OBJ cache consumo]', e.message));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }
@@ -129,7 +133,7 @@ router.get('/efectivo', async (req, res) => {
   try {
     const rows = await fetchEfectivoBC(pm);
     const inactivas = await getInactivasSet();
-    res.json(rows.filter(r => !inactivas.has(r.sucursal_id)));
+    res.json(filtrarPorSucursal(rows.filter(r => !inactivas.has(r.sucursal_id)), req.sucursalesPermitidas));
     cacheEfectivo(req.query.periodo, rows)
       .catch(e => console.error('[OBJ cache efectivo]', e.message));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error de servidor' }); }

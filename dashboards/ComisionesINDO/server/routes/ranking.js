@@ -2,9 +2,13 @@ import { Router } from 'express';
 import { getPool, sql } from '../config/db.js';
 import { getPoolBC } from '../config/dbBeClever.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
+import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(attachScope);
+router.use(blockWriteIfSupervisor);
 
 // ── Migración: agrega columnas si no existen ──────────────────────────────────
 async function ensureColumns(pool) {
@@ -52,7 +56,7 @@ router.get('/', async (req, res) => {
       ${where} AND ISNULL(s.activa, 1) = 1
       ORDER BY r.grupo, r.posicion, r.sucursal_id
     `);
-    res.json(r.recordset);
+    res.json(filtrarPorSucursal(r.recordset, req.sucursalesPermitidas));
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 

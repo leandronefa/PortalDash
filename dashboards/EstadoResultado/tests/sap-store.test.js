@@ -142,3 +142,69 @@ test('manifest.json que parsea pero no es un objeto plano (array, numero, string
     assert.throws(() => store.readManifest(), undefined, `no lanzo para: ${valorInvalido}`)
   }
 })
+
+// CRITICAL 1 de la revision final (2026-07-28-estado-resultado-refresh-red-y-descarga):
+// escenario del revisor. El manifest marca un periodo 'manual' pero el bloque
+// correspondiente no esta en el vigente (vigente truncado/borrado/tocado desde
+// afuera, o manifest adelantado al vigente por una interrupcion entre las dos
+// escrituras). Antes del fix, esto hacia que el merge desde 'sap' descartara el
+// periodo entrante (lo reportaba como "preservado") y el mes desaparecia para
+// siempre. Ahora: sin bloque en el vigente no hay nada que preservar, se acepta
+// el dato de la red y el periodo queda presente.
+test('manifest marca un periodo manual sin bloque correspondiente en el vigente: el merge desde sap lo trae igual', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' })
+  store.merge({ empresaKey: 'tesi', texto: txt(FEB_AJUSTADO), origen: 'manual' })
+
+  // Simula el vigente truncado/tocado desde afuera: se pierde el bloque de
+  // febrero (el 'manual'), el manifest queda intacto y sigue diciendo 'manual'.
+  fs.writeFileSync(store.vigentePath('tesi'), txt(ENE_SAP))
+  assert.equal(store.readManifest().tesi['2026-02'].origen, 'manual', 'precondicion: el manifest sigue marcando manual')
+
+  const r = store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP, MAR_SAP), origen: 'sap' })
+
+  assert.deepEqual(r.preservados, [], 'no hay nada que preservar: el bloque manual no existia')
+  assert.deepEqual(r.traidos, ['2026-01', '2026-02', '2026-03'])
+  assert.equal(store.readVigente('tesi'), txt(ENE_SAP, FEB_SAP, MAR_SAP), 'febrero debe volver con el dato crudo de sap, no desaparecer')
+  assert.deepEqual(r.periodos, ['2026-01', '2026-02', '2026-03'])
+})
+
+// Idem pero con el vigente completamente borrado (no solo truncado): mismo
+// resultado, ningun periodo puede desaparecer por esto.
+test('manifest marca periodos manual y el vigente entero desaparecio: el merge desde sap reconstruye todo', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' })
+  store.merge({ empresaKey: 'tesi', texto: txt(FEB_AJUSTADO), origen: 'manual' })
+
+  fs.rmSync(store.vigentePath('tesi'))
+  assert.equal(store.readVigente('tesi'), null, 'precondicion: el vigente desaparecio')
+
+  const r = store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' })
+
+  assert.deepEqual(r.preservados, [])
+  assert.deepEqual(r.traidos, ['2026-01', '2026-02'])
+  assert.equal(store.readVigente('tesi'), txt(ENE_SAP, FEB_SAP))
+})
+
+// El fix atomico no debe cambiar el contenido final ni cuando el bloque
+// manual SI existe: sigue preservandose (no es una regresion de la regla
+// central del negocio, solo de su verificacion contra el vigente).
+test('con el bloque manual presente en el vigente, sigue preservandose igual que antes', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' })
+  store.merge({ empresaKey: 'tesi', texto: txt(FEB_AJUSTADO), origen: 'manual' })
+
+  const r = store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP, MAR_SAP), origen: 'sap' })
+
+  assert.deepEqual(r.preservados, ['2026-02'])
+  assert.equal(store.readVigente('tesi'), txt(ENE_SAP, FEB_AJUSTADO, MAR_SAP))
+})
+
+// El vigente se escribe con temporal + rename (igual que el manifest): no debe
+// quedar ningun archivo .tmp huerfano en el store despues de un merge exitoso.
+test('el vigente se escribe atomicamente: no quedan temporales huerfanos tras el merge', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' })
+  const restantes = fs.readdirSync(store.dir).filter(f => f.endsWith('.tmp'))
+  assert.deepEqual(restantes, [])
+})

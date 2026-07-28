@@ -18,7 +18,6 @@ const SAP_SOURCE_PATH = process.env.SAP_SOURCE_PATH || path.join(__dirname, 'sap
 // Ruta de red READ-ONLY donde SAP deja los archivos una vez por mes.
 const SAP_NETWORK_PATH = process.env.SAP_NETWORK_PATH || '\\\\10.0.0.115\\Cegid'
 const PROCESSED_SUBDIR = 'SAPResultProcesado'
-const CACHE_FILE = path.join(__dirname, 'data-cache', 'latest.json')
 const CHECK_HOUR = parseInt(process.env.CHECK_HOUR || '1')
 const store = createStore({ dir: path.join(__dirname, 'data-store') })
 
@@ -64,36 +63,6 @@ function extractPeriodo(records) {
   return p || null
 }
 
-function loadCache() {
-  try {
-    if (fs.existsSync(CACHE_FILE)) {
-      const data = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'))
-      state.pueblo = data.pueblo
-      state.tesi = data.tesi
-      state.periodo = data.periodo ?? null
-      state.lastUpdate = data.lastUpdate
-      console.log('[EstadoResultado] Cache cargado:', new Date(data.lastUpdate).toLocaleString('es-AR'))
-    }
-  } catch (e) {
-    console.error('[EstadoResultado] Error leyendo cache:', e.message)
-  }
-}
-
-function saveCache() {
-  try {
-    const dir = path.dirname(CACHE_FILE)
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(CACHE_FILE, JSON.stringify({
-      pueblo: state.pueblo,
-      tesi: state.tesi,
-      periodo: state.periodo,
-      lastUpdate: state.lastUpdate
-    }))
-  } catch (e) {
-    console.error('[EstadoResultado] Error guardando cache:', e.message)
-  }
-}
-
 // Archivado del historico (reemplaza moveToProcessed, que movia archivos desde
 // la red; ahora la red es read-only y nunca se le escribe ni se le borra nada).
 //
@@ -122,10 +91,10 @@ function archivarTexto(texto, filename, origen) {
 }
 
 // Reparseo del estado en memoria desde el vigente (unica fuente de verdad).
-// A proposito NO toca lastUpdate/saveCache: eso queda a cargo de
-// sellarActualizacion(), que los llamadores invocan solo cuando algo realmente
-// entro nuevo (ver I5: sellar sin que haya entrado nada le mentiria al usuario
-// "actualizado hace un minuto" sobre datos de hace un mes).
+// A proposito NO toca lastUpdate: eso queda a cargo de sellarActualizacion(),
+// que los llamadores invocan solo cuando algo realmente entro nuevo (ver I5:
+// sellar sin que haya entrado nada le mentiria al usuario "actualizado hace
+// un minuto" sobre datos de hace un mes).
 function recargarEstadoDesdeStore() {
   for (const key of Object.keys(EMPRESAS)) {
     const texto = store.readVigente(key)
@@ -144,7 +113,6 @@ function recargarEstadoDesdeStore() {
 
 function sellarActualizacion() {
   state.lastUpdate = new Date().toISOString()
-  saveCache()
 }
 
 // Migracion al primer arranque: si data-store/ esta vacio, siembra con el
@@ -159,6 +127,18 @@ function migrarSiHaceFalta() {
   let migroAlgo = false
   for (const [key, filename] of Object.entries(EMPRESAS)) {
     if (store.readVigente(key)) continue
+    // I5: perder data-store/ entero (sin manifest ni vigentes) es indistinguible
+    // de una primera corrida legitima, asi que se siembra desde SAP sin pedir
+    // permiso. Pero si hay uploads manuales archivados para esta empresa, esos
+    // ajustes contables estan por perderse en silencio (se resiembra con datos
+    // crudos de SAP). No los resembramos automaticamente -que ajuste corresponde
+    // a que mes es criterio humano-, pero avisamos bien fuerte para que alguien
+    // los revise a mano en sap-inbox\SAPResultProcesado\.
+    const sufijoManual = `_manual_${filename}`
+    const archivadosManual = fs.readdirSync(destDir).filter(f => f.endsWith(sufijoManual))
+    if (archivadosManual.length > 0) {
+      console.error(`[EstadoResultado] ######## ADVERTENCIA: data-store/ vacio para ${key.toUpperCase()} pero hay ${archivadosManual.length} ajuste(s) manual(es) archivado(s) en ${destDir} (${archivadosManual.join(', ')}). Se va a resembrar desde SAP con datos crudos: revisar si esos ajustes hay que reaplicarlos a mano. ########`)
+    }
     const sufijo = `_sap_${filename}`
     const candidatos = fs.readdirSync(destDir).filter(f => f.endsWith(sufijo)).sort()
     const ultimo = candidatos[candidatos.length - 1]
@@ -250,7 +230,7 @@ async function checkAndLoad() {
 // el costo para el usuario es minimo, un reintento a los pocos segundos.
 // storeBusy es un mutex neutro (no es "isRefreshing"): un upload manual no es
 // un refresh de red, y /api/status no debe mostrarlo como tal (I minor).
-async function procesarUploads(nombres) {
+async function procesarUploads(files) {
   if (state.storeBusy) {
     return {
       rejected: true,
@@ -262,14 +242,18 @@ async function procesarUploads(nombres) {
   try {
     const empresas = {}
     for (const [key, filename] of Object.entries(EMPRESAS)) {
-      if (!nombres.includes(filename)) continue
-      const p = path.join(SAP_SOURCE_PATH, filename)
-      if (!fs.existsSync(p)) continue
-      const texto = fs.readFileSync(p, 'utf8')
+      // Se busca por originalname (el contrato de nombre con el usuario), pero
+      // se lee y se borra por la ruta real que multer reporto (f.path), nunca
+      // reconstruida por nombre: con el nombre en disco unico (ver arriba en
+      // la config de multer) dos uploads concurrentes ya no pueden leerse ni
+      // borrarse el archivo entre si (IMPORTANT 3 de la revision final).
+      const f = files.find(f => f.originalname === filename)
+      if (!f || !fs.existsSync(f.path)) continue
+      const texto = fs.readFileSync(f.path, 'utf8')
       try {
         const r = store.merge({ empresaKey: key, texto, origen: 'manual' })
         archivarTexto(texto, filename, 'manual')
-        fs.unlinkSync(p)   // el inbox es zona de paso; el vigente ya vive en data-store
+        fs.unlinkSync(f.path)   // el inbox es zona de paso; el vigente ya vive en data-store
         empresas[key] = { ok: true, origen: 'manual', traidos: r.traidos, preservados: [] }
         console.log(`[EstadoResultado] ${key.toUpperCase()} manual — periodos marcados: [${r.traidos}]`)
       } catch (e) {
@@ -308,7 +292,14 @@ const upload = multer({
       if (!fs.existsSync(SAP_SOURCE_PATH)) fs.mkdirSync(SAP_SOURCE_PATH, { recursive: true })
       cb(null, SAP_SOURCE_PATH)
     },
-    filename: (req, file, cb) => cb(null, file.originalname)
+    // Nombre UNICO en disco (no file.originalname): con dos uploads
+    // concurrentes, escribir con nombre fijo hace que el segundo pise el
+    // archivo del primero antes de que ninguno de los dos llegue al mutex de
+    // procesarUploads (ver IMPORTANT 3 de la revision final). El
+    // originalname sigue siendo el contrato de nombre con el usuario
+    // (fileFilter lo valida abajo) y procesarUploads lo usa solo para saber a
+    // que empresa corresponde cada archivo, no para encontrarlo en disco.
+    filename: (req, file, cb) => cb(null, `${file.originalname}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`)
   }),
   fileFilter: (req, file, cb) => {
     const nombresValidos = Object.values(EMPRESAS)
@@ -396,13 +387,13 @@ app.post('/api/upload', (req, res) => {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ ok: false, message: 'No se recibieron archivos' })
     }
-    const nombres = req.files.map(f => f.originalname)
-    const resultado = await procesarUploads(nombres)
+    const resultado = await procesarUploads(req.files)
     if (resultado.rejected) {
       limpiarArchivosSubidos(req.files)
       return res.status(409).json({ ok: false, message: resultado.message })
     }
     const { empresas } = resultado
+    const nombres = req.files.map(f => f.originalname)
     const periodos = [...new Set(Object.values(empresas).flatMap(e => e.traidos ?? []))].sort()
     res.json({ ok: true, message: `Cargado con ajustes manuales: ${nombres.join(', ')} (${periodos.join(', ')})`, empresas })
   })
@@ -412,7 +403,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 
-loadCache()
 const migro = migrarSiHaceFalta()
 recargarEstadoDesdeStore()
 if (migro) sellarActualizacion()

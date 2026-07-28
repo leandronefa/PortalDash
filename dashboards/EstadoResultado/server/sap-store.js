@@ -84,7 +84,19 @@ export function createStore({ dir }) {
     const cargadoEn = new Date().toISOString()
 
     for (const [periodo, lines] of entrantes) {
-      const esManual = meta[periodo]?.origen === 'manual'
+      // 'manual' solo es preservable si el bloque realmente existe en el
+      // vigente leido. Si el manifest dice 'manual' pero el bloque no esta
+      // (vigente truncado/borrado/tocado desde afuera, manifest.json
+      // adelantado al vigente), no hay nada que preservar: es un estado
+      // inconsistente, no un ajuste. Preferimos aceptar el dato crudo de la
+      // red antes que dejar el mes afuera para siempre (ver CRITICAL 1 de la
+      // revision final): un mes con datos de SAP es mejor que un mes que no
+      // existe.
+      const marcadoManual = meta[periodo]?.origen === 'manual'
+      const esManual = marcadoManual && blocks.has(periodo)
+      if (marcadoManual && !blocks.has(periodo)) {
+        console.error(`[sap-store] ######## manifest/vigente desincronizados para ${empresaKey}/${periodo}: marcado 'manual' pero sin bloque en el vigente. Se acepta el dato de la red para no perder el mes. ########`)
+      }
       if (origen === 'sap' && esManual) {
         preservados.push(periodo)
         continue
@@ -95,15 +107,32 @@ export function createStore({ dir }) {
     }
 
     ensureDir()
-    // Orden deliberado: manifest ANTES que el archivo vigente. Si el proceso
-    // se corta entre las dos escrituras, esto deja el peor caso del lado
-    // seguro: el periodo ya quedo marcado 'manual' pero el vigente en disco
-    // todavia tiene el contenido viejo (nada perdido de forma irreversible;
-    // el usuario nota que su ajuste no se ve y lo vuelve a subir). El orden
-    // inverso dejaria el vigente con el ajuste pero el manifest todavia en
-    // 'sap', y el siguiente refresh de red lo pisaria sin aviso.
+    // Orden: manifest ANTES que el archivo vigente. Si el proceso se corta
+    // entre las dos escrituras, el peor caso es que el periodo quede marcado
+    // 'manual' en el manifest mientras el vigente en disco todavia tiene el
+    // contenido viejo (verificado con el vigente en read-only: EPERM en el
+    // segundo write, manifest ya commiteado). Esto NO es "nada perdido de
+    // forma irreversible" como decia antes este comentario: el mes queda
+    // blindado como ajustado sin tener ningun ajuste, y un refresh de red
+    // posterior no lo va a corregir (ver IMPORTANT 2 de la revision final).
+    // Es preferible al orden inverso, que dejaria el vigente con el ajuste
+    // pero el manifest todavia en 'sap' — ahi si el siguiente refresh de red
+    // lo pisaria sin aviso, perdiendo el ajuste en silencio. El fix real de
+    // este riesgo es la escritura atomica de abajo, que reduce la ventana de
+    // interrupcion a un rename (practicamente instantaneo) en vez de a todo
+    // el tiempo que tarda writeFileSync.
     saveManifest(manifest)
-    fs.writeFileSync(vigentePath(empresaKey), serializeBlocks(blocks), 'utf8')
+    // Escritura atomica del vigente, igual que el manifest: temporal + rename.
+    // Sin esto, un proceso interrumpido a mitad de writeFileSync (reinicio,
+    // disco lleno, kill) deja el .txt truncado; con el manifest ya sano, un
+    // periodo 'manual' que no llega a estar en el vigente se reportaria como
+    // preservado y desaparecería para siempre. El rename tambien cierra la
+    // descarga concurrente (IMPORTANT 4): un lector ve el archivo viejo o el
+    // nuevo completo, nunca uno a medias.
+    const p = vigentePath(empresaKey)
+    const tmp = path.join(dir, `${EMPRESAS[empresaKey]}.${process.pid}.${Date.now()}.tmp`)
+    fs.writeFileSync(tmp, serializeBlocks(blocks), 'utf8')
+    fs.renameSync(tmp, p)
 
     return {
       traidos: traidos.sort(),

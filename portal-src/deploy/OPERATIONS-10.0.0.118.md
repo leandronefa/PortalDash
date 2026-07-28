@@ -112,30 +112,33 @@ cd <ruta-del-agente>
 
 ## EstadoResultado — flujo de datos (importante)
 
-El servicio `dashestadoresultado.exe` **NO puede acceder a rutas UNC** porque corre como SYSTEM (sin credenciales de red). El archivo `.env` usa un **inbox local**:
+El botón **Actualizar** del tablero (y el chequeo diario de las 01:00) lee `\\10.0.0.115\Cegid`
+**directo de la red** (`SAP_NETWORK_PATH`, read-only); ya no hace falta copiar archivos al
+inbox a mano. Verificado el 28/07/2026: el servicio, con su cuenta normal, lee la UNC sin
+problemas (log: `TESI desde red — traidos: [...] preservados: []`, ídem PUEBLO). Si alguna vez
+aparece `EACCES`/`EPERM` en `daemon\dashestadoresultado.out.log`, es permisos del share — hay
+que darle al servicio una cuenta con acceso a `Cegid`. Mientras tanto "Subir files" sigue
+funcionando igual (no depende de la red).
 
-```
-SAP_SOURCE_PATH=C:\apps\dashboards\EstadoResultado\sap-inbox
-```
+El estado vigente vive en `data-store\` (`SAP_RESULT.txt`, `SAP_PU_RESULT.txt`,
+`manifest.json`), que marca cada período (mes) de cada empresa como origen `sap` o `manual`:
+una lectura de red nunca pisa un período `manual`, solo otro upload lo reemplaza. No hay
+"restaurar desde SAP" — los originales quedan archivados en `sap-inbox\SAPResultProcesado\`
+(nombre `<timestamp>_<origen>_<archivo>.txt`).
 
-### Flujo mensual para cargar un nuevo período
+Nuevo endpoint `GET /api/download?empresa=TESI|PUEBLO` sirve el archivo vigente byte a byte
+(mismo nombre original), para el circuito **Descargar files → ajustar a mano → Subir files**.
+Verificado end-to-end el 28/07/2026 con TESI: hash de la descarga idéntico al de la red, edición
+de un importe de 2026-06, upload, los 6 períodos pasaron a `manual`, y un refresh posterior no
+los tocó (`traidos: []`, `preservados` los 6 meses) mientras PUEBLO sí se actualizó.
 
-```powershell
-# 1) Copiar los archivos desde el servidor Cegid al inbox local (ejecutar como Administrador)
-$inbox = "C:\apps\dashboards\EstadoResultado\sap-inbox"
-Copy-Item "\\10.0.0.115\Cegid\SAP_PU_RESULT.txt" -Destination "$inbox\SAP_PU_RESULT.txt" -Force
-Copy-Item "\\10.0.0.115\Cegid\SAP_RESULT.txt"    -Destination "$inbox\SAP_RESULT.txt"    -Force
+Variables nuevas en el `.env`: `SAP_NETWORK_PATH` (fuente real) y `SAP_SOURCE_PATH` (inbox local
+de uploads manuales — pese al nombre, ya no es "la fuente").
 
-# 2) Disparar el procesamiento (el servicio lee, parsea y archiva automáticamente)
-Invoke-RestMethod -Method POST "http://localhost:3008/api/refresh"
-
-# 3) Verificar
-Invoke-RestMethod "http://localhost:3008/api/status"
-```
-
-El servicio mueve los archivos procesados a `sap-inbox\SAPResultProcesado\` con timestamp.
-El chequeo automático diario (01:00 hs) también procesa si hay archivos en el inbox.
-Los archivos originales en `\\10.0.0.115\Cegid\` no se tocan (copiar, no mover desde UNC).
+Tests: `node --test "tests/*.test.js"` desde `C:\apps\dashboards\EstadoResultado` (28 tests, el
+glob va entre comillas). Pendiente del usuario: verificación visual en navegador (descargas
+simultáneas, punto ámbar de mes ajustado, consola sin errores) — no se pudo hacer en este
+entorno por falta de la extensión de Chrome.
 
 ---
 

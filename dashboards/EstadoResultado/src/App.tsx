@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, Fragment, useRef } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightNav, Moon, Sun, Upload } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightNav, Moon, Sun, Upload, Download } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
@@ -394,6 +394,10 @@ function MatrixView({ matrix, periodoStr }: { matrix: MatrixPL; periodoStr: stri
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
+// Origen de cada periodo en el manifest: 'sap' (vino de la red) o 'manual' (ajustado a mano).
+type OrigenPeriodo = { origen: 'sap' | 'manual'; cargadoEn: string }
+type Manifest = { tesi: Record<string, OrigenPeriodo>; pueblo: Record<string, OrigenPeriodo> }
+
 export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
   const [empresa, setEmpresa] = useState<Empresa>('TESI')
@@ -409,6 +413,7 @@ export default function App() {
   const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedPeriodo, setSelectedPeriodo] = useState<string | null>(null)
+  const [manifest, setManifest] = useState<Manifest | null>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -418,7 +423,15 @@ export default function App() {
   useEffect(() => {
     fetch('/api/status')
       .then(r => r.json())
-      .then(d => setSourcePath(d.sourcePath))
+      .then(d => {
+        setSourcePath(d.sourcePath)
+        setManifest(d.manifest ?? null)
+        // El manifest puede venir null si el manifest.json del servidor esta corrupto/inconsistente.
+        // En ese caso el backend manda el motivo en manifestError: avisamos porque Actualizar no va a poder traer datos.
+        if (!d.manifest && d.manifestError) {
+          setUploadMsg({ ok: false, text: d.manifestError })
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -477,15 +490,38 @@ export default function App() {
   const chartData = useMemo(() => pl ? topExpenses(pl, 15) : [], [pl])
   const matrix = useMemo<MatrixPL | null>(() => filteredRecords ? buildMatrixPL(filteredRecords) : null, [filteredRecords])
 
+  // Info de ajuste manual del mes visible, para la empresa actualmente seleccionada.
+  const ajusteDelPeriodo = useMemo<OrigenPeriodo | null>(() => {
+    if (!manifest || !selectedPeriodo) return null
+    const m = empresa === 'PUEBLO' ? manifest.pueblo : manifest.tesi
+    const info = m?.[selectedPeriodo]
+    return info?.origen === 'manual' ? info : null
+  }, [manifest, empresa, selectedPeriodo])
+
   async function handleRefresh() {
     if (refreshing) return
     setRefreshing(true)
+    setUploadMsg(null)
     try {
-      await fetch('/api/refresh', { method: 'POST' })
-      await new Promise(r => setTimeout(r, 1500))
+      const r = await (await fetch('/api/refresh', { method: 'POST' })).json()
+      const partes: string[] = []
+      for (const [key, label] of [['tesi', 'TESI'], ['pueblo', 'PUEBLO']] as const) {
+        const e = r.empresas?.[key]
+        if (!e) continue
+        if (!e.ok) { partes.push(`${label}: ${e.error}`); continue }
+        const traidos = e.traidos?.length ? `${e.traidos.length} mes(es) de SAP` : 'sin cambios'
+        const preservados = e.preservados?.length ? `, preservados con ajustes: ${e.preservados.join(', ')}` : ''
+        partes.push(`${label}: ${traidos}${preservados}`)
+      }
+      setUploadMsg({ ok: !!r.ok, text: partes.join(' · ') || 'No se pudo actualizar' })
       await fetchData(empresa)
+      const st = await (await fetch('/api/status')).json()
+      setManifest(st.manifest ?? null)
+    } catch {
+      setUploadMsg({ ok: false, text: 'Error al actualizar desde la red' })
     } finally {
       setRefreshing(false)
+      setTimeout(() => setUploadMsg(null), 8000)
     }
   }
 
@@ -499,14 +535,34 @@ export default function App() {
       for (const f of files) form.append('files', f)
       const res = await fetch('/api/upload', { method: 'POST', body: form })
       const json = await res.json()
-      setUploadMsg({ ok: json.ok, text: json.message })
-      if (json.ok) await fetchData(empresa)
+      // El backend puede responder 409 si hay un refresh de red en curso: json.message ya trae
+      // el texto para el usuario (pedirle que reintente), no lo tapamos con uno genérico.
+      setUploadMsg({ ok: !!json.ok, text: json.message ?? 'Error al subir los archivos' })
+      if (json.ok) {
+        await fetchData(empresa)
+        const st = await (await fetch('/api/status')).json()
+        setManifest(st.manifest ?? null)
+      }
     } catch {
       setUploadMsg({ ok: false, text: 'Error al subir los archivos' })
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
       setTimeout(() => setUploadMsg(null), 5000)
+    }
+  }
+
+  function handleDownload() {
+    // Dos descargas separadas, con los nombres originales de SAP intactos.
+    for (const [i, emp] of (['TESI', 'PUEBLO'] as const).entries()) {
+      setTimeout(() => {
+        const a = document.createElement('a')
+        a.href = `/api/download?empresa=${emp}`
+        a.download = ''
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      }, i * 400) // separadas, si no el navegador descarta la segunda
     }
   }
 
@@ -579,6 +635,12 @@ export default function App() {
                     <option key={p} value={p} className="capitalize bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200">{formatPeriodoOption(p)}</option>
                   ))}
                 </select>
+                {ajusteDelPeriodo && (
+                  <span
+                    className="w-2 h-2 mr-1 rounded-full bg-amber-500 shrink-0"
+                    title={`Mes con ajustes manuales, cargado el ${new Date(ajusteDelPeriodo.cargadoEn).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}. Actualizar no lo va a sobrescribir.`}
+                  />
+                )}
                 <button
                   onClick={() => {
                     const i = periodos.indexOf(selectedPeriodo ?? '')
@@ -611,6 +673,14 @@ export default function App() {
               className="hidden"
               onChange={handleUpload}
             />
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              title="Descargar SAP_RESULT.txt y SAP_PU_RESULT.txt tal como están cargados, para ajustarlos y volver a subirlos"
+            >
+              <Download className="w-4 h-4" />
+              Descargar files
+            </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}

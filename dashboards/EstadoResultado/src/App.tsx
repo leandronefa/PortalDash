@@ -414,6 +414,9 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedPeriodo, setSelectedPeriodo] = useState<string | null>(null)
   const [manifest, setManifest] = useState<Manifest | null>(null)
+  const [downloading, setDownloading] = useState(false)
+  // Id del setTimeout pendiente que limpia uploadMsg, para poder cancelarlo si llega un mensaje nuevo antes de tiempo.
+  const uploadMsgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -498,9 +501,18 @@ export default function App() {
     return info?.origen === 'manual' ? info : null
   }, [manifest, empresa, selectedPeriodo])
 
+  // Programa el borrado automatico del banner, cancelando cualquier timer anterior
+  // pendiente: si el usuario encadena Actualizar -> Subir files, el timer del primer
+  // mensaje no debe pisar al mensaje del segundo antes de tiempo.
+  function scheduleClearUploadMsg(ms: number) {
+    if (uploadMsgTimerRef.current) clearTimeout(uploadMsgTimerRef.current)
+    uploadMsgTimerRef.current = setTimeout(() => setUploadMsg(null), ms)
+  }
+
   async function handleRefresh() {
     if (refreshing) return
     setRefreshing(true)
+    if (uploadMsgTimerRef.current) clearTimeout(uploadMsgTimerRef.current)
     setUploadMsg(null)
     try {
       const r = await (await fetch('/api/refresh', { method: 'POST' })).json()
@@ -508,7 +520,7 @@ export default function App() {
       for (const [key, label] of [['tesi', 'TESI'], ['pueblo', 'PUEBLO']] as const) {
         const e = r.empresas?.[key]
         if (!e) continue
-        if (!e.ok) { partes.push(`${label}: ${e.error}`); continue }
+        if (!e.ok) { partes.push(`${label}: ${e.error ?? 'no se pudo actualizar'}`); continue }
         const traidos = e.traidos?.length ? `${e.traidos.length} mes(es) de SAP` : 'sin cambios'
         const preservados = e.preservados?.length ? `, preservados con ajustes: ${e.preservados.join(', ')}` : ''
         partes.push(`${label}: ${traidos}${preservados}`)
@@ -521,7 +533,7 @@ export default function App() {
       setUploadMsg({ ok: false, text: 'Error al actualizar desde la red' })
     } finally {
       setRefreshing(false)
-      setTimeout(() => setUploadMsg(null), 8000)
+      scheduleClearUploadMsg(8000)
     }
   }
 
@@ -529,6 +541,7 @@ export default function App() {
     const files = e.target.files
     if (!files || files.length === 0) return
     setUploading(true)
+    if (uploadMsgTimerRef.current) clearTimeout(uploadMsgTimerRef.current)
     setUploadMsg(null)
     try {
       const form = new FormData()
@@ -548,21 +561,64 @@ export default function App() {
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
-      setTimeout(() => setUploadMsg(null), 5000)
+      scheduleClearUploadMsg(5000)
     }
   }
 
-  function handleDownload() {
-    // Dos descargas separadas, con los nombres originales de SAP intactos.
-    for (const [i, emp] of (['TESI', 'PUEBLO'] as const).entries()) {
-      setTimeout(() => {
-        const a = document.createElement('a')
-        a.href = `/api/download?empresa=${emp}`
-        a.download = ''
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-      }, i * 400) // separadas, si no el navegador descarta la segunda
+  async function handleDownload() {
+    if (downloading) return
+    setDownloading(true)
+    if (uploadMsgTimerRef.current) clearTimeout(uploadMsgTimerRef.current)
+    setUploadMsg(null)
+    // Nombres reales de SAP: el usuario los edita a mano y los vuelve a subir, y el
+    // backend valida el upload por nombre de archivo — no se puede dejar vacio.
+    const targets: Array<{ empresa: 'TESI' | 'PUEBLO'; filename: string }> = [
+      { empresa: 'TESI', filename: 'SAP_RESULT.txt' },
+      { empresa: 'PUEBLO', filename: 'SAP_PU_RESULT.txt' },
+    ]
+    const fallas: string[] = []
+    let bajados = 0
+    try {
+      // Nota: aun bajando desde blobs (no <a href> directo), Chrome puede pedirle
+      // permiso al usuario la primera vez que un sitio dispara varias descargas
+      // seguidas ("Allow multiple downloads"). Es esperado, no un bug: el usuario
+      // lo concede una sola vez y despues las dos descargas salen sin aviso.
+      for (const { empresa: emp, filename } of targets) {
+        try {
+          const res = await fetch(`/api/download?empresa=${emp}`)
+          if (!res.ok) {
+            let msg = `no se encontraron datos cargados (HTTP ${res.status})`
+            try {
+              const json = await res.json()
+              if (json?.message) msg = json.message
+            } catch { /* respuesta sin JSON: nos quedamos con el mensaje generico */ }
+            fallas.push(`${emp}: ${msg}`)
+            continue
+          }
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = filename
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          URL.revokeObjectURL(url)
+          bajados++
+        } catch {
+          fallas.push(`${emp}: error al descargar`)
+        }
+      }
+      if (fallas.length === 0) {
+        setUploadMsg({ ok: true, text: 'Se descargaron los 2 archivos' })
+      } else if (bajados > 0) {
+        setUploadMsg({ ok: false, text: `Se descargo 1 archivo. Fallo: ${fallas.join(' · ')}` })
+      } else {
+        setUploadMsg({ ok: false, text: `No se pudo descargar ningun archivo. ${fallas.join(' · ')}` })
+      }
+    } finally {
+      setDownloading(false)
+      scheduleClearUploadMsg(8000)
     }
   }
 
@@ -675,10 +731,11 @@ export default function App() {
             />
             <button
               onClick={handleDownload}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              disabled={downloading}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
               title="Descargar SAP_RESULT.txt y SAP_PU_RESULT.txt tal como están cargados, para ajustarlos y volver a subirlos"
             >
-              <Download className="w-4 h-4" />
+              <Download className={`w-4 h-4 ${downloading ? 'animate-pulse' : ''}`} />
               Descargar files
             </button>
             <button

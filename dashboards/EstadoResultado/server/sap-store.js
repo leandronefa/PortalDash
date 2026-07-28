@@ -29,19 +29,28 @@ export function createStore({ dir }) {
 
   function readManifest() {
     const p = path.join(dir, MANIFEST)
-    const vacio = { tesi: {}, pueblo: {} }
-    if (!fs.existsSync(p)) return vacio
+    // Que no exista es el arranque legitimo (primera corrida): manifest vacio.
+    if (!fs.existsSync(p)) return { tesi: {}, pueblo: {} }
+    // Que exista y no parsee es otra cosa: un manifest vacio ahi seria
+    // indistinguible de "primera corrida" y la siguiente lectura de red
+    // pisaria en silencio todos los periodos manual. Mejor fallar ruidoso.
+    let raw
     try {
-      const m = JSON.parse(fs.readFileSync(p, 'utf8'))
-      return { tesi: m.tesi ?? {}, pueblo: m.pueblo ?? {} }
-    } catch {
-      return vacio
+      raw = JSON.parse(fs.readFileSync(p, 'utf8'))
+    } catch (err) {
+      throw new Error(`manifest.json corrupto en ${p}: ${err.message}`)
     }
+    return { tesi: raw.tesi ?? {}, pueblo: raw.pueblo ?? {} }
   }
 
   function saveManifest(m) {
     ensureDir()
-    fs.writeFileSync(path.join(dir, MANIFEST), JSON.stringify(m, null, 2))
+    // Escritura atomica: temporal + rename, para que una interrupcion a mitad
+    // de la escritura nunca deje un manifest.json truncado/corrupto en disco.
+    const p = path.join(dir, MANIFEST)
+    const tmp = path.join(dir, `${MANIFEST}.${process.pid}.${Date.now()}.tmp`)
+    fs.writeFileSync(tmp, JSON.stringify(m, null, 2))
+    fs.renameSync(tmp, p)
   }
 
   function merge({ empresaKey, texto, origen }) {
@@ -70,8 +79,15 @@ export function createStore({ dir }) {
     }
 
     ensureDir()
-    fs.writeFileSync(vigentePath(empresaKey), serializeBlocks(blocks), 'utf8')
+    // Orden deliberado: manifest ANTES que el archivo vigente. Si el proceso
+    // se corta entre las dos escrituras, esto deja el peor caso del lado
+    // seguro: el periodo ya quedo marcado 'manual' pero el vigente en disco
+    // todavia tiene el contenido viejo (nada perdido de forma irreversible;
+    // el usuario nota que su ajuste no se ve y lo vuelve a subir). El orden
+    // inverso dejaria el vigente con el ajuste pero el manifest todavia en
+    // 'sap', y el siguiente refresh de red lo pisaria sin aviso.
     saveManifest(manifest)
+    fs.writeFileSync(vigentePath(empresaKey), serializeBlocks(blocks), 'utf8')
 
     return {
       traidos: traidos.sort(),

@@ -92,3 +92,27 @@ test('las empresas no se contaminan entre si', () => {
   assert.equal(store.readVigente('pueblo'), txt(FEB_SAP))
   assert.equal(store.readManifest().tesi['2026-02'], undefined)
 })
+
+test('periodos devuelve todos los periodos del vigente, no solo los del entrante', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' })
+  const r = store.merge({ empresaKey: 'tesi', texto: txt(MAR_SAP), origen: 'sap' })
+  assert.deepEqual(r.periodos, ['2026-01', '2026-02', '2026-03'])
+})
+
+test('un manifest.json corrupto hace fallar readManifest en vez de devolver uno vacio', () => {
+  const store = tmpStore()
+  fs.writeFileSync(path.join(store.dir, 'manifest.json'), '{ esto no es json')
+  assert.throws(() => store.readManifest())
+})
+
+test('con un periodo manual y el manifest corrupto, un refresh de red no llega a pisar el vigente', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(FEB_AJUSTADO), origen: 'manual' })
+  const vigenteAntes = store.readVigente('tesi')
+  fs.writeFileSync(path.join(store.dir, 'manifest.json'), '{ esto no es json')
+
+  assert.throws(() => store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' }))
+
+  assert.equal(store.readVigente('tesi'), vigenteAntes)
+})

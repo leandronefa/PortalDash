@@ -21,10 +21,24 @@ test('archivo inexistente devuelve ENOENT sin lanzar', () => {
   assert.equal(r.code, 'ENOENT')
 })
 
-test('ruta de red inexistente devuelve error sin lanzar', () => {
-  const r = leerArchivoDeRed('\\\\10.255.255.255\\NoExiste', 'SAP_RESULT.txt')
+test('un error de fs se propaga con su code sin transformar', (t) => {
+  t.mock.method(fs, 'readFileSync', () => {
+    throw Object.assign(new Error('boom'), { code: 'ETIMEDOUT' })
+  })
+  const r = leerArchivoDeRed('cualquier-ruta', 'x.txt')
   assert.equal(r.ok, false)
-  assert.ok(r.code, 'deberia traer un code')
+  assert.equal(r.code, 'ETIMEDOUT')
+  assert.equal(r.message, 'boom')
+})
+
+test('un error sin code cae en UNKNOWN', (t) => {
+  t.mock.method(fs, 'readFileSync', () => {
+    throw new Error('boom')
+  })
+  const r = leerArchivoDeRed('cualquier-ruta', 'x.txt')
+  assert.equal(r.ok, false)
+  assert.equal(r.code, 'UNKNOWN')
+  assert.equal(r.message, 'boom')
 })
 
 test('descripcionDeError distingue permisos de archivo ausente', () => {

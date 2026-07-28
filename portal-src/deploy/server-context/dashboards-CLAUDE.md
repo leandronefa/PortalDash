@@ -20,7 +20,7 @@ Desde jul 2026 los usuarios **no** acceden por `http://10.0.0.118:PUERTO`: el po
 | `ComisionesINDO` | `dashcomisionesindo.exe` | 3011 | `/d/8/` | `server\index.js` | Antes 3005; se movió porque Qlik (`QvOdbcConnectorPackage`) ocupa `127.0.0.1:3005`. |
 | `ConciliacionPunitorios` | `dashconciliacionpunitorios.exe` | 3006 | `/d/9/` | ver package.json | Conciliación de punitorios. |
 | `ValidacionCobranzas` | `dashvalidacioncobranzas.exe` | 3007 | `/d/10/` | `server.cjs` | Concilia 1167 vs Libro Mayor. |
-| `EstadoResultado` | `dashestadoresultado.exe` | 3008 | `/d/11/` | `server.js` | Inbox local `sap-inbox\` (SYSTEM no accede a UNC). |
+| `EstadoResultado` | `dashestadoresultado.exe` | 3008 | `/d/11/` | `server.js` | Refresh lee `\\10.0.0.115\Cegid` (read-only); `sap-inbox\` es solo para uploads manuales. |
 | `PassReset` | `dashpassreset.exe` | 3009 | `/d/12/` | `server.cjs` | Rotación de contraseñas Windows; agentes en servidores remotos. |
 | `DashMeLi` | `dashmeli.exe` | 3010 | `/d/13/` | `server.js` | Stock dep. 198/199 + MercadoLibre; tokens OAuth se renuevan solos. |
 

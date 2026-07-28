@@ -572,7 +572,7 @@ cd C:/apps && git add dashboards/EstadoResultado/server/sap-network.js dashboard
   - `GET /api/status` → lo de antes + `manifest: { tesi: {...}, pueblo: {...} }` + `networkPath`.
   - `GET /api/data?empresa=` → sin cambios de contrato.
 
-- [ ] **Step 1: Agregar `SAP_NETWORK_PATH` al `.env` y `data-store/` al `.gitignore`**
+- [ ] **Step 1: Agregar `SAP_NETWORK_PATH` al `.env`**
 
 Agregar al final de `.env` (no tocar las claves existentes: `PORT`, `SAP_SOURCE_PATH`, `CHECK_HOUR`):
 
@@ -580,11 +580,10 @@ Agregar al final de `.env` (no tocar las claves existentes: `PORT`, `SAP_SOURCE_
 SAP_NETWORK_PATH=\\10.0.0.115\Cegid
 ```
 
-Agregar al `.gitignore` de la carpeta (si no existe, crearlo con esta línea):
-
-```
-data-store/
-```
+> El `.gitignore` **ya está resuelto** en el commit de setup de la rama:
+> `dashboards/EstadoResultado/data-store/` está ignorado junto a `sap-inbox/` en el
+> `.gitignore` raíz (sección "Datos de negocio"). No crear un `.gitignore` local ni
+> volver a tocarlo.
 
 - [ ] **Step 2: Reescribir la carga en `server.js`**
 
@@ -986,8 +985,11 @@ Con el server corriendo (`node server.js`), abrir `http://localhost:3008` y veri
 - [ ] **Step 8: Commit**
 
 ```bash
-cd C:/apps && git add dashboards/EstadoResultado/src/App.tsx dashboards/EstadoResultado/dist && git commit -m "feat(estado-resultado): boton Descargar files, badge de mes ajustado y banner de refresh"
+cd C:/apps && git add dashboards/EstadoResultado/src/App.tsx && git commit -m "feat(estado-resultado): boton Descargar files, badge de mes ajustado y banner de refresh"
 ```
+
+> **No commitear `dist/`**: está git-ignored en el repo (`dashboards/**/dist/`). Se
+> genera con `npm run build` en el servidor y el servicio lo sirve desde disco.
 
 ---
 

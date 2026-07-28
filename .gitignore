@@ -34,6 +34,7 @@ dashboards/ConciliacionPunitorios/public/data*.js
 dashboards/ConciliacionPunitorios/archivos/
 dashboards/ValidacionCobranzas/archivos/
 dashboards/EstadoResultado/sap-inbox/
+dashboards/EstadoResultado/data-store/
 dashboards/EstadoResultado/SAPResultProcesado/
 dashboards/EstadoResultado/data-cache/
 dashboards/sucursal-user-visualizer/layout-state.json
@@ -45,8 +46,9 @@ dashboards/ComisionesINDO/tmp*.cjs
 .claude/
 **/.claude/
 
-# Worktrees de trabajo aislado (superpowers)
+# Worktrees y workspaces de trabajo (superpowers)
 .worktrees/
+.superpowers/
 
 # Miscelánea
 *.user

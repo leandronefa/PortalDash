@@ -167,6 +167,22 @@ un mensaje claro hasta la primera carga real (desde la red o por upload).
 7. Si la red no responde, el tablero sigue mostrando el último estado válido y la UI
    informa el error.
 
+## Desviaciones durante la implementación (28/07/2026)
+
+Dos puntos de este spec se implementaron distinto, a propósito:
+
+- **El caché `data-cache\latest.json` como fallback (sección 7) se eliminó.** Mantenerlo permitía que
+  el estado en memoria mostrara datos que `data-store\` no tenía, y con eso `GET /api/download`
+  respondía 404 sobre un período que la pantalla sí mostraba — rompiendo justamente la propiedad
+  central del diseño: *lo que se ve es lo que se descarga*. Ahora el estado se reparsea siempre desde
+  los archivos vigentes, que son la única fuente de verdad.
+- **La copia intermedia al inbox al leer de la red se salteó.** El refresh lee el texto de la red, lo
+  mergea al store y archiva una copia en `SAPResultProcesado\`. El inbox quedó solo como destino de
+  los uploads de multer. Mismo resultado observable, un movimiento de archivo menos.
+
+Además, el **riesgo abierto de la sección 4 quedó descartado**: se verificó que el servicio, corriendo
+como SYSTEM, lee `\\10.0.0.115\Cegid` sin problemas de permisos. No hizo falta cuenta de servicio.
+
 ## Fuera de alcance
 
 - Restaurar un mes `manual` desde SAP (descartado explícitamente).

@@ -10,11 +10,13 @@ import { leerArchivoDeRed, descripcionDeError } from './server/sap-network.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const PORT = parseInt(process.env.PORT || '3008')
-const SAP_SOURCE_PATH = process.env.SAP_SOURCE_PATH || '\\\\10.0.0.115\\Cegid'
+// Inbox local: zona de paso para los uploads manuales (multer escribe aca) y
+// para el historico archivado. Default LOCAL a proposito: si faltara la env
+// var, no puede terminar apuntando a la red (que es read-only) ni un upload
+// ni el archivado — la fuente de la red vive solo en SAP_NETWORK_PATH.
+const SAP_SOURCE_PATH = process.env.SAP_SOURCE_PATH || path.join(__dirname, 'sap-inbox')
 // Ruta de red READ-ONLY donde SAP deja los archivos una vez por mes.
 const SAP_NETWORK_PATH = process.env.SAP_NETWORK_PATH || '\\\\10.0.0.115\\Cegid'
-const FILE_PUEBLO = 'SAP_PU_RESULT.txt'
-const FILE_TESI = 'SAP_RESULT.txt'
 const PROCESSED_SUBDIR = 'SAPResultProcesado'
 const CACHE_FILE = path.join(__dirname, 'data-cache', 'latest.json')
 const CHECK_HOUR = parseInt(process.env.CHECK_HOUR || '1')
@@ -26,6 +28,13 @@ const state = {
   periodo: null,   // e.g. "2026-05" extraído del 5° campo del archivo
   lastUpdate: null,
   lastCheckAt: null,
+  // Mutex real: excluye checkAndLoad y procesarUploads entre si para que no
+  // escriban el store al mismo tiempo (ver comentario en procesarUploads).
+  storeBusy: false,
+  // Indicador de UI: solo informa si HAY UN REFRESH DE RED en curso. Separado
+  // de storeBusy a proposito: un upload manual tambien toma storeBusy, pero
+  // no es un "refresh de red" y no deberia mostrarse como tal en /api/status
+  // (la tarea siguiente construye la UI sobre este campo).
   isRefreshing: false
 }
 
@@ -87,60 +96,97 @@ function saveCache() {
 
 // Archivado del historico (reemplaza moveToProcessed, que movia archivos desde
 // la red; ahora la red es read-only y nunca se le escribe ni se le borra nada).
-function archivarTexto(texto, filename) {
+//
+// El nombre lleva el origen ('sap' o 'manual') como infijo: migrarSiHaceFalta
+// solo debe resembrar desde archivos de RED, nunca desde un upload manual
+// archivado (que es indistinguible en contenido de uno de SAP, pero no en
+// origen). Sin esta marca, perder data-store/ y volver a arrancar podria
+// migrar un ajuste manual como si fuera 'sap' y checkAndLoad lo pisaria acto
+// seguido con el dato crudo de la red.
+function archivarTexto(texto, filename, origen) {
   try {
     const destDir = path.join(SAP_SOURCE_PATH, PROCESSED_SUBDIR)
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true })
+    const sufijo = `_${origen}_${filename}`
+    // Si el contenido es igual al ultimo archivado de este origen, no genera
+    // otra copia: con un refresh diario que casi nunca trae cambios, escribir
+    // siempre acumula ~365 archivos/anio por empresa sin aportar nada.
+    const candidatos = fs.readdirSync(destDir).filter(f => f.endsWith(sufijo)).sort()
+    const ultimo = candidatos[candidatos.length - 1]
+    if (ultimo && fs.readFileSync(path.join(destDir, ultimo), 'utf8') === texto) return
     const ts = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')
-    fs.writeFileSync(path.join(destDir, `${ts}_${filename}`), texto, 'utf8')
+    fs.writeFileSync(path.join(destDir, `${ts}${sufijo}`), texto, 'utf8')
   } catch (e) {
     console.error(`[EstadoResultado] Error archivando ${filename}:`, e.message)
   }
 }
 
 // Reparseo del estado en memoria desde el vigente (unica fuente de verdad).
+// A proposito NO toca lastUpdate/saveCache: eso queda a cargo de
+// sellarActualizacion(), que los llamadores invocan solo cuando algo realmente
+// entro nuevo (ver I5: sellar sin que haya entrado nada le mentiria al usuario
+// "actualizado hace un minuto" sobre datos de hace un mes).
 function recargarEstadoDesdeStore() {
   for (const key of Object.keys(EMPRESAS)) {
     const texto = store.readVigente(key)
-    if (!texto) continue
+    if (!texto) {
+      // Sin vigente en disco: el estado en memoria no puede mostrar datos que
+      // la descarga no tiene (si no, /api/data y /api/status informarian
+      // "cargado" mientras /api/download da 404 para el mismo archivo).
+      state[key] = null
+      continue
+    }
     const records = parseFile(texto)
-    if (records.length > 0) state[key] = records
+    state[key] = records.length > 0 ? records : null
   }
   state.periodo = extractPeriodo(state.tesi ?? state.pueblo ?? [])
+}
+
+function sellarActualizacion() {
   state.lastUpdate = new Date().toISOString()
   saveCache()
 }
 
 // Migracion al primer arranque: si data-store/ esta vacio, siembra con el
-// archivo mas reciente de cada empresa en SAPResultProcesado/, como origen 'sap'.
+// archivo mas reciente de cada empresa en SAPResultProcesado/, como origen
+// 'sap' — SOLO entre los archivados de red (sufijo "_sap_"), nunca entre los
+// de un upload manual (ver comentario de archivarTexto).
+// Devuelve true si migro algun periodo, para que el arranque pueda sellar
+// lastUpdate de forma consistente con I5.
 function migrarSiHaceFalta() {
   const destDir = path.join(SAP_SOURCE_PATH, PROCESSED_SUBDIR)
-  if (!fs.existsSync(destDir)) return
+  if (!fs.existsSync(destDir)) return false
+  let migroAlgo = false
   for (const [key, filename] of Object.entries(EMPRESAS)) {
     if (store.readVigente(key)) continue
-    const candidatos = fs.readdirSync(destDir).filter(f => f.endsWith(`_${filename}`)).sort()
+    const sufijo = `_sap_${filename}`
+    const candidatos = fs.readdirSync(destDir).filter(f => f.endsWith(sufijo)).sort()
     const ultimo = candidatos[candidatos.length - 1]
     if (!ultimo) continue
     const texto = fs.readFileSync(path.join(destDir, ultimo), 'utf8')
     try {
       const r = store.merge({ empresaKey: key, texto, origen: 'sap' })
+      migroAlgo = migroAlgo || r.traidos.length > 0
       console.log(`[EstadoResultado] Migrado ${key.toUpperCase()} desde ${ultimo}: ${r.traidos.length} periodos`)
     } catch (e) {
-      // manifest.json corrupto: store.merge() lee el manifest ANTES de escribir
-      // nada, asi que si tira excepcion no se perdio ni se piso nada en disco.
-      // Logueamos fuerte y NO migramos esta empresa; el arranque sigue igual
-      // (mas abajo checkAndLoad() vuelve a intentar leer el manifest y aborta
-      // el refresh de red de la misma forma si sigue corrupto).
+      // manifest.json corrupto o ausente-con-vigente: store.merge() lee el
+      // manifest ANTES de escribir nada, asi que si tira excepcion no se
+      // perdio ni se piso nada en disco. Logueamos fuerte y NO migramos esta
+      // empresa; el arranque sigue igual (mas abajo checkAndLoad() vuelve a
+      // intentar leer el manifest y aborta el refresh de red de la misma
+      // forma si sigue corrupto).
       console.error(`[EstadoResultado] ######## MANIFEST.JSON CORRUPTO — no se pudo migrar ${key.toUpperCase()}: ${e.message} ########`)
     }
   }
+  return migroAlgo
 }
 
 // Refresh desde la red (reemplaza checkAndLoad de la version anterior, que leia
 // del inbox local). El inbox local (SAP_SOURCE_PATH) queda solo como zona de
 // paso para los uploads manuales.
 async function checkAndLoad() {
-  if (state.isRefreshing) return { ok: false, empresas: {} }
+  if (state.storeBusy) return { ok: false, empresas: {} }
+  state.storeBusy = true
   state.isRefreshing = true
   state.lastCheckAt = new Date().toISOString()
   const empresas = {}
@@ -177,12 +223,17 @@ async function checkAndLoad() {
         continue
       }
       const r = store.merge({ empresaKey: key, texto: leido.texto, origen: 'sap' })
-      archivarTexto(leido.texto, filename)
+      archivarTexto(leido.texto, filename, 'sap')
       console.log(`[EstadoResultado] ${key.toUpperCase()} desde red — traidos: [${r.traidos}] preservados: [${r.preservados}]`)
       empresas[key] = { ok: true, origen: 'red', traidos: r.traidos, preservados: r.preservados }
     }
     recargarEstadoDesdeStore()
+    // I5: si el share estaba caido (o el manifest corrupto) y ninguna empresa
+    // trajo nada, no sellamos lastUpdate — que siga mostrando la fecha del
+    // ultimo dato real en vez de mentir "actualizado ahora".
+    if (Object.values(empresas).some(e => e.ok)) sellarActualizacion()
   } finally {
+    state.storeBusy = false
     state.isRefreshing = false
   }
 
@@ -191,21 +242,23 @@ async function checkAndLoad() {
 
 // Procesar uploads del inbox (los periodos que traen pasan a 'manual').
 //
-// Comparte el flag state.isRefreshing con checkAndLoad() para evitar la
+// Comparte el mutex state.storeBusy con checkAndLoad() para evitar la
 // carrera: si un usuario sube un archivo justo cuando el chequeo automatico de
 // la 1am (u otro refresh) esta escribiendo el store, las dos escrituras
 // podrian pisarse. Elegimos RECHAZAR el upload en vez de encolarlo/esperarlo:
 // es la opcion mas facil de razonar (no hay cola, no hay que decidir orden) y
 // el costo para el usuario es minimo, un reintento a los pocos segundos.
+// storeBusy es un mutex neutro (no es "isRefreshing"): un upload manual no es
+// un refresh de red, y /api/status no debe mostrarlo como tal (I minor).
 async function procesarUploads(nombres) {
-  if (state.isRefreshing) {
+  if (state.storeBusy) {
     return {
       rejected: true,
       message: 'Hay una actualizacion automatica en curso, reintente en unos segundos',
       empresas: {}
     }
   }
-  state.isRefreshing = true
+  state.storeBusy = true
   try {
     const empresas = {}
     for (const [key, filename] of Object.entries(EMPRESAS)) {
@@ -215,7 +268,7 @@ async function procesarUploads(nombres) {
       const texto = fs.readFileSync(p, 'utf8')
       try {
         const r = store.merge({ empresaKey: key, texto, origen: 'manual' })
-        archivarTexto(texto, filename)
+        archivarTexto(texto, filename, 'manual')
         fs.unlinkSync(p)   // el inbox es zona de paso; el vigente ya vive en data-store
         empresas[key] = { ok: true, origen: 'manual', traidos: r.traidos, preservados: [] }
         console.log(`[EstadoResultado] ${key.toUpperCase()} manual — periodos marcados: [${r.traidos}]`)
@@ -227,9 +280,11 @@ async function procesarUploads(nombres) {
       }
     }
     recargarEstadoDesdeStore()
+    // I5: mismo criterio que checkAndLoad — sellar solo si algo entro de verdad.
+    if (Object.values(empresas).some(e => e.ok)) sellarActualizacion()
     return { rejected: false, empresas }
   } finally {
-    state.isRefreshing = false
+    state.storeBusy = false
   }
 }
 
@@ -256,10 +311,11 @@ const upload = multer({
     filename: (req, file, cb) => cb(null, file.originalname)
   }),
   fileFilter: (req, file, cb) => {
-    if (file.originalname === FILE_PUEBLO || file.originalname === FILE_TESI) {
+    const nombresValidos = Object.values(EMPRESAS)
+    if (nombresValidos.includes(file.originalname)) {
       cb(null, true)
     } else {
-      cb(new Error(`Archivo no reconocido: "${file.originalname}". Se esperan: ${FILE_TESI} o ${FILE_PUEBLO}`))
+      cb(new Error(`Archivo no reconocido: "${file.originalname}". Se esperan: ${nombresValidos.join(' o ')}`))
     }
   }
 })
@@ -300,7 +356,7 @@ app.get('/api/status', (req, res) => {
 })
 
 app.post('/api/refresh', async (req, res) => {
-  if (state.isRefreshing) return res.json({ ok: false, message: 'Actualización ya en curso', empresas: {} })
+  if (state.storeBusy) return res.json({ ok: false, message: 'Hay una operación sobre el store en curso, reintente en unos segundos', empresas: {} })
   const r = await checkAndLoad()
   res.json(r)
 })
@@ -318,6 +374,22 @@ app.get('/api/download', (req, res) => {
   fs.createReadStream(p).pipe(res)
 })
 
+// Borra del inbox los archivos que multer ya escribio, para el caso en que el
+// upload se rechaza DESPUES de que la escritura a disco termino con exito
+// (409 por storeBusy). Si dejaramos el archivo ahi, quedaria huerfano: nadie
+// vuelve a leer el inbox salvo un proximo upload con el mismo nombre, y el
+// mensaje "reintente" seria falso (el archivo del intento fallido nunca se
+// aplica solo). El otro caso (fileFilter rechaza un nombre invalido a mitad
+// de un upload de 2 archivos) ya lo limpia multer solo: ver
+// remove-uploaded-files.js, abortWithError() borra los que ya se habian
+// escrito antes de propagar el error, por eso NO hace falta repetir la
+// limpieza en la rama de "err".
+function limpiarArchivosSubidos(files) {
+  for (const f of files ?? []) {
+    try { fs.unlinkSync(f.path) } catch { /* ya no esta: nada que limpiar */ }
+  }
+}
+
 app.post('/api/upload', (req, res) => {
   upload.array('files', 2)(req, res, async (err) => {
     if (err) return res.status(400).json({ ok: false, message: err.message })
@@ -327,6 +399,7 @@ app.post('/api/upload', (req, res) => {
     const nombres = req.files.map(f => f.originalname)
     const resultado = await procesarUploads(nombres)
     if (resultado.rejected) {
+      limpiarArchivosSubidos(req.files)
       return res.status(409).json({ ok: false, message: resultado.message })
     }
     const { empresas } = resultado
@@ -340,8 +413,9 @@ app.get('*', (req, res) => {
 })
 
 loadCache()
-migrarSiHaceFalta()
+const migro = migrarSiHaceFalta()
 recargarEstadoDesdeStore()
+if (migro) sellarActualizacion()
 await checkAndLoad()
 scheduleDailyCheck()
 

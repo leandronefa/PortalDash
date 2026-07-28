@@ -116,3 +116,29 @@ test('con un periodo manual y el manifest corrupto, un refresh de red no llega a
 
   assert.equal(store.readVigente('tesi'), vigenteAntes)
 })
+
+test('primera corrida legitima: sin manifest y sin ningun vigente, readManifest devuelve vacio', () => {
+  const store = tmpStore()
+  assert.deepEqual(store.readManifest(), { tesi: {}, pueblo: {} })
+})
+
+test('manifest ausente pero con un vigente ya cargado hace fallar readManifest (no es primera corrida)', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(FEB_AJUSTADO), origen: 'manual' })
+  // Simula que se perdio/borro el manifest.json sin tocar el vigente.
+  fs.rmSync(path.join(store.dir, 'manifest.json'))
+
+  assert.throws(() => store.readManifest())
+  // Y por lo tanto un refresh de red tampoco puede pisar el vigente en este estado.
+  const vigenteAntes = store.readVigente('tesi')
+  assert.throws(() => store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' }))
+  assert.equal(store.readVigente('tesi'), vigenteAntes)
+})
+
+test('manifest.json que parsea pero no es un objeto plano (array, numero, string, null) hace fallar readManifest', () => {
+  for (const valorInvalido of ['[]', '123', '"x"', 'null']) {
+    const store = tmpStore()
+    fs.writeFileSync(path.join(store.dir, 'manifest.json'), valorInvalido)
+    assert.throws(() => store.readManifest(), undefined, `no lanzo para: ${valorInvalido}`)
+  }
+})

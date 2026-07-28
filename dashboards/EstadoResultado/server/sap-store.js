@@ -29,16 +29,32 @@ export function createStore({ dir }) {
 
   function readManifest() {
     const p = path.join(dir, MANIFEST)
-    // Que no exista es el arranque legitimo (primera corrida): manifest vacio.
-    if (!fs.existsSync(p)) return { tesi: {}, pueblo: {} }
-    // Que exista y no parsee es otra cosa: un manifest vacio ahi seria
-    // indistinguible de "primera corrida" y la siguiente lectura de red
-    // pisaria en silencio todos los periodos manual. Mejor fallar ruidoso.
+    if (!fs.existsSync(p)) {
+      // Que no exista es el arranque legitimo SOLO si tampoco hay ningun
+      // vigente todavia (primera corrida real: no hay nada que perder). Si ya
+      // hay al menos un archivo vigente en el store, el manifest no puede
+      // faltar de forma legitima: alguien lo borro o se perdio, y tratarlo
+      // como "primera corrida" (manifest vacio) haria que el siguiente
+      // refresh de red piense que ningun periodo es 'manual' y los pise a
+      // todos en silencio. Mismo criterio que el JSON corrupto: fallar ruidoso.
+      const hayVigente = Object.keys(EMPRESAS).some(k => fs.existsSync(vigentePath(k)))
+      if (hayVigente) {
+        throw new Error(`manifest.json ausente en ${p} pero hay archivos vigentes en el store`)
+      }
+      return { tesi: {}, pueblo: {} }
+    }
+    // Que exista y no parsee (o no sea un objeto plano: array, numero, string,
+    // null) es otra cosa: un manifest vacio ahi seria indistinguible de
+    // "primera corrida" y la siguiente lectura de red pisaria en silencio
+    // todos los periodos manual. Mejor fallar ruidoso.
     let raw
     try {
       raw = JSON.parse(fs.readFileSync(p, 'utf8'))
     } catch (err) {
       throw new Error(`manifest.json corrupto en ${p}: ${err.message}`)
+    }
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new Error(`manifest.json corrupto en ${p}: no es un objeto`)
     }
     return { tesi: raw.tesi ?? {}, pueblo: raw.pueblo ?? {} }
   }

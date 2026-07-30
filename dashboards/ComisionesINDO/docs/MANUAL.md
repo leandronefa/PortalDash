@@ -1,5 +1,172 @@
 # Manual de uso — Comisiones INDO
 
-## Contenido en preparación
+## 1. Qué hace esta aplicación (y qué no)
 
-El contenido completo del manual se carga en la tarea 5 del plan.
+Comisiones INDO calcula y liquida las comisiones del personal de sucursales INDO: **cajeros, operadores, encargados y supervisores**, tanto de sucursales **Retail** como **Millón**.
+
+Lo que hace: trae las ventas y los objetivos del período, aplica las reglas de escalones y categoría por sucursal, y te muestra el resultado por rol, listo para revisar y exportar.
+
+Lo que **no** hace: no paga los sueldos, no emite recibos ni comprobantes, y no manda nada al sistema de sueldos. La aplicación produce el cálculo y sus exportaciones — el pago en sí se gestiona por fuera de acá.
+
+## 2. Período activo
+
+Arriba, en el panel lateral, tenés el selector de **Período activo** con formato `YYYY-MM` (por ejemplo `2026-07`). Es lo primero que tenés que fijar antes de trabajar, porque **todas** las pantallas de la aplicación leen datos según ese período.
+
+El período que elegís se guarda solo: si cerrás la aplicación y volvés a entrar, se acuerda del último que usaste.
+
+## 3. Cómo se liquida un período, paso a paso
+
+Para liquidar un período completo, seguí estos cuatro pasos en orden:
+
+1. Revisá los datos maestros del período en las pantallas de DATOS: Sucursales, Montos, Objetivos y Supervisores (con sus sucursales asignadas). Es el momento de corregir cualquier valor antes de calcular.
+2. Andá a **Cálculos → Total** y apretá **▶ Ejecutar cálculo**. Este botón sincroniza los objetivos desde BeClever, recalcula el ranking de categorías A/B/C, y corre todo el motor de una sola vez: Total, Operadores Retail, Operadores Millón, Encargados Retail, Encargados Millón y Supervisores. El resultado queda guardado. Hoy es el **único** disparador del cálculo completo.
+3. Andá a **Cálculos → Cajeros** y apretá su botón propio de cálculo. Cajeros queda aparte porque necesita los overrides de jornada (full-time / part-time) que se cargan en esa misma pantalla.
+4. Recorré los resultados por rol en las pantallas de Cálculos y exportá los CSV que necesites.
+
+## 4. Pantallas de DATOS
+
+| Pantalla | Qué muestra | Qué se puede editar |
+|---|---|---|
+| Sucursales Retail | Listado de sucursales con ID, nombre, provincia, categoría del período, si tiene efectivo y su estado | El toggle **Habilitada / Deshabilitada** y el toggle CON/SIN efectivo. Una sucursal deshabilitada desaparece de las pantallas y del cálculo |
+| Sucursales Millón | Sucursales Millón con sus operadores, originaciones e importe total | El toggle **¿Es operador?** por persona, y podés actualizar los datos desde BeClever con su botón propio |
+| Montos | Los montos de comisión de cada rol, por escalón y categoría (Cajeros, Operadores, Encargados, Encargados Millón, Supervisores, Préstamos) | El valor de **Categoría C** de cada concepto — Categoría B y A se calculan y graban solos |
+| Ranking | La categoría A/B/C asignada a cada sucursal en el período, y los multiplicadores por categoría | Podés forzar manualmente la categoría de una sucursal y editar el valor de los multiplicadores |
+| Objetivos | Los objetivos de consumo y de efectivo cargados por sucursal para el período | Es de solo lectura — los objetivos se traen automáticamente desde BeClever |
+| Ventas | Las ventas de consumo, de efectivo y las originaciones de créditos del período | Es de solo lectura. En Originaciones podés filtrar por operador, sucursal y fecha |
+| Supervisores | El listado de supervisores, con su usuario de acceso y las sucursales que tiene asignadas | Alta, edición y baja de supervisores, y qué sucursales tiene asignadas cada uno |
+
+## 5. Pantallas de Cálculos
+
+| Pantalla | Qué muestra | ¿Botón de cálculo propio? |
+|---|---|---|
+| Total | El resultado completo del período, en pestañas: Sucursales, Cajeros, Operadores, Encargados, Supervisores | Sí — **▶ Ejecutar cálculo**, el único que corre el motor completo |
+| Cajeros | El resultado de comisión de cada cajero, agrupado por sucursal, con su jornada y si comisionó | Sí — necesita los overrides de jornada de esta pantalla |
+| Operadores Retail | El resultado por operador de sucursales Retail, con sus indicadores | Sí |
+| Operadores Millón | El resultado por operador de sucursales Millón, con su jornada y el objetivo dividido en full-equivalentes | Sí |
+| Encargados Retail | El resultado **por sucursal**, sin nombres de personas | No — lee el último cálculo guardado desde Total |
+| Encargados Millón | El resultado **por sucursal**, sin nombres de personas | No — lee el último cálculo guardado desde Total |
+| Supervisores | El resultado por supervisor, con el detalle de sus plazas y sus sucursales | No — lee el último cálculo guardado desde Total |
+
+## 6. Exportar a CSV
+
+Cada pantalla de resultado tiene un botón **↓ CSV** (o **⬇ CSV**, según la pantalla) que descarga lo que estás viendo.
+
+El archivo sale con separador `;` y con BOM UTF-8, así que **abre directo en Excel en español**, con los acentos correctos y sin que tengas que importar nada a mano.
+
+En **Ventas → Originaciones**, el CSV descarga **solo las filas que tenés filtradas** en ese momento — si querés todo, primero limpiá los filtros.
+
+## 7. Retail y Millón: dos mundos distintos
+
+Las sucursales se dividen en dos tipos, según su ID:
+
+- **Retail**: ID menor a 100.
+- **Millón**: ID mayor o igual a 100 — son las sucursales de originación de créditos.
+
+Cada tipo tiene sus propias reglas de cálculo: no son una variante una de la otra, son motores distintos. Además, Retail y Millón forman **plazas separadas** aun cuando compartan la misma provincia — una plaza Retail y una plaza Millón de la misma provincia se evalúan por separado.
+
+## 8. Categorías de sucursal y ranking
+
+Cada sucursal tiene asignada una categoría — **A**, **B** o **C** — para cada período. Esa categoría define, entre otras cosas, qué monto de comisión le corresponde a su gente.
+
+El ranking que asigna esas categorías se recalcula **solo** cuando ejecutás el cálculo desde la pantalla Total. Si necesitás forzar la categoría de una sucursal en particular, podés hacerlo a mano desde la pantalla Ranking.
+
+## 9. Escalones y la tolerancia del 4%
+
+El sistema mide el cumplimiento de ventas o efectivo contra tres umbrales, llamados escalones:
+
+- **E1**: 100% del objetivo.
+- **E2**: 110% del objetivo.
+- **E3**: 126,5% del objetivo (110% × 1,15).
+
+En todo el sistema se aplica una **tolerancia del 4%**: si te falta menos del 4% del umbral para llegar a un escalón, se considera alcanzado igual. Esta tolerancia es la misma en escalones, en los indicadores de Operadores y en la participación de Encargados y Supervisores.
+
+## 10. Multiplicador de categoría: se aplica una sola vez
+
+Los montos de comisión varían según la categoría de la sucursal, con estos multiplicadores:
+
+- **A**: 1,30
+- **B**: 1,15
+- **C**: 1,00
+
+Este multiplicador se aplica en un **único** lugar del sistema: cuando editás el monto de **Categoría C** en el ABM de Montos, el sistema calcula y graba **ya multiplicados** los valores de B y A. Por eso el motor de cálculo no vuelve a multiplicar esos montos — ya vienen así guardados.
+
+Los **cajeros nunca llevan multiplicador**: su monto es el mismo para cualquier categoría de sucursal.
+
+## 11. Reglas de Cajeros
+
+Un cajero comisiona cuando su participación de ventas (VTA/VTATOT) es mayor o igual al objetivo de participación de su sucursal — ambos valores se comparan en porcentaje directo, con la misma tolerancia del 4%.
+
+Si comisiona, cobra el monto completo que corresponde a la categoría de su sucursal. Si es **part-time**, cobra el **50%** de ese monto, redondeado a múltiplos de $1.000.
+
+La jornada (full-time o part-time) viene cargada desde el sistema, pero la podés sobreescribir a mano desde la pantalla Cajeros, antes de calcular.
+
+## 12. Reglas de Operadores
+
+### Retail
+
+Los operadores Retail se miden con tres indicadores: **G**, **O** y **R**. El indicador **G actúa como puerta**: si un operador no llega a G, no cobra ni O ni R, aunque los haya alcanzado.
+
+### Millón
+
+Los operadores Millón se miden **solo por efectivo**. El objetivo de la sucursal se divide entre sus operadores en full-equivalentes: un full-time pesa 1, un part-time pesa 0,5. El part-time compara su venta **multiplicada por 2** contra ese objetivo individual, y si llega, cobra el **50%** del monto.
+
+## 13. Reglas de Encargados
+
+### Retail
+
+El encargado Retail cobra por dos componentes **independientes**: el escalón de consumo y la participación (indicador G). Son independientes entre sí — un encargado puede cobrar uno sin cobrar el otro.
+
+### Millón
+
+El encargado Millón cobra **solo** por el escalón de efectivo. No tiene componente de participación.
+
+## 14. Reglas de Supervisores
+
+Estas son las reglas vigentes desde el 16 de julio de 2026.
+
+**Retail** (mira solo consumo, con dos indicadores por sucursal):
+
+- **Pesos**: llega si el escalón de consumo es 1 o más (con la tolerancia del 4%).
+- **Participación**: llega si el indicador G es mayor a −4% (el mismo indicador que usa Encargados). Si la sucursal no tiene objetivo de participación cargado, **no llega** a participación.
+
+Según esos dos indicadores, la sucursal paga esto por supervisor:
+
+| Pesos | Participación | Paga |
+|---|---|---|
+| Sí | Sí | Monto completo de la categoría: A $10.000 · B $9.000 · C $8.000 |
+| Sí | No | La mitad, redondeada a miles: A $5.000 · B $5.000 · C $4.000 |
+| No | — | $0 — los pesos son condición necesaria |
+
+Además del pago por sucursal, existe un **plus por plaza** (plaza = provincia): si **todas** las sucursales Retail asignadas al supervisor en esa provincia llegan a **participación** (sin importar los pesos), el plus es la suma de lo efectivamente pagado por esas sucursales, multiplicado por **0,5**, redondeado a miles. Si una sola sucursal de la plaza falla en participación, no hay plus para esa plaza.
+
+**Millón** (mira solo efectivo): no paga por sucursal. Si **todas** las sucursales Millón asignadas al supervisor en una provincia llegaron por efectivo, la plaza paga **$23.000 una sola vez**.
+
+## 15. Montos congelados por período
+
+La primera vez que se calcula un período, el sistema guarda una foto de los montos vigentes en ese momento. Si más adelante volvés a calcular ese mismo período, **siempre** se usa esa foto — no importa qué hayas cambiado después en el ABM de Montos.
+
+El ABM sigue funcionando con normalidad: seguís editando el valor "vivo", que es el que se usa para los períodos **nuevos**. Esto existe para que recalcular un mes ya cerrado no te cambie lo que ya se liquidó.
+
+## 16. Usuarios supervisores: acceso de solo lectura
+
+Los usuarios con perfil supervisor ven el tablero completo de la aplicación, pero en **modo de solo lectura**: no tienen controles de edición ni botones de cálculo. Además, solo ven los datos de las sucursales que tienen asignadas.
+
+En el resultado de la pantalla Supervisores, cada usuario supervisor ve **únicamente su propio registro** — no el de los demás supervisores.
+
+## 17. Limitaciones conocidas
+
+- **Cajeros no se recalcula con el botón de Total**: necesita los overrides de jornada que se cargan en su propia pantalla, así que siempre hay que calcularlo aparte.
+- **Descongelar un período no tiene botón en la pantalla**, y es a propósito. Si un período se calculó por error antes de terminar de cargar los montos correctos, pedile al **equipo técnico** que borre la foto de ese período para que el próximo cálculo tome los valores nuevos.
+- El aviso amarillo **"los datos guardados son del formato anterior"** significa que ese resultado se generó con reglas viejas. Se resuelve re-ejecutando el cálculo del período desde Total.
+- El escalón **E1 en ámbar** puede mostrarse en verde en períodos que no se recalcularon con la versión actual del sistema.
+- **Operadores Retail** reconstruye su monto desde la fila de categoría C multiplicada, en lugar de leer directamente las filas A/B cargadas en Montos. Es una inconsistencia conocida frente al resto del motor, y puede dar diferencias puntuales en sucursales de categoría A y B.
+
+## 18. Problemas frecuentes
+
+| Síntoma | Causa probable | Qué hacer |
+|---|---|---|
+| Una pantalla de resultado aparece vacía | No se ejecutó el cálculo de ese período | Andá a Cálculos → Total → ▶ Ejecutar cálculo |
+| Cambiaste un monto y no se refleja en el resultado | El período ya tiene sus montos congelados (ver sección 15) | Es esperado — ese período usa la foto que se guardó la primera vez que se calculó |
+| A un supervisor no le aparece el plus de plaza | Alguna sucursal de esa provincia no llegó a participación (ver sección 14) | Revisá el detalle de sucursales de esa plaza en el resultado de Supervisores |
+| Una sucursal no aparece en ninguna pantalla | Está deshabilitada | Revisá su estado en Sucursales Retail y, si corresponde, volvé a habilitarla |
+| Aparece "Sin autorización" o te vuelve al login | La sesión venció | Volvé a iniciar sesión |

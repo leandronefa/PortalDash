@@ -296,9 +296,14 @@ tfoot td { padding: 8px 10px; white-space: nowrap; border-top: 2px solid var(--c
 }
 
 /* ── Impresión del manual ────────────────────────────────────────── */
+/* Acotado a la página del manual: #sidebar, #main-content y .page-body son
+   selectores globales, así que van detrás de body:has(.manual-wrap) para no
+   afectar la impresión de cualquier otra pantalla de la app. */
 @media print {
-  #sidebar, .manual-toolbar, .manual-index, .manual-foot { display: none !important; }
-  #main-content, .page-body { overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+  body:has(.manual-wrap) #sidebar,
+  .manual-toolbar, .manual-index, .manual-foot { display: none !important; }
+  body:has(.manual-wrap) #main-content,
+  body:has(.manual-wrap) .page-body { overflow: visible !important; margin: 0 !important; padding: 0 !important; }
   .manual-wrap, .manual-cols { display: block !important; height: auto !important; }
   .manual-content {
     overflow: visible !important; height: auto !important;

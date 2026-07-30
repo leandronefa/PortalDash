@@ -29,7 +29,7 @@ Para liquidar un período completo, seguí estos cuatro pasos en orden:
 |---|---|---|
 | Sucursales Retail | Listado de sucursales con ID, nombre, provincia, categoría del período, si tiene efectivo y su estado | El toggle **Habilitada / Deshabilitada** y el toggle CON/SIN efectivo. Una sucursal deshabilitada desaparece de las pantallas y del cálculo |
 | Sucursales Millón | Sucursales Millón con sus operadores, originaciones e importe total | El toggle **¿Es operador?** por persona, y podés actualizar los datos desde BeClever con su botón propio |
-| Montos | Los montos de comisión de cada rol, por escalón y categoría (Cajeros, Operadores, Encargados, Encargados Millón, Supervisores, Préstamos) | El valor de **Categoría C** de cada concepto — Categoría B y A se calculan y graban solos |
+| Montos | Los montos de comisión de cada rol, por escalón y categoría: Cajeros, Operadores CON Efectivo, Operadores SIN Efectivo, Encargados, Encargados Millón, Supervisores y Préstamos | El valor de Categoría C de cada concepto — B y A se calculan y graban solos. Excepción: el monto de Cajeros es único y B y A toman el mismo valor que C |
 | Ranking | La categoría A/B/C asignada a cada sucursal en el período, y los multiplicadores por categoría | Podés forzar manualmente la categoría de una sucursal y editar el valor de los multiplicadores |
 | Objetivos | Los objetivos de consumo y de efectivo cargados por sucursal para el período | Es de solo lectura — los objetivos se traen automáticamente desde BeClever |
 | Ventas | Las ventas de consumo, de efectivo y las originaciones de créditos del período | Es de solo lectura. En Originaciones podés filtrar por operador, sucursal y fecha |
@@ -39,7 +39,7 @@ Para liquidar un período completo, seguí estos cuatro pasos en orden:
 
 | Pantalla | Qué muestra | ¿Botón de cálculo propio? |
 |---|---|---|
-| Total | El resultado completo del período, en pestañas: Sucursales, Cajeros, Operadores, Encargados, Supervisores | Sí — **▶ Ejecutar cálculo**, el único que corre el motor completo |
+| Total | El resultado completo del período, en pestañas: Sucursales, Cajeros, Operadores, Encargados, Supervisores. **Ojo**: la pestaña Cajeros de Total se calcula sin los overrides de jornada, así que ahí los part-time pueden aparecer con el monto full — no liquides cajeros desde acá | Sí — **▶ Ejecutar cálculo**, el único que corre el motor completo |
 | Cajeros | El resultado de comisión de cada cajero, agrupado por sucursal, con su jornada y si comisionó | Sí — necesita los overrides de jornada de esta pantalla |
 | Operadores Retail | El resultado por operador de sucursales Retail, con sus indicadores | Sí |
 | Operadores Millón | El resultado por operador de sucursales Millón, con su jornada y el objetivo dividido en full-equivalentes | Sí |
@@ -68,7 +68,7 @@ Cada tipo tiene sus propias reglas de cálculo: no son una variante una de la ot
 
 Cada sucursal tiene asignada una categoría — **A**, **B** o **C** — para cada período. Esa categoría define, entre otras cosas, qué monto de comisión le corresponde a su gente.
 
-El ranking que asigna esas categorías se recalcula **solo** cuando ejecutás el cálculo desde la pantalla Total. Si necesitás forzar la categoría de una sucursal en particular, podés hacerlo a mano desde la pantalla Ranking.
+El ranking se recalcula automáticamente cada vez que ejecutás el cálculo desde Total, y también podés recalcularlo aparte con el botón **⟳ Calcular Ranking Automático** de la pantalla Ranking. Si necesitás forzar la categoría de una sucursal en particular, podés hacerlo a mano desde esa misma pantalla.
 
 ## 9. Escalones y la tolerancia del 4%
 
@@ -88,13 +88,13 @@ Los montos de comisión varían según la categoría de la sucursal, con estos m
 - **B**: 1,15
 - **C**: 1,00
 
-Este multiplicador se aplica en un **único** lugar del sistema: cuando editás el monto de **Categoría C** en el ABM de Montos, el sistema calcula y graba **ya multiplicados** los valores de B y A. Por eso el motor de cálculo no vuelve a multiplicar esos montos — ya vienen así guardados.
+Este multiplicador se aplica en un **único** lugar del sistema: cuando editás el monto de **Categoría C** en el ABM de Montos, el sistema calcula y graba **ya multiplicados** los valores de B y A. Por eso el motor de cálculo no vuelve a multiplicar esos montos — ya vienen así guardados. La única excepción es Operadores Retail, que reconstruye el monto desde la fila de categoría C y aplica el multiplicador él mismo — ver la sección 17.
 
 Los **cajeros nunca llevan multiplicador**: su monto es el mismo para cualquier categoría de sucursal.
 
 ## 11. Reglas de Cajeros
 
-Un cajero comisiona cuando su participación de ventas (VTA/VTATOT) es mayor o igual al objetivo de participación de su sucursal — ambos valores se comparan en porcentaje directo, con la misma tolerancia del 4%.
+Un cajero comisiona cuando su participación de ventas (VTA/VTATOT) supera el 96% del objetivo de participación de su sucursal — es decir, el objetivo con la tolerancia del 4% ya aplicada (96% exacto no alcanza). Ambos valores se comparan en porcentaje directo. Si la sucursal no tiene objetivo de participación cargado, el cajero no comisiona.
 
 Si comisiona, cobra el monto completo que corresponde a la categoría de su sucursal. Si es **part-time**, cobra el **50%** de ese monto, redondeado a múltiplos de $1.000.
 
@@ -104,11 +104,11 @@ La jornada (full-time o part-time) viene cargada desde el sistema, pero la podé
 
 ### Retail
 
-Los operadores Retail se miden con tres indicadores: **G**, **O** y **R**. El indicador **G actúa como puerta**: si un operador no llega a G, no cobra ni O ni R, aunque los haya alcanzado.
+Los operadores Retail se miden con tres indicadores: **G**, **O** y **R**. Los indicadores G, O y R se miden a nivel de la sucursal, así que valen igual para todos sus operadores. **G es la puerta** de O y R: sin G no se cobran esos dos componentes, aunque el componente por escalón se cobra igual.
 
 ### Millón
 
-Los operadores Millón se miden **solo por efectivo**. El objetivo de la sucursal se divide entre sus operadores en full-equivalentes: un full-time pesa 1, un part-time pesa 0,5. El part-time compara su venta **multiplicada por 2** contra ese objetivo individual, y si llega, cobra el **50%** del monto.
+Los operadores Millón se miden **solo por efectivo**. El objetivo de la sucursal se divide entre sus operadores en full-equivalentes: un full-time pesa 1, un part-time pesa 0,5. El part-time compara su venta **multiplicada por 2** contra ese objetivo individual, y si llega, cobra el **50%** del monto, redondeado a múltiplos de $1.000.
 
 ## 13. Reglas de Encargados
 
@@ -155,9 +155,9 @@ En el resultado de la pantalla Supervisores, cada usuario supervisor ve **única
 
 ## 17. Limitaciones conocidas
 
-- **Cajeros no se recalcula con el botón de Total**: necesita los overrides de jornada que se cargan en su propia pantalla, así que siempre hay que calcularlo aparte.
+- **Cajeros no se recalcula con el botón de Total**: necesita los overrides de jornada que se cargan en su propia pantalla, así que siempre hay que calcularlo aparte. La pestaña Cajeros de Total se calcula sin los overrides de jornada, así que ahí los part-time pueden aparecer con el monto full. El resultado válido de Cajeros es siempre el de la pantalla Cajeros, calculado con su botón propio — no liquides cajeros desde Total.
 - **Descongelar un período no tiene botón en la pantalla**, y es a propósito. Si un período se calculó por error antes de terminar de cargar los montos correctos, pedile al **equipo técnico** que borre la foto de ese período para que el próximo cálculo tome los valores nuevos.
-- El aviso amarillo **"los datos guardados son del formato anterior"** significa que ese resultado se generó con reglas viejas. Se resuelve re-ejecutando el cálculo del período desde Total.
+- El aviso amarillo **"los datos guardados son del formato anterior"** significa que ese resultado se generó con reglas viejas. Se resuelve re-ejecutando el cálculo del período desde Total (el aviso todavía dice "desde el Dashboard": ignoralo, el botón está en Total).
 - El escalón **E1 en ámbar** puede mostrarse en verde en períodos que no se recalcularon con la versión actual del sistema.
 - **Operadores Retail** reconstruye su monto desde la fila de categoría C multiplicada, en lugar de leer directamente las filas A/B cargadas en Montos. Es una inconsistencia conocida frente al resto del motor, y puede dar diferencias puntuales en sucursales de categoría A y B.
 

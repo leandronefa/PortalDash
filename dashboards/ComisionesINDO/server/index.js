@@ -18,6 +18,7 @@ import millonRoutes from './routes/millon.js';
 import supervisoresRoutes from './routes/supervisores.js';
 import cajerosRoutes from './routes/cajeros.js';
 import operadoresRoutes from './routes/operadores.js';
+import manualRoutes from './routes/manual.js';
 import { getPool } from './config/db.js';
 import { backfillMontosHistorial } from './services/montosHistorial.js';
 
@@ -36,6 +37,7 @@ app.use('/api/millon',      millonRoutes);
 app.use('/api/supervisores',supervisoresRoutes);
 app.use('/api/cajeros',      cajerosRoutes);
 app.use('/api/operadores',   operadoresRoutes);
+app.use('/api/manual',       manualRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

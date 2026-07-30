@@ -18,7 +18,22 @@ Implementado con spec + plan + 6 tareas vía subagentes (spec: `docs/superpowers
 - **Edición sin build ni reinicio** (verificación pendiente de la Tarea 5, cerrada acá): con el servicio ya reiniciado, se pidió `/api/manual` (hash A, `actualizado` t1), se agregó una línea comentario temporal al final de `docs/MANUAL.md`, se volvió a pedir **sin build ni restart** → el `markdown` trajo la línea nueva y `actualizado` cambió a t2; se quitó la línea y un tercer pedido devolvió exactamente el hash A original. Confirma la arquitectura: el `.md` se lee del disco en cada request.
 - Fallback de archivo ausente: se renombró `docs/MANUAL.md` a `.bak`, se pidió `/api/manual` → **200** (no 500, no error de red) con `markdown` = "Manual no disponible" + la ruta esperada (`C:\apps\dashboards\ComisionesINDO\docs\MANUAL.md`) y `actualizado: null`. Se restauró el archivo de inmediato y un pedido posterior confirmó el manual completo de nuevo (mismo hash que antes de la prueba). `git status` al final: `docs/MANUAL.md` sin cambios.
 
-**Pendiente del usuario — verificación visual en el navegador**: esta sesión corrió sin navegador disponible en el servidor, así que **no** se verificó visualmente: índice navegable, buscador filtrando, impresión, modo claro/oscuro, ni la vista real logueado como `EVIDABLE` (perfil 8) desde `http://10.0.0.118/d/8/`. Falta que el usuario lo confirme desde su navegador.
+**Ronda de fix del review final (30/07, después de lo anterior)**: la revisión final de toda la rama no encontró nada crítico ni regresión sobre los módulos blindados (todo el CSS de pantalla quedó prefijado `.manual-*`), pero dejó 2 hallazgos Important y 7 Minor, corregidos en 5 commits:
+
+- **Títulos del índice sin escapar** (`src/pages/manual.js`): `extraerSecciones()` devolvía el título crudo mientras `mdToHtml()` escapaba todo, así que un `##` con HTML entraba literal al enlace del índice. Se exportó `escapeHtml` del parser y se aplica al armar los `<a>`.
+- **Una tabla mal formada desaparecía en silencio** (`src/components/markdown.js`): toda línea que empieza con `|` sin una fila separadora válida se perdía sin dejar rastro — si alguien rompía la fila `|---|---|---|` de la tabla de pagos de Supervisores, la tabla se evaporaba. Ahora cae a párrafo escapado, como manda la regla de robustez del spec. El test que lo enmascaraba (solo asertaba `length > 0`) se endureció para exigir que el texto de la fila sobreviva.
+- `Cache-Control: no-store` en el endpoint — la promesa de "editar el `.md` y recargar" se había verificado con curl, nunca a través del proxy YARP del portal, donde una respuesta cacheada la rompería.
+- Manual vacío o truncado: la página muestra un mensaje explícito en vez de quedar en blanco; el endpoint ya no descarta el campo `ok` de `leerManual()`.
+- `err.message` pasó a `textContent` (cierra el patrón de inyección en todo el archivo).
+- **El bloque `@media print` estaba sin acotar** y afectaba la impresión de **toda** la app (ocultaba el sidebar al imprimir cualquier pantalla). Quedó detrás de `body:has(.manual-wrap)`.
+- Contenido: se resolvió una contradicción entre la sección 10 y la 11 sobre el monto de cajeros, y la tabla de la sección 5 ganó la columna "Qué se puede editar" (con la aclaración de que la jornada de Operadores Millón sí la respeta el cálculo desde Total — a diferencia de Cajeros).
+- Al hacer clic en el índice con un filtro de búsqueda activo, ahora se limpia el buscador antes de scrollear (antes no pasaba nada).
+
+Tests tras el fix: **27/27 PASS**. Build + `Restart-Service` hechos de nuevo; servicio `Running`, smoke 401 sin token y 200 con token de perfil 1 (con `Cache-Control: no-store` y `ok` en la respuesta).
+
+Aceptado a propósito, sin arreglar: el markdown de fallback publica la ruta absoluta del archivo en el servidor. Lo pidió el spec y solo lo ve un usuario autenticado; no hay path traversal (la ruta se resuelve contra `import.meta.url` y el router llama `leerManual()` sin argumentos).
+
+**Pendiente del usuario — verificación visual en el navegador**: esta sesión corrió sin navegador disponible en el servidor, así que **no** se verificó visualmente: índice navegable, buscador filtrando, impresión, modo claro/oscuro, ni la vista real logueado como `EVIDABLE` (perfil 8) desde `http://10.0.0.118/d/8/`. Falta que el usuario lo confirme desde su navegador. Nota de compatibilidad: los estilos de impresión usan `body:has(...)`, soportado en Chrome/Edge 105+ y Firefox 121+.
 
 ---
 

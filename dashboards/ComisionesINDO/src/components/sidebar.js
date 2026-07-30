@@ -21,6 +21,9 @@ const MENU = [
   { route: 'encargados',          icon: '👔', label: 'Encargados Retail' },
   { route: 'encargados-millon',   icon: '👔', label: 'Encargados Millón' },
   { route: 'resultado-supervisores', icon: '👤', label: 'Supervisores' },
+
+  { section: 'AYUDA' },
+  { route: 'manual',       icon: '📖', label: 'Manual' },
 ];
 
 function getPeriodos() {

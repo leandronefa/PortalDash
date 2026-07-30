@@ -15,6 +15,7 @@ import { renderVisorMontos } from './pages/visor-montos.js';
 import { renderRanking } from './pages/ranking.js';
 import { renderVisorObjetivos } from './pages/visor-objetivos.js';
 import { renderVisorVentas } from './pages/visor-ventas.js';
+import { renderManual } from './pages/manual.js';
 import { initToast } from './components/toast.js';
 
 const ROUTES = {
@@ -33,6 +34,7 @@ const ROUTES = {
   'visor-ranking':        renderRanking,
   'visor-objetivos':      renderVisorObjetivos,
   'visor-ventas':         renderVisorVentas,
+  manual:                 renderManual,
 };
 
 export let periodoActual = getCurrentPeriodo();

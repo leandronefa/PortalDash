@@ -37,15 +37,15 @@ Para liquidar un período completo, seguí estos cuatro pasos en orden:
 
 ## 5. Pantallas de Cálculos
 
-| Pantalla | Qué muestra | ¿Botón de cálculo propio? |
-|---|---|---|
-| Total | El resultado completo del período, en pestañas: Sucursales, Cajeros, Operadores, Encargados, Supervisores. **Ojo**: la pestaña Cajeros de Total se calcula sin los overrides de jornada, así que ahí los part-time pueden aparecer con el monto full — no liquides cajeros desde acá | Sí — **▶ Ejecutar cálculo**, el único que corre el motor completo |
-| Cajeros | El resultado de comisión de cada cajero, agrupado por sucursal, con su jornada y si comisionó | Sí — necesita los overrides de jornada de esta pantalla |
-| Operadores Retail | El resultado por operador de sucursales Retail, con sus indicadores | Sí |
-| Operadores Millón | El resultado por operador de sucursales Millón, con su jornada y el objetivo dividido en full-equivalentes | Sí |
-| Encargados Retail | El resultado **por sucursal**, sin nombres de personas | No — lee el último cálculo guardado desde Total |
-| Encargados Millón | El resultado **por sucursal**, sin nombres de personas | No — lee el último cálculo guardado desde Total |
-| Supervisores | El resultado por supervisor, con el detalle de sus plazas y sus sucursales | No — lee el último cálculo guardado desde Total |
+| Pantalla | Qué muestra | ¿Botón de cálculo propio? | Qué se puede editar |
+|---|---|---|---|
+| Total | El resultado completo del período, en pestañas: Sucursales, Cajeros, Operadores, Encargados, Supervisores. **Ojo**: la pestaña Cajeros de Total se calcula sin los overrides de jornada, así que ahí los part-time pueden aparecer con el monto full — no liquides cajeros desde acá | Sí — **▶ Ejecutar cálculo**, el único que corre el motor completo | Nada — es de solo lectura, además de disparar el cálculo completo |
+| Cajeros | El resultado de comisión de cada cajero, agrupado por sucursal, con su jornada y si comisionó | Sí — necesita los overrides de jornada de esta pantalla | El override de jornada (full-time / part-time) de cada cajero, antes de calcular |
+| Operadores Retail | El resultado por operador de sucursales Retail, con sus indicadores | Sí | Nada — es de solo lectura |
+| Operadores Millón | El resultado por operador de sucursales Millón, con su jornada y el objetivo dividido en full-equivalentes | Sí | La jornada (full-time / part-time) de cada operador. A diferencia de Cajeros, esta jornada **se guarda** y el cálculo desde Total **la respeta**, sin necesidad de recalcular aparte |
+| Encargados Retail | El resultado **por sucursal**, sin nombres de personas | No — lee el último cálculo guardado desde Total | Nada — es de solo lectura |
+| Encargados Millón | El resultado **por sucursal**, sin nombres de personas | No — lee el último cálculo guardado desde Total | Nada — es de solo lectura |
+| Supervisores | El resultado por supervisor, con el detalle de sus plazas y sus sucursales | No — lee el último cálculo guardado desde Total | Nada — es de solo lectura |
 
 ## 6. Exportar a CSV
 
@@ -96,7 +96,7 @@ Los **cajeros nunca llevan multiplicador**: su monto es el mismo para cualquier 
 
 Un cajero comisiona cuando su participación de ventas (VTA/VTATOT) supera el 96% del objetivo de participación de su sucursal — es decir, el objetivo con la tolerancia del 4% ya aplicada (96% exacto no alcanza). Ambos valores se comparan en porcentaje directo. Si la sucursal no tiene objetivo de participación cargado, el cajero no comisiona.
 
-Si comisiona, cobra el monto completo que corresponde a la categoría de su sucursal. Si es **part-time**, cobra el **50%** de ese monto, redondeado a múltiplos de $1.000.
+Si comisiona, cobra el monto de cajeros del período (igual para las categorías A, B y C). Si es **part-time**, cobra el **50%** de ese monto, redondeado a múltiplos de $1.000.
 
 La jornada (full-time o part-time) viene cargada desde el sistema, pero la podés sobreescribir a mano desde la pantalla Cajeros, antes de calcular.
 

@@ -8,7 +8,7 @@
  * un manual mal formado tiene que verse feo, no dejar la página en blanco.
  */
 
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -150,8 +150,12 @@ export function mdToHtml(md) {
       !/^(#{1,3}\s|```|\s*>|\s*---+\s*$)/.test(lineas[i]) &&
       !esItem(lineas[i]) && !esFilaTabla(lineas[i])
     ) { buf.push(lineas[i].trim()); i++; }
-    if (buf.length) out.push(`<p>${inline(escapeHtml(buf.join(' ')))}</p>`);
-    else i++;  // salvaguarda: nunca dejar de avanzar
+    if (buf.length) { out.push(`<p>${inline(escapeHtml(buf.join(' ')))}</p>`); continue; }
+    // Salvaguarda: la línea no la consumió ningún bloque (ej: fila de tabla mal
+    // formada, sin separador válido). Regla de robustez: nunca se descarta en
+    // silencio, sale como párrafo plano escapado. Y siempre avanza `i`.
+    out.push(`<p>${inline(escapeHtml(lineas[i].trim()))}</p>`);
+    i++;
   }
 
   return out.join('\n');

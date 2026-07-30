@@ -86,6 +86,26 @@ test('markdown mal formado no lanza y no devuelve vacío', () => {
   assert.ok(html.length > 0);
 });
 
+test('tabla sin fila separadora no desaparece: sobrevive como párrafo', () => {
+  const html = mdToHtml('| a | b |\n| c | d |');
+  assert.ok(html.length > 0, 'no debe devolver vacío');
+  assert.ok(!html.includes('<table'), 'no es una tabla válida, no debe armar <table>');
+  assert.match(html, /a/);
+  assert.match(html, /b/);
+  assert.match(html, /c/);
+  assert.match(html, /d/);
+});
+
+test('tabla con separador con typo no desaparece: sobrevive como párrafo', () => {
+  const html = mdToHtml('| Pesos | Paga |\n|-x-\n| Si | 100 |');
+  assert.ok(html.length > 0, 'no debe devolver vacío');
+  assert.ok(!html.includes('<table'), 'separador inválido, no debe armar <table>');
+  assert.match(html, /Pesos/);
+  assert.match(html, /Paga/);
+  assert.match(html, /Si/);
+  assert.match(html, /100/);
+});
+
 test('entrada vacía devuelve string vacío', () => {
   assert.equal(mdToHtml(''), '');
   assert.deepEqual(extraerSecciones(''), []);

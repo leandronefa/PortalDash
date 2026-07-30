@@ -9,8 +9,12 @@ router.use(authMiddleware);
 // sucursal que filtrar y el router no expone escritura. Perfil 8 (supervisor,
 // solo lectura) ve exactamente el mismo contenido que cualquier otro usuario.
 router.get('/', async (_req, res) => {
-  const { markdown, actualizado } = await leerManual();
-  res.json({ markdown, actualizado });
+  const { ok, markdown, actualizado } = await leerManual();
+  // Sin cache: la promesa de la arquitectura es "editar el .md y recargar la
+  // página", sin rebuild ni reinicio — una respuesta cacheada (por el navegador
+  // o por el proxy YARP del portal) la rompería.
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok, markdown, actualizado });
 });
 
 export default router;

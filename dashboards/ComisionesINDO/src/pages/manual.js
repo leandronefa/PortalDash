@@ -1,5 +1,5 @@
 import { api } from '../api/client.js';
-import { mdToHtml, extraerSecciones } from '../components/markdown.js';
+import { mdToHtml, extraerSecciones, escapeHtml } from '../components/markdown.js';
 
 function fmtFecha(iso) {
   if (!iso) return '—';
@@ -72,22 +72,36 @@ export async function renderManual(container) {
       <div class="manual-msg">
         <div style="font-size:32px;margin-bottom:12px">📭</div>
         <p style="font-weight:600">No se pudo cargar el manual</p>
-        <p style="font-size:12px;color:var(--color-muted)">${err.message}</p>
+        <p style="font-size:12px;color:var(--color-muted)"><span id="manual-err"></span></p>
         <button id="manual-retry" class="btn btn-primary btn-sm" style="margin-top:12px">Reintentar</button>
       </div>`;
+    $content.querySelector('#manual-err').textContent = err.message;
     $content.querySelector('#manual-retry')
       .addEventListener('click', () => renderManual(container));
     return;
   }
 
   const md = data.markdown || '';
+
+  if (!md.trim()) {
+    $content.innerHTML = `
+      <div class="manual-msg">
+        <div style="font-size:32px;margin-bottom:12px">📭</div>
+        <p style="font-weight:600">El manual está vacío</p>
+        <p style="font-size:12px;color:var(--color-muted)">Avisale al equipo técnico.</p>
+      </div>`;
+    $index.innerHTML = '';
+    $foot.textContent = `Última actualización del manual: ${fmtFecha(data.actualizado)}`;
+    return;
+  }
+
   $content.innerHTML = mdToHtml(md);
   $foot.textContent = `Última actualización del manual: ${fmtFecha(data.actualizado)}`;
 
   const secciones = extraerSecciones(md);
   $index.innerHTML = secciones.length
     ? `<div class="manual-index-title">Contenido</div>` +
-      secciones.map(s => `<a class="manual-index-link" href="#${s.id}" data-id="${s.id}">${s.titulo}</a>`).join('')
+      secciones.map(s => `<a class="manual-index-link" href="#${s.id}" data-id="${s.id}">${escapeHtml(s.titulo)}</a>`).join('')
     : '';
 
   // Scroll manual: el contenedor scrolleable es .manual-content, no la ventana,
@@ -95,6 +109,13 @@ export async function renderManual(container) {
   $index.querySelectorAll('.manual-index-link').forEach(a => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
+      // Si hay un filtro activo, la sección destino puede estar oculta y el
+      // scroll no haría nada: limpiamos el buscador y restauramos el
+      // contenido completo antes de scrollear.
+      if ($search.value) {
+        $search.value = '';
+        aplicarBusqueda('');
+      }
       const dest = $content.querySelector(`[id="${a.dataset.id}"]`);
       if (dest) dest.scrollIntoView({ behavior: 'smooth', block: 'start' });
       $index.querySelectorAll('.manual-index-link').forEach(x => x.classList.remove('active'));

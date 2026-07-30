@@ -33,6 +33,10 @@ Tests tras el fix: **27/27 PASS**. Build + `Restart-Service` hechos de nuevo; se
 
 Aceptado a propósito, sin arreglar: el markdown de fallback publica la ruta absoluta del archivo en el servidor. Lo pidió el spec y solo lo ve un usuario autenticado; no hay path traversal (la ruta se resuelve contra `import.meta.url` y el router llama `leerManual()` sin argumentos).
 
+**Guardarraíl contra la desincronización manual↔motor (30/07)**: `server/services/manualCoherencia.test.js` (4 tests). No lee constantes: llama a `calcularSucursal`, `calcularCajeros` y `calcularEncargados` con fixtures mínimos, deriva el borde real de cada umbral probando el comportamiento justo por encima y por debajo, y además exige que `docs/MANUAL.md` afirme textualmente ese mismo número. Cubre los umbrales E1/E2/E3 con la tolerancia del 4%, el 96% estricto de cajeros (96% exacto no comisiona), el part-time al 50% redondeado a miles, y el −4% del indicador G. **Verificado que muerde**: se mutó el motor en las tres reglas (una por vez) y el test falló en cada caso con un mensaje que dice qué sección del manual actualizar; también se mutó el manual (4% → 5%) y falló. El motor quedó revertido — `git status` limpio.
+
+No cubre, y está documentado en el encabezado del archivo: los montos en pesos (los $10.000/$9.000/$8.000 de Supervisores, los $23.000 de plaza Millón, el factor 0,5, los montos de cajeros y operadores) porque viven en la DB (`tbl_CoVenAppINDO_Montos*`) y no son constantes del código; y Operadores Millón (full-equivalentes, venta × 2), que necesita un contexto de fixtures mucho más grande. Total de tests del repo tras esto: **31/31 PASS**.
+
 **Pendiente del usuario — verificación visual en el navegador**: esta sesión corrió sin navegador disponible en el servidor, así que **no** se verificó visualmente: índice navegable, buscador filtrando, impresión, modo claro/oscuro, ni la vista real logueado como `EVIDABLE` (perfil 8) desde `http://10.0.0.118/d/8/`. Falta que el usuario lo confirme desde su navegador. Nota de compatibilidad: los estilos de impresión usan `body:has(...)`, soportado en Chrome/Edge 105+ y Firefox 121+.
 
 ---

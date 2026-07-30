@@ -163,6 +163,8 @@ Restart-Service dashcomisionesindo.exe
 - Cambios en `server/` (backend) **no** requieren build, solo reiniciar el servicio.
 
 > **Al cambiar una regla del motor de cálculo, actualizar `docs/MANUAL.md`.** Es el manual que ven los usuarios desde la app (sección AYUDA); no requiere build ni deploy, solo editar el archivo.
+>
+> `server/services/manualCoherencia.test.js` es el guardarraíl: deriva del motor los umbrales que el manual afirma (escalones E1/E2/E3 con la tolerancia del 4%, el 96% de cajeros y su part-time, el −4% del indicador G) y falla si el motor y el texto divergen. Cubre solo lo que es constante del código — los montos en pesos viven en la DB y no se pueden verificar sin ella.
 
 ---
 

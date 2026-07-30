@@ -126,8 +126,9 @@ export async function renderManual(container) {
       $content.innerHTML = `
         <div class="manual-msg">
           <div style="font-size:32px;margin-bottom:12px">🔍</div>
-          <p>Sin coincidencias para «${termino}»</p>
+          <p>Sin coincidencias para «<span id="manual-q"></span>»</p>
         </div>`;
+      $content.querySelector('#manual-q').textContent = termino;
       return;
     }
     resaltar($content, termino);

@@ -234,9 +234,12 @@ tfoot td { padding: 8px 10px; white-space: nowrap; border-top: 2px solid var(--c
 }
 
 .manual-content {
-  flex: 1; overflow-y: auto; min-width: 0; padding-right: 8px;
+  flex: 1; overflow-y: auto; overflow-x: hidden; min-width: 0; max-width: 100%;
+  padding-right: 8px;
   font-size: 14px; line-height: 1.65; color: var(--color-text);
 }
+/* Red de contención: nada del contenido debe empujar el ancho de la página. */
+.manual-content > * { max-width: 100%; }
 .manual-content h1 { font-size: 22px; font-weight: 700; margin: 0 0 14px; }
 .manual-content h2 {
   font-size: 18px; font-weight: 700; margin: 26px 0 10px;
@@ -265,13 +268,19 @@ tfoot td { padding: 8px 10px; white-space: nowrap; border-top: 2px solid var(--c
   border-left: 3px solid var(--sem-yellow-t); border-radius: 0 6px 6px 0;
 }
 
+/* table-layout: fixed reparte el ancho entre las columnas ignorando el
+   contenido. Sin esto, una celda larga (el manual tiene una de 443 caracteres)
+   estira la tabla más allá del contenedor y aparece un scroll horizontal de
+   toda la página. Con fixed + overflow-wrap el texto envuelve y siempre entra. */
 .manual-table {
-  width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 13px;
+  width: 100%; max-width: 100%; table-layout: fixed;
+  border-collapse: collapse; margin: 0 0 14px; font-size: 13px;
   background: var(--color-surface);
 }
 .manual-table th, .manual-table td {
   border: 1px solid var(--color-border); padding: 6px 10px;
   text-align: left; vertical-align: top;
+  overflow-wrap: anywhere;   /* corta también un token largo sin espacios */
 }
 .manual-table th { background: var(--color-bg); font-weight: 700; }
 .manual-table tbody tr:hover { background: var(--color-row-hover); }
@@ -312,5 +321,10 @@ tfoot td { padding: 8px 10px; white-space: nowrap; border-top: 2px solid var(--c
   .manual-content h2, .manual-content h3 { break-after: avoid; }
   .manual-table, .manual-content pre, .manual-content blockquote { break-inside: avoid; }
   .manual-table th { background: #eee !important; }
+  /* En pantalla los bloques de código scrollean; en papel no hay scroll, así que
+     envuelven — si no, el PDF los corta en el margen. */
+  .manual-content pre { white-space: pre-wrap; overflow-x: visible !important; }
+  /* El ancho de la hoja es más angosto que la pantalla: reforzar la contención. */
+  .manual-content, .manual-content > *, .manual-table { max-width: 100% !important; }
   .manual-hit { background: none !important; color: #000 !important; }
 }

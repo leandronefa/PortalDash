@@ -146,6 +146,7 @@ Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpi
 | Cálculos | `encargados`, `encargados-millon` | Resultado por sucursal, sin nombres de personas — **blindado, no tocar** |
 | Cálculos | `total` | Ejecuta el cálculo completo (botón "▶ Ejecutar cálculo") + pestañas de resultado y CSV. **Conectada al menú el 2026-07-14** — existía huérfana (sin ruta ni link) desde que se quitó el botón del Dashboard |
 | Cálculos | `resultado-supervisores` | Resultado por supervisor, plazas en una línea por provincia (Retail + Millón), detalle por sucursal — **ÚNICO módulo abierto** (2026-07-06) |
+| AYUDA | `manual` | Manual de uso. El texto vive en `docs/MANUAL.md` y lo sirve `GET /api/manual` — editar el `.md` y recargar la página alcanza, **sin** `npm run build` ni reinicio del servicio |
 
 El ABM de Supervisores (`pages/supervisores.js`) vive en "DATOS" (se movió desde "Cálculos" sin tocar su lógica); la página de resultado (`resultado-supervisores.js`) es la que reemplaza ese rol en "Cálculos".
 
@@ -160,6 +161,8 @@ Restart-Service dashcomisionesindo.exe
 
 - Cambios en `src/` (frontend) requieren `npm run build` **antes** de reiniciar el servicio, o la página sigue mostrando la versión vieja.
 - Cambios en `server/` (backend) **no** requieren build, solo reiniciar el servicio.
+
+> **Al cambiar una regla del motor de cálculo, actualizar `docs/MANUAL.md`.** Es el manual que ven los usuarios desde la app (sección AYUDA); no requiere build ni deploy, solo editar el archivo.
 
 ---
 

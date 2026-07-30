@@ -1,4 +1,26 @@
-# Retomar — ComisionesINDO — actualizado 2026-07-27
+# Retomar — ComisionesINDO — actualizado 2026-07-30
+
+## Sesión 2026-07-30 — Manual de uso (sección AYUDA)
+
+Implementado con spec + plan + 6 tareas vía subagentes (spec: `docs/superpowers/specs/2026-07-30-manual-uso-design.md`, plan: `docs/superpowers/plans/2026-07-30-manual-uso.md`).
+
+**Arquitectura**: el texto del manual vive en `docs/MANUAL.md` (Markdown plano) y lo sirve `GET /api/manual` (`server/routes/manual.js` → `server/services/manualDoc.js::leerManual()`, lee el archivo del disco en cada request). La página `src/pages/manual.js` (ruta `manual`, sidebar AYUDA → 📖 Manual) lo renderiza con un mini-parser de Markdown propio sin dependencias (`src/components/markdown.js`: encabezados, párrafos, negrita/itálica/código, listas, tabla GFM, bloque de código, blockquote, regla horizontal, escape de HTML), con índice de navegación (a partir de los `h2`), buscador client-side y estilos de impresión/modo oscuro. **Decisión de diseño clave**: no hay `attachScope` ni `blockWriteIfSupervisor` en el router — el manual no tiene datos de sucursal que filtrar y no expone escritura, así que el perfil 8 (supervisor, solo lectura) ve exactamente el mismo contenido que cualquier otro perfil.
+
+**Archivos nuevos**: `docs/MANUAL.md`, `server/services/manualDoc.js` + `manualDoc.test.js`, `server/routes/manual.js`, `src/components/markdown.js` + `markdown.test.js`, `src/pages/manual.js`.
+
+**Tests (30/07)**: `node --test server/services/manualDoc.test.js src/components/markdown.test.js server/services/calcEngine.supervisores.test.js` → **25/25 PASS** (2 manualDoc + 13 markdown + 10 calcEngine.supervisores, este último corrido solo para confirmar no-regresión — no se tocó el motor).
+
+**Deploy (30/07)**: `npm run build` + `Restart-Service dashcomisionesindo.exe` → `Running`. Smoke test `GET /api/manual` sin token → 401 (router registrado, pide auth).
+
+**Verificación por API (reemplaza la visual del plan, no había navegador disponible en el server)**:
+- Token perfil 1 vs token perfil 8 (`usuario: EVIDABLE`) contra `GET /api/manual` → **ambos 200 con el mismo `markdown` byte a byte** (hash SHA-256 idéntico) — confirma que el supervisor ve el manual completo, sin recorte ni 403.
+- No-regresión: mismo token de perfil 1 contra `GET /api/sucursales` y `GET /api/health` → 200, respuesta normal, el resto de la app sigue viva.
+- **Edición sin build ni reinicio** (verificación pendiente de la Tarea 5, cerrada acá): con el servicio ya reiniciado, se pidió `/api/manual` (hash A, `actualizado` t1), se agregó una línea comentario temporal al final de `docs/MANUAL.md`, se volvió a pedir **sin build ni restart** → el `markdown` trajo la línea nueva y `actualizado` cambió a t2; se quitó la línea y un tercer pedido devolvió exactamente el hash A original. Confirma la arquitectura: el `.md` se lee del disco en cada request.
+- Fallback de archivo ausente: se renombró `docs/MANUAL.md` a `.bak`, se pidió `/api/manual` → **200** (no 500, no error de red) con `markdown` = "Manual no disponible" + la ruta esperada (`C:\apps\dashboards\ComisionesINDO\docs\MANUAL.md`) y `actualizado: null`. Se restauró el archivo de inmediato y un pedido posterior confirmó el manual completo de nuevo (mismo hash que antes de la prueba). `git status` al final: `docs/MANUAL.md` sin cambios.
+
+**Pendiente del usuario — verificación visual en el navegador**: esta sesión corrió sin navegador disponible en el servidor, así que **no** se verificó visualmente: índice navegable, buscador filtrando, impresión, modo claro/oscuro, ni la vista real logueado como `EVIDABLE` (perfil 8) desde `http://10.0.0.118/d/8/`. Falta que el usuario lo confirme desde su navegador.
+
+---
 
 ## Sesión 2026-07-27 (2) — Historización de montos por período (foto congelada)
 

@@ -285,6 +285,34 @@ tfoot td { padding: 8px 10px; white-space: nowrap; border-top: 2px solid var(--c
 .manual-table th { background: var(--color-bg); font-weight: 700; }
 .manual-table tbody tr:hover { background: var(--color-row-hover); }
 
+/* Proporciones por tabla. Con table-layout: fixed, sin esto las columnas quedan
+   todas iguales y las de contenido corto (Sí/No, "¿Botón propio?") desperdician
+   ancho que necesitan las de texto largo. Los anchos van en el th de cada
+   columna, que es lo que fixed usa para dimensionar.
+   La clase la pone el parser a partir del título de la sección: si el título
+   cambia, estas reglas dejan de aplicar y la tabla vuelve a columnas iguales. */
+
+/* 4. Pantallas de DATOS — Pantalla | Qué muestra | Qué se puede editar */
+.manual-table--4-pantallas-de-datos th:nth-child(1) { width: 18%; }
+.manual-table--4-pantallas-de-datos th:nth-child(2) { width: 46%; }
+.manual-table--4-pantallas-de-datos th:nth-child(3) { width: 36%; }
+
+/* 5. Pantallas de Cálculos — Pantalla | Qué muestra | ¿Botón propio? | Qué se puede editar */
+.manual-table--5-pantallas-de-calculos th:nth-child(1) { width: 15%; }
+.manual-table--5-pantallas-de-calculos th:nth-child(2) { width: 38%; }
+.manual-table--5-pantallas-de-calculos th:nth-child(3) { width: 14%; }
+.manual-table--5-pantallas-de-calculos th:nth-child(4) { width: 33%; }
+
+/* 14. Reglas de Supervisores — Pesos | Participación | Paga */
+.manual-table--14-reglas-de-supervisores th:nth-child(1) { width: 12%; }
+.manual-table--14-reglas-de-supervisores th:nth-child(2) { width: 18%; }
+.manual-table--14-reglas-de-supervisores th:nth-child(3) { width: 70%; }
+
+/* 18. Problemas frecuentes — Síntoma | Causa probable | Qué hacer */
+.manual-table--18-problemas-frecuentes th:nth-child(1) { width: 30%; }
+.manual-table--18-problemas-frecuentes th:nth-child(2) { width: 30%; }
+.manual-table--18-problemas-frecuentes th:nth-child(3) { width: 40%; }
+
 .manual-msg { text-align: center; padding: 60px 20px; color: var(--color-muted); }
 .manual-foot {
   flex-shrink: 0; margin-top: 10px; padding-top: 8px;

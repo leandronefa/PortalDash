@@ -71,6 +71,7 @@ export function mdToHtml(md) {
   const dedup = nuevoDedup();
   const out = [];
   let i = 0;
+  let seccionActual = '';   // slug del último h2: etiqueta las tablas de esa sección
 
   while (i < lineas.length) {
     const linea = lineas[i];
@@ -94,7 +95,8 @@ export function mdToHtml(md) {
     }
     if ((m = /^##\s+(.*)$/.exec(linea))) {
       const titulo = m[1].trim();
-      out.push(`<h2 id="${dedup(titulo)}">${inline(escapeHtml(titulo))}</h2>`); i++; continue;
+      seccionActual = dedup(titulo);
+      out.push(`<h2 id="${seccionActual}">${inline(escapeHtml(titulo))}</h2>`); i++; continue;
     }
     if ((m = /^#\s+(.*)$/.exec(linea))) {
       out.push(`<h1>${inline(escapeHtml(m[1].trim()))}</h1>`); i++; continue;
@@ -106,8 +108,15 @@ export function mdToHtml(md) {
       i += 2;
       const body = [];
       while (i < lineas.length && esFilaTabla(lineas[i])) { body.push(celdas(escapeHtml(lineas[i]))); i++; }
+      // La clase de la sección permite darle a cada tabla sus proporciones de
+      // columna en el CSS (con table-layout: fixed, si no todas quedan iguales).
+      // Si el título de la sección cambia, la regla del CSS deja de aplicar y la
+      // tabla vuelve a columnas iguales: degrada, no rompe.
+      const claseTabla = seccionActual
+        ? `manual-table manual-table--${seccionActual}`
+        : 'manual-table';
       out.push(
-        '<table class="manual-table"><thead><tr>' +
+        `<table class="${claseTabla}"><thead><tr>` +
         head.map(c => `<th>${c}</th>`).join('') +
         '</tr></thead><tbody>' +
         body.map(f => '<tr>' + f.map(c => `<td>${c}</td>`).join('') + '</tr>').join('') +

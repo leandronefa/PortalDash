@@ -36,6 +36,19 @@ test('tabla GFM con encabezado', () => {
   assert.match(html, /<td>\$10\.000<\/td>/);
 });
 
+test('una tabla dentro de una sección lleva la clase de esa sección', () => {
+  const md = '## 4. Pantallas de DATOS\n\n| Pantalla | Qué muestra |\n|---|---|\n| Montos | Los montos |';
+  const html = mdToHtml(md);
+  assert.match(html, /<table class="manual-table manual-table--4-pantallas-de-datos">/);
+});
+
+test('la clase de sección de la tabla acompaña al slug deduplicado del h2', () => {
+  const md = '## Reglas\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n## Reglas\n\n| c | d |\n|---|---|\n| 3 | 4 |';
+  const html = mdToHtml(md);
+  assert.match(html, /manual-table--reglas"/,   'la primera tabla usa el slug base');
+  assert.match(html, /manual-table--reglas-2"/, 'la segunda usa el slug deduplicado, igual que el id de su h2');
+});
+
 test('bloque de código y blockquote', () => {
   const code = mdToHtml('```\nDELETE FROM tabla\n```');
   assert.match(code, /<pre><code>DELETE FROM tabla\n<\/code><\/pre>/);

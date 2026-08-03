@@ -97,3 +97,38 @@ export function construirMatriz(registros, periodo, nombres = {}) {
     }
   }
 }
+
+/**
+ * Asiento completo de un dia+sucursal: es el drill-down de una celda de la
+ * matriz. Incluye TODAS las cuentas del grupo (no solo la de diferencias)
+ * porque el sentido del panel es entender de donde salio la diferencia; el
+ * saldo de la Caja Recaudadora se ve aca como dato, sin generar alerta.
+ */
+export function construirAsiento(registros, fechaISO, sucursal) {
+  const lineas = registros
+    .filter(r => r.fechaISO === fechaISO && r.sucursal === sucursal)
+    .map(r => ({
+      cuentaCodigo: r.cuentaCodigo,
+      cuentaNombre: r.cuentaNombre,
+      debe: r.debe,
+      haber: r.haber,
+      saldo: r.saldo,
+      esDiferenciaCaja: r.cuentaCodigo === CUENTA_DIFERENCIAS_CAJA
+    }))
+    .sort((a, b) => a.cuentaCodigo.localeCompare(b.cuentaCodigo))
+
+  const totales = lineas.reduce(
+    (acc, l) => ({ debe: acc.debe + l.debe, haber: acc.haber + l.haber }),
+    { debe: 0, haber: 0 }
+  )
+
+  return {
+    fechaISO,
+    sucursal,
+    lineas,
+    totales,
+    // Con datos de SAP siempre da true. Se expone igual para que un dia en que
+    // no cuadre se vea en pantalla en vez de pasar inadvertido.
+    cuadra: esCero(totales.debe - totales.haber)
+  }
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { CUENTA_DIFERENCIAS_CAJA, periodosDisponibles, construirMatriz } from '../server/control-caja.js'
+import { CUENTA_DIFERENCIAS_CAJA, periodosDisponibles, construirMatriz, construirAsiento } from '../server/control-caja.js'
 
 // Helper: arma un registro con los campos que la matriz mira.
 function reg(fechaISO, sucursal, cuentaCodigo, saldo, extra = {}) {
@@ -156,4 +156,49 @@ test('un periodo sin registros da una matriz vacia, no un error', () => {
   assert.deepEqual(m.sucursales, [])
   assert.equal(m.granTotal, 0)
   assert.equal(m.resumen.diasTotales, 0)
+})
+
+test('el asiento trae todas las cuentas del dia+sucursal, ordenadas por codigo', () => {
+  const rs = [
+    reg('2026-06-03', '020', DIF, 23200),
+    reg('2026-06-03', '020', '1.1.001.01.024', -23200),
+    reg('2026-06-03', '003', DIF, 999),          // otra sucursal
+    reg('2026-06-04', '020', DIF, 111)           // otro dia
+  ]
+  const a = construirAsiento(rs, '2026-06-03', '020')
+  assert.deepEqual(a.lineas.map(l => l.cuentaCodigo), ['1.1.001.01.024', '4.2.002.01.050'])
+})
+
+test('el asiento marca las lineas de diferencias de caja', () => {
+  const rs = [reg('2026-06-03', '020', DIF, 100), reg('2026-06-03', '020', VENTA, -100)]
+  const a = construirAsiento(rs, '2026-06-03', '020')
+  const dif = a.lineas.find(l => l.cuentaCodigo === DIF)
+  const venta = a.lineas.find(l => l.cuentaCodigo === VENTA)
+  assert.equal(dif.esDiferenciaCaja, true)
+  assert.equal(venta.esDiferenciaCaja, false)
+})
+
+test('los totales del asiento son la suma de debe y de haber, y cuadran', () => {
+  const rs = [
+    { ...reg('2026-06-03', '020', DIF, 0), debe: 300, haber: 300 },
+    { ...reg('2026-06-03', '020', VENTA, 0), debe: 700, haber: 700 }
+  ]
+  const a = construirAsiento(rs, '2026-06-03', '020')
+  assert.equal(a.totales.debe, 1000)
+  assert.equal(a.totales.haber, 1000)
+  assert.equal(a.cuadra, true)
+})
+
+test('cuadra es false si debe != haber', () => {
+  // No deberia pasar con datos de SAP, pero si pasa hay que verlo, no taparlo.
+  const rs = [{ ...reg('2026-06-03', '020', DIF, 0), debe: 300, haber: 100 }]
+  const a = construirAsiento(rs, '2026-06-03', '020')
+  assert.equal(a.cuadra, false)
+})
+
+test('un dia+sucursal sin movimientos da un asiento vacio, no un error', () => {
+  const a = construirAsiento([], '2026-06-03', '020')
+  assert.deepEqual(a.lineas, [])
+  assert.equal(a.totales.debe, 0)
+  assert.equal(a.cuadra, true)
 })

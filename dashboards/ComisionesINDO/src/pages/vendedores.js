@@ -446,7 +446,8 @@ export async function renderVendedores(container, periodo) {
     const etiqueta = `${body.anio}-${String(body.mes).padStart(2, '0')}`;
     if (!confirm(`${editando ? 'Guardar cambios en' : 'Crear'} la vigencia ${etiqueta}:\n\n` +
                  `1er $${fmtNum(body.primer)} · 2do $${fmtNum(body.segundo)} · 3er $${fmtNum(body.tercer)}\n\n` +
-                 `Los períodos ya calculados no cambian hasta que el job SQL los reprocese.`)) return;
+                 `Va a regir los periodos ${rango(body)}.\n` +
+                 `Los periodos ya calculados no cambian hasta que el job SQL los reprocese.`)) return;
     try {
       if (editando) await api.put(`/vendedores/importes/${editando.anio}/${editando.mes}`, body);
       else          await api.post('/vendedores/importes', body);

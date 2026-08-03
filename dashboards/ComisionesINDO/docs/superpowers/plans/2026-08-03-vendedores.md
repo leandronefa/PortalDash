@@ -590,7 +590,7 @@ Run:
 ```bash
 node --test server/services/manualDoc.test.js src/components/markdown.test.js server/services/calcEngine.supervisores.test.js server/services/manualCoherencia.test.js server/services/vendedoresView.test.js
 ```
-Expected: PASS — 56 tests (31 previos + 25 nuevos)
+Expected: PASS — 58 tests (33 previos + 25 nuevos)
 
 - [ ] **Step 19: Commit**
 
@@ -1643,7 +1643,7 @@ Run:
 ```bash
 node --test server/services/manualDoc.test.js src/components/markdown.test.js server/services/calcEngine.supervisores.test.js server/services/manualCoherencia.test.js server/services/vendedoresView.test.js
 ```
-Expected: PASS — 56 tests. **Si `manualCoherencia.test.js` falla, es porque se tocó `docs/MANUAL.md` de una forma que rompió los números que ese test exige; arreglarlo antes de seguir.**
+Expected: PASS — 58 tests. **Si `manualCoherencia.test.js` falla, es porque se tocó `docs/MANUAL.md` de una forma que rompió los números que ese test exige; arreglarlo antes de seguir.**
 
 - [ ] **Step 2: Agregar la sección de Vendedores a `docs/MANUAL.md`**
 
@@ -1730,7 +1730,7 @@ No hay tests automatizados. La verificación es manual contra los datos reales d
 por:
 
 ```
-Tests: `node --test server/services/manualDoc.test.js src/components/markdown.test.js server/services/calcEngine.supervisores.test.js server/services/manualCoherencia.test.js server/services/vendedoresView.test.js` (56 tests). Cubren el motor de Supervisores, el parser del manual, la coherencia manual↔motor y la vista de Vendedores. El resto se verifica manualmente contra los datos reales de SQL Server.
+Tests: `node --test server/services/manualDoc.test.js src/components/markdown.test.js server/services/calcEngine.supervisores.test.js server/services/manualCoherencia.test.js server/services/vendedoresView.test.js` (58 tests). Cubren el motor de Supervisores, el parser del manual, la coherencia manual↔motor y la vista de Vendedores. El resto se verifica manualmente contra los datos reales de SQL Server.
 ```
 
 Y reemplazar en la sección de arquitectura:
@@ -1819,7 +1819,7 @@ Expected: sin archivos modificados ni scripts temporales sueltos en `dashboards/
 
 ## Verificación final del módulo
 
-- [ ] `node --test` con los 5 archivos de test → 56 PASS
+- [ ] `node --test` con los 5 archivos de test → 58 PASS
 - [ ] `npm run build` sin errores
 - [ ] `Get-Service dashcomisionesindo.exe` → `Running`
 - [ ] `GET /api/vendedores?periodo=2026-06` con token → 200, 32 sucursales, 0 desfasados

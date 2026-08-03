@@ -108,7 +108,7 @@ Montado en `/api/vendedores` con `authMiddleware` + `attachScope` + `blockWriteI
 }
 ```
 
-Una sola query con `INNER JOIN` de Grilla + Comisiones + Escalones + Vendedores y `LEFT JOIN` a `tbl_CoVenAppINDO_Sucursales` para el nombre. `CAST(g.idSucursal AS INT)` para cruzar el varchar con el int (no usar `TRY_CONVERT`: SQL 2008 R2). El armado por sucursal se hace en JS, no en SQL.
+Una sola query: `INNER JOIN` a `EscalonesINDO` (sin umbrales no hay nada que mostrar) y `LEFT JOIN` a `GrillaComisionesINDO`, `tbl_CoVenApp_Vendedores` y `tbl_CoVenAppINDO_Sucursales` — un vendedor sin fila de comisión o sin ficha aparece igual, con comisión 0 y marcado `desfasado`, en vez de desaparecer de la vista. `CAST(g.idSucursal AS INT)` para cruzar el varchar con el int (no usar `TRY_CONVERT`: SQL 2008 R2). El armado por sucursal se hace en JS, no en SQL.
 
 Sucursales con escalón pero **sin vendedores en el período no se listan** (el join es sobre la grilla).
 
@@ -139,6 +139,7 @@ El router queda fino; toda la lógica derivable vive acá y se testea sin DB (`n
 
 | Función | Contrato |
 |---|---|
+| `agruparVigencias(rows)` | Las 3 filas por vigencia de `ImportesEscalonesINDO` colapsadas en una fila por vigencia, de la más nueva a la más vieja. |
 | `armarVista(filas)` | Filas planas del JOIN → array de sucursales con vendedores anidados, `escalon` derivado, `desfasado`, totales por sucursal y globales. |
 | `escalonAlcanzado(venta, umbrales)` | Réplica exacta del criterio del SP: `>= 3er` → 3, `>= 2do` → 2, `>= 1er` → 1, si no 0. |
 | `vigenciaParaPeriodo(vigencias, periodo)` | Réplica del `TOP 1 (Año*100+Mes) <= período ORDER BY Año DESC, Mes DESC`. Sin vigencia aplicable → `null`. |

@@ -155,7 +155,7 @@ El router queda fino; toda la lógica derivable vive acá y se testea sin DB (`n
 
 ## 7. Frontend — `src/pages/vendedores.js`
 
-Ruta `vendedores`. **Sidebar: primera entrada de la sección Cálculos**, arriba de `🧮 Total`. Icono `🛍️`, label `Vendedores`.
+Ruta `vendedores`. **Sidebar: sección Cálculos, debajo de `🧮 Total` y arriba de `🧾 Cajeros`** (segunda entrada de la sección). Icono `🛍️`, label `Vendedores`.
 
 Patrón visual de `operadores.js`: sticky header, filtro de texto, CSV es-AR (`;`, coma decimal, BOM UTF-8), modo oscuro, `container.innerHTML` desde `renderVendedores(container, periodo)`.
 

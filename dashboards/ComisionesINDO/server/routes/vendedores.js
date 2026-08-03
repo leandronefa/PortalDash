@@ -3,7 +3,7 @@ import { getPool, sql } from '../config/db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { attachScope, blockWriteIfSupervisor } from '../middleware/supervisorScope.js';
 import { filtrarPorSucursal } from '../utils/scopeFiltro.js';
-import { armarVista, agruparVigencias, vigenciaParaPeriodo } from '../services/vendedoresView.js';
+import { armarVista, agruparVigencias, vigenciaParaPeriodo, validarVigencia } from '../services/vendedoresView.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -104,6 +104,108 @@ router.get('/importes', async (req, res) => {
     });
   } catch (err) {
     console.error('[vendedores GET /importes]', err);
+    res.status(500).json({ ok: false, error: 'Error de servidor' });
+  }
+});
+
+// ── ABM de vigencias de importes ─────────────────────────────────────────────
+// Único write del módulo. La semántica es la que ya tiene el SQL: una vigencia
+// rige desde su (año, mes) hasta que aparece una posterior. Para cambiar los
+// montos se crea una vigencia nueva; los períodos anteriores siguen resolviendo
+// la vieja, así que recalcularlos da el mismo resultado que hoy.
+
+const DESCRIPCIONES_SQL = [
+  ['PRIMER ESCALON',  'primer'],
+  ['SEGUNDO ESCALON', 'segundo'],
+  ['TERCER ESCALON',  'tercer'],
+];
+
+async function insertarVigencia(tx, anio, mes, body) {
+  for (const [descripcion, campo] of DESCRIPCIONES_SQL) {
+    await new sql.Request(tx)
+      .input('desc',  sql.VarChar(50), descripcion)
+      .input('monto', sql.Decimal(18, 2), body[campo])
+      .input('mes',   sql.Int, mes)
+      .input('anio',  sql.Int, anio)
+      .query(`INSERT INTO dbo.tbl_CoVenApp_ImportesEscalonesINDO (Descripcion, FullTime, Mes, Año)
+              VALUES (@desc, @monto, @mes, @anio)`);
+  }
+}
+
+// POST /api/vendedores/importes — nueva vigencia (3 filas, en transacción)
+router.post('/importes', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const vigencias = await leerVigencias(pool);
+    const v = validarVigencia(req.body, vigencias, 'crear');
+    if (!v.ok) return res.status(v.status).json({ ok: false, error: v.error });
+
+    const anio = Number(req.body.anio), mes = Number(req.body.mes);
+    const tx = new sql.Transaction(pool);
+    await tx.begin();
+    try {
+      await insertarVigencia(tx, anio, mes, req.body);
+      await tx.commit();
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+    console.log(`[vendedores] vigencia creada ${anio}-${mes} por ${req.user?.usuario}`);
+    res.status(201).json({ ok: true, vigencia: { anio, mes, primer: req.body.primer, segundo: req.body.segundo, tercer: req.body.tercer } });
+  } catch (err) {
+    console.error('[vendedores POST /importes]', err);
+    res.status(500).json({ ok: false, error: 'Error de servidor' });
+  }
+});
+
+// PUT /api/vendedores/importes/:anio/:mes — reemplaza los 3 montos
+router.put('/importes/:anio/:mes', async (req, res) => {
+  const anio = Number(req.params.anio), mes = Number(req.params.mes);
+  try {
+    const pool = await getPool();
+    const vigencias = await leerVigencias(pool);
+    const v = validarVigencia({ ...req.body, anio, mes }, vigencias, 'editar');
+    if (!v.ok) return res.status(v.status).json({ ok: false, error: v.error });
+
+    // Borrar + reinsertar: la tabla no tiene clave por (Descripcion, Mes, Año),
+    // así que un UPDATE por descripción podría tocar filas duplicadas de una
+    // carga manual vieja. Reinsertar deja la vigencia con exactamente 3 filas.
+    const tx = new sql.Transaction(pool);
+    await tx.begin();
+    try {
+      await new sql.Request(tx)
+        .input('mes', sql.Int, mes).input('anio', sql.Int, anio)
+        .query('DELETE FROM dbo.tbl_CoVenApp_ImportesEscalonesINDO WHERE Mes=@mes AND Año=@anio');
+      await insertarVigencia(tx, anio, mes, req.body);
+      await tx.commit();
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+    console.log(`[vendedores] vigencia editada ${anio}-${mes} por ${req.user?.usuario}`);
+    res.json({ ok: true, vigencia: { anio, mes, primer: req.body.primer, segundo: req.body.segundo, tercer: req.body.tercer } });
+  } catch (err) {
+    console.error('[vendedores PUT /importes]', err);
+    res.status(500).json({ ok: false, error: 'Error de servidor' });
+  }
+});
+
+// DELETE /api/vendedores/importes/:anio/:mes — borra la vigencia completa
+router.delete('/importes/:anio/:mes', async (req, res) => {
+  const anio = Number(req.params.anio), mes = Number(req.params.mes);
+  try {
+    const pool = await getPool();
+    const vigencias = await leerVigencias(pool);
+    const v = validarVigencia({ anio, mes }, vigencias, 'borrar');
+    if (!v.ok) return res.status(v.status).json({ ok: false, error: v.error });
+
+    await pool.request()
+      .input('mes', sql.Int, mes).input('anio', sql.Int, anio)
+      .query('DELETE FROM dbo.tbl_CoVenApp_ImportesEscalonesINDO WHERE Mes=@mes AND Año=@anio');
+    console.log(`[vendedores] vigencia borrada ${anio}-${mes} por ${req.user?.usuario}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[vendedores DELETE /importes]', err);
     res.status(500).json({ ok: false, error: 'Error de servidor' });
   }
 });

@@ -9,6 +9,7 @@ const TABS = [
   { key: 'enc-millon',  label: 'Encargados Millón',        seccion: 'ENC_MILLON',          type: 'base' },
   { key: 'supervisor',  label: 'Supervisores',             endpoint: '/montos/supervisor', type: 'supervisor' },
   { key: 'prestamos',   label: 'Préstamos',               endpoint: '/montos/prestamos',  type: 'prestamos' },
+  { key: 'vendedores',  label: 'Vendedores',               type: 'vendedores' },
 ];
 
 function fmt(v) {
@@ -44,7 +45,7 @@ const NOTE = `<div style="font-size:11px;color:var(--color-muted);padding:8px 12
   ✏️ Editá los valores de <strong>Categoría C</strong> — B y A se calculan automáticamente.
 </div>`;
 
-export async function renderVisorMontos(container) {
+export async function renderVisorMontos(container, periodo) {
   container.innerHTML = `
     <style>
       #montos-wrap table th,
@@ -118,6 +119,22 @@ export async function renderVisorMontos(container) {
         } catch (err) { showToast(err.message, 'error'); return; }
       }
       renderEncargadosMerged(wrap, baseData.filter(r => r.seccion === 'ENCARGADO'));
+      return;
+    }
+
+    // Vendedores no va por categoría ni por escalón cargado a mano: sus importes
+    // son vigencias con fecha (otra tabla, otro endpoint), así que tiene su propio
+    // camino de carga en vez de pasar por renderByType.
+    if (tab.type === 'vendedores') {
+      if (!cache[key] || reload) {
+        wrap.innerHTML = '<p style="color:var(--color-muted);text-align:center;padding:30px">Cargando…</p>';
+        try {
+          const qs = /^\d{4}-\d{2}$/.test(String(periodo || '')) ? `?periodo=${periodo}` : '';
+          const r = await api.get(`/vendedores/importes${qs}`);
+          cache[key] = { vigencias: r.vigencias || [], vigente: r.vigente || null };
+        } catch (err) { showToast(err.message, 'error'); return; }
+      }
+      renderVendedores(wrap, cache[key]);
       return;
     }
 
@@ -607,6 +624,147 @@ export async function renderVisorMontos(container) {
         showToast(err.message, 'error');
         btn.disabled = false; btn.textContent = '💾';
       }
+    });
+  }
+
+  // ─── VENDEDORES (vigencias de importes de escalones) ──────────────
+  // Estos montos no tienen categoría A/B/C: valen para todos, y en vez de
+  // editarse en el lugar tienen fecha de vigencia. Una vigencia rige desde su
+  // mes en adelante hasta que aparece otra posterior, así que para cambiar
+  // montos se crea una vigencia nueva y los períodos anteriores no se tocan.
+
+  function fmtVig(v) { return `${v.anio}-${String(v.mes).padStart(2, '0')}`; }
+
+  function rangoVigencia(vigencias, v) {
+    const k = v.anio * 100 + v.mes;
+    const posteriores = vigencias
+      .filter(x => x.anio * 100 + x.mes > k)
+      .sort((a, b) => (a.anio * 100 + a.mes) - (b.anio * 100 + b.mes));
+    if (!posteriores.length) return `${fmtVig(v)} en adelante`;
+    const sig = posteriores[0];
+    const mes  = sig.mes === 1 ? 12 : sig.mes - 1;
+    const anio = sig.mes === 1 ? sig.anio - 1 : sig.anio;
+    return `${fmtVig(v)} a ${anio}-${String(mes).padStart(2, '0')}`;
+  }
+
+  function renderVendedores(wrap, data) {
+    const vigencias = data.vigencias;
+    const readonly  = isSupervisorReadonly();
+    const claveVigente = data.vigente ? data.vigente.anio * 100 + data.vigente.mes : null;
+
+    const trs = vigencias.map(v => {
+      const attrs = `data-anio="${v.anio}" data-mes="${v.mes}"`;
+      const esVigente = (v.anio * 100 + v.mes) === claveVigente;
+      return `<tr>
+        <td style="font-weight:600;white-space:nowrap">${fmtVig(v)}${esVigente
+          ? ' <span title="Vigencia que rige el período seleccionado" style="color:var(--color-success)">●</span>' : ''}</td>
+        <td style="font-size:11px;color:var(--color-muted);white-space:nowrap">${rangoVigencia(vigencias, v)}</td>
+        <td>${inputNum(v.primer,  'inp-v1', attrs)}</td>
+        <td>${inputNum(v.segundo, 'inp-v2', attrs)}</td>
+        <td>${inputNum(v.tercer,  'inp-v3', attrs)}</td>
+        <td style="white-space:nowrap">${readonly ? '' : `
+          <button class="btn-vend-save btn" ${attrs} title="Guardar los importes de esta vigencia"
+            style="font-size:12px;padding:3px 10px">💾</button>
+          <button class="btn-vend-del btn" ${attrs} title="Borrar esta vigencia"
+            style="font-size:12px;padding:3px 8px;color:var(--color-danger)">🗑</button>`}</td>
+      </tr>`;
+    }).join('');
+
+    const filaNueva = readonly ? '' : `
+      <tr style="border-top:2px solid var(--color-border)">
+        <td colspan="2" style="white-space:nowrap">
+          <input type="text" inputmode="numeric" id="vend-new-anio" placeholder="Año" maxlength="4"
+            style="width:58px;padding:3px 6px;border:1px solid var(--color-border);border-radius:4px;
+                   background:var(--color-input);color:var(--color-text);font-size:12px;text-align:center">
+          <input type="text" inputmode="numeric" id="vend-new-mes" placeholder="Mes" maxlength="2"
+            style="width:44px;padding:3px 6px;border:1px solid var(--color-border);border-radius:4px;
+                   background:var(--color-input);color:var(--color-text);font-size:12px;text-align:center">
+        </td>
+        <td>${inputNum(0, 'inp-new1')}</td>
+        <td>${inputNum(0, 'inp-new2')}</td>
+        <td>${inputNum(0, 'inp-new3')}</td>
+        <td><button class="btn btn-primary" id="vend-new-save" title="Crear esta vigencia"
+              style="font-size:12px;padding:3px 10px">+ Crear</button></td>
+      </tr>`;
+
+    wrap.innerHTML = `<div class="card" style="margin-top:0">
+      <div style="font-size:11px;color:var(--color-muted);padding:8px 12px 4px;line-height:1.6">
+        📅 Estos importes <strong>no van por categoría</strong>: valen igual para todos, y el
+        <strong>part time cobra la mitad</strong>.<br>
+        Cada vigencia rige <strong>desde su mes en adelante</strong> hasta que se carga una posterior.
+        Para cambiar montos, <strong>creá una vigencia nueva</strong>: los períodos anteriores no se alteran.<br>
+        ⚠️ El cálculo de Vendedores lo corre el proceso automático de la base, no el tablero: un período
+        ya calculado <strong>no cambia</strong> hasta que ese proceso lo vuelva a procesar.
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Vigencia</th><th>Alcanza</th>
+          <th>1er escalón</th><th>2do escalón</th><th>3er escalón</th><th></th>
+        </tr></thead>
+        <tbody>${trs}${filaNueva}</tbody>
+      </table></div>
+    </div>`;
+
+    if (readonly) return;
+
+    // Guardar los 3 importes de una vigencia existente
+    wrap.querySelectorAll('.btn-vend-save').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const anio = Number(btn.dataset.anio), mes = Number(btn.dataset.mes);
+        const row  = btn.closest('tr');
+        const body = {
+          primer:  parseNum(row.querySelector('.inp-v1').value),
+          segundo: parseNum(row.querySelector('.inp-v2').value),
+          tercer:  parseNum(row.querySelector('.inp-v3').value),
+        };
+        const v = vigencias.find(x => x.anio === anio && x.mes === mes);
+        if (!confirm(`Guardar los importes de la vigencia ${fmtVig({ anio, mes })}:\n\n`
+          + `1er $${fmt(body.primer)} · 2do $${fmt(body.segundo)} · 3er $${fmt(body.tercer)}\n\n`
+          + `Alcanza los períodos ${rangoVigencia(vigencias, v)} si se los vuelve a calcular.\n`
+          + `Los que ya están calculados no cambian hasta que el proceso los reprocese.`)) return;
+        try {
+          await api.put(`/vendedores/importes/${anio}/${mes}`, body);
+          showToast('Vigencia actualizada', 'success');
+          loadTab('vendedores', true);
+        } catch (err) { showToast(err.message, 'error'); }
+      });
+    });
+
+    // Borrar una vigencia completa
+    wrap.querySelectorAll('.btn-vend-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const anio = Number(btn.dataset.anio), mes = Number(btn.dataset.mes);
+        const v = vigencias.find(x => x.anio === anio && x.mes === mes);
+        if (!confirm(`¿Borrar la vigencia ${fmtVig({ anio, mes })}?\n\n`
+          + `Los períodos ${rangoVigencia(vigencias, v)} pasarían a tomar la vigencia anterior `
+          + `si se los vuelve a calcular.`)) return;
+        try {
+          await api.delete(`/vendedores/importes/${anio}/${mes}`);
+          showToast('Vigencia borrada', 'success');
+          loadTab('vendedores', true);
+        } catch (err) { showToast(err.message, 'error'); }
+      });
+    });
+
+    // Crear una vigencia nueva
+    wrap.querySelector('#vend-new-save').addEventListener('click', async () => {
+      const body = {
+        anio:    parseNum(wrap.querySelector('#vend-new-anio').value),
+        mes:     parseNum(wrap.querySelector('#vend-new-mes').value),
+        primer:  parseNum(wrap.querySelector('.inp-new1').value),
+        segundo: parseNum(wrap.querySelector('.inp-new2').value),
+        tercer:  parseNum(wrap.querySelector('.inp-new3').value),
+      };
+      if (!body.anio || !body.mes) { showToast('Completá año y mes de la vigencia', 'error'); return; }
+      if (!confirm(`Crear la vigencia ${fmtVig(body)}:\n\n`
+        + `1er $${fmt(body.primer)} · 2do $${fmt(body.segundo)} · 3er $${fmt(body.tercer)}\n\n`
+        + `Va a regir los períodos ${rangoVigencia(vigencias, body)}.\n`
+        + `Los períodos ya calculados no cambian hasta que el proceso los reprocese.`)) return;
+      try {
+        await api.post('/vendedores/importes', body);
+        showToast('Vigencia creada', 'success');
+        loadTab('vendedores', true);
+      } catch (err) { showToast(err.message, 'error'); }
     });
   }
 

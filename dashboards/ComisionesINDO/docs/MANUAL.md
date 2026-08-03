@@ -29,7 +29,7 @@ Para liquidar un período completo, seguí estos cuatro pasos en orden:
 |---|---|---|
 | Sucursales Retail | Listado de sucursales con ID, nombre, provincia, categoría del período, si tiene efectivo y su estado | El toggle **Habilitada / Deshabilitada** y el toggle CON/SIN efectivo. Una sucursal deshabilitada desaparece de las pantallas y del cálculo |
 | Sucursales Millón | Sucursales Millón con sus operadores, originaciones e importe total | El toggle **¿Es operador?** por persona, y podés actualizar los datos desde BeClever con su botón propio |
-| Montos | Los montos de comisión de cada rol, por escalón y categoría: Cajeros, Operadores CON Efectivo, Operadores SIN Efectivo, Encargados, Encargados Millón, Supervisores y Préstamos | El valor de Categoría C de cada concepto — B y A se calculan y graban solos. Excepción: el monto de Cajeros es único y B y A toman el mismo valor que C |
+| Montos | Los montos de comisión de cada rol, por escalón y categoría: Cajeros, Operadores CON Efectivo, Operadores SIN Efectivo, Encargados, Encargados Millón, Supervisores y Préstamos. La pestaña **Vendedores** funciona distinto: sus importes no van por categoría y se cargan por fecha de vigencia (ver la sección de Vendedores) | El valor de Categoría C de cada concepto — B y A se calculan y graban solos. Excepciones: el monto de Cajeros es único y B y A toman el mismo valor que C; en Vendedores se editan los tres importes de una vigencia, o se crea una vigencia nueva |
 | Ranking | La categoría A/B/C asignada a cada sucursal en el período, y los multiplicadores por categoría | Podés forzar manualmente la categoría de una sucursal y editar el valor de los multiplicadores |
 | Objetivos | Los objetivos de consumo y de efectivo cargados por sucursal para el período | Es de solo lectura — los objetivos se traen automáticamente desde BeClever |
 | Ventas | Las ventas de consumo, de efectivo y las originaciones de créditos del período | Es de solo lectura. En Originaciones podés filtrar por operador, sucursal y fecha |
@@ -159,7 +159,11 @@ alcanzado y la comisión.
 
 ### Importes de escalones: vigencias
 
-Los importes que se pagan por cada escalón se cargan desde el botón **Vigencias**.
+Los importes que se pagan por cada escalón se cargan desde dos lugares equivalentes:
+la pestaña **Vendedores** de la pantalla **Montos** (en DATOS, junto a los montos de
+los demás roles) o el botón **Vigencias** de esta misma pantalla. Las dos editan lo
+mismo, así que da igual cuál uses.
+
 Funcionan por fecha de vigencia: una vigencia rige **desde su mes en adelante**,
 hasta que se carga otra posterior.
 

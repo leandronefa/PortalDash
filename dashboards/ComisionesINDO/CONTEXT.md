@@ -158,7 +158,7 @@ Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpi
 | `tbl_CoVenApp_Vendedores` | Nombres y jornada actual del legajo (`GCL_TEMPSPARTIEL`) |
 | `tbl_CoVenAppINDO_Sucursales` | Nombre de sucursal (join, tabla propia del dashboard) |
 
-Página `src/pages/vendedores.js` (ruta `vendedores`, sidebar Cálculos entre Total y Cajeros) + modal de vigencias. Igual que el resto del módulo Cálculos, respeta `attachScope`/`blockWriteIfSupervisor`: perfil 8 ve menos sucursales (filtro por scope) y no puede tocar vigencias.
+Página `src/pages/vendedores.js` (ruta `vendedores`, sidebar Cálculos entre Total y Cajeros) + modal de vigencias. **El mismo ABM está también como pestaña "Vendedores" en el visor de Montos** (`src/pages/visor-montos.js`, tipo de tab `vendedores`, agregada 2026-08-03 a pedido del usuario: los montos de todos los otros roles se editan ahí y este era el único que no). Las dos UIs consumen los mismos endpoints; si se cambia el contrato, hay que tocar las dos. Igual que el resto del módulo Cálculos, respeta `attachScope`/`blockWriteIfSupervisor`: perfil 8 ve menos sucursales (filtro por scope) y no puede tocar vigencias.
 
 ---
 

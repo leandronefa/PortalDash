@@ -92,24 +92,51 @@ function importeDeEscalon(suc, escalon) {
   return 0;
 }
 
+// Tolerancia de medio peso: los montos son float en SQL.
+function difierePlata(a, b) {
+  return Math.abs((Number(a) || 0) - (Number(b) || 0)) > 0.5;
+}
+
 /**
  * Filas planas del JOIN → sucursales con sus vendedores anidados.
  *
  * La comisión que se expone es SIEMPRE la persistida en
  * tbl_CoVenApp_GrillaComisionesINDO: acá no se recalcula nada. Lo que sí se
  * deriva es el escalón alcanzado, y de la comparación entre ambos sale
- * `desfasado` — que significa "se editaron importes y este período no se
- * volvió a procesar".
+ * `desfasado` — que significa "la comisión guardada no coincide con el
+ * importe CONGELADO del escalón alcanzado en este período". Es una
+ * desincronización interna del propio job (p.ej. escalones rellenados sin
+ * recalcular comisiones), NO lo que dispara editar una vigencia: el importe
+ * congelado de `tbl_CoVenApp_EscalonesINDO` no se toca al editar vigencias,
+ * solo lo actualiza `sp_CoVenApp_LlenarEscalonesINDO` cuando el job procesa
+ * ese período — y ahí siempre corre encadenado con el cálculo de comisiones.
+ *
+ * Lo que SÍ detecta una edición de importes sin reprocesar es el segundo
+ * parámetro opcional `vigencia` — la vigencia que rige HOY para el período
+ * (ver `vigenciaParaPeriodo`). Si algún importe congelado de la sucursal
+ * difiere del de esa vigencia, la sucursal queda con
+ * `importes_desactualizados: true`: la card de "importes vigentes" y las
+ * comisiones mostradas dejaron de coincidir. Sin vigencia (o `null`), da
+ * `false` en todas — y el llamado sin este argumento sigue funcionando
+ * exactamente igual que antes.
  *
  * La jornada usada es la CONGELADA (`parcial`, de la grilla del período), no
  * la actual del legajo: es la que el SP aplicó al dividir por 2.
  */
-export function armarVista(filas) {
+export function armarVista(filas, vigencia = null) {
   const porSucursal = new Map();
 
   for (const f of filas || []) {
     const id = Number(f.sucursal_id);
     if (!porSucursal.has(id)) {
+      const importePrimer  = Number(f.importe_primer)  || 0;
+      const importeSegundo = Number(f.importe_segundo) || 0;
+      const importeTercer  = Number(f.importe_tercer)  || 0;
+      const importesDesactualizados = !!vigencia && (
+        difierePlata(importePrimer,  vigencia.primer)  ||
+        difierePlata(importeSegundo, vigencia.segundo) ||
+        difierePlata(importeTercer,  vigencia.tercer)
+      );
       porSucursal.set(id, {
         sucursal_id: id,
         sucursal_nombre: f.sucursal_nombre || `Sucursal ${id}`,
@@ -117,9 +144,10 @@ export function armarVista(filas) {
         primer_escalon:  Number(f.primer_escalon)  || 0,
         segundo_escalon: Number(f.segundo_escalon) || 0,
         tercer_escalon:  Number(f.tercer_escalon)  || 0,
-        importe_primer:  Number(f.importe_primer)  || 0,
-        importe_segundo: Number(f.importe_segundo) || 0,
-        importe_tercer:  Number(f.importe_tercer)  || 0,
+        importe_primer:  importePrimer,
+        importe_segundo: importeSegundo,
+        importe_tercer:  importeTercer,
+        importes_desactualizados: importesDesactualizados,
         total_comision: 0,
         vendedores: [],
       });
@@ -148,8 +176,7 @@ export function armarVista(filas) {
       comisiona: Number(f.comisiona) === 1,
       escalon,
       comision,
-      // Tolerancia de medio peso: los montos son float en SQL.
-      desfasado: Math.abs(comision - esperado) > 0.5,
+      desfasado: difierePlata(comision, esperado),
     });
     suc.total_comision += comision;
   }
@@ -165,6 +192,7 @@ export function armarVista(filas) {
       sucursales: sucursales.length,
       vendedores: sucursales.reduce((n, s) => n + s.vendedores.length, 0),
       comision:   sucursales.reduce((n, s) => n + s.total_comision, 0),
+      sucursales_desactualizadas: sucursales.filter(s => s.importes_desactualizados).length,
     },
   };
 }

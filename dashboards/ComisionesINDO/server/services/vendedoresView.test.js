@@ -108,7 +108,7 @@ test('armarVista agrupa por sucursal, ordena y suma totales', () => {
   assert.deepEqual(vista.sucursales[0].vendedores.map(v => v.legajo), ['1621', '1680']);
   assert.equal(vista.sucursales[0].total_comision, 42000);
   assert.equal(vista.sucursales[1].total_comision, 0);
-  assert.deepEqual(vista.totales, { sucursales: 2, vendedores: 3, comision: 42000 });
+  assert.deepEqual(vista.totales, { sucursales: 2, vendedores: 3, comision: 42000, sucursales_desactualizadas: 0 });
 });
 
 test('armarVista deriva el escalon sumando venta calculada mas proporcional', () => {
@@ -153,8 +153,46 @@ test('armarVista avisa si la jornada actual difiere de la congelada', () => {
 test('armarVista con cero filas devuelve estructura vacia, no error', () => {
   assert.deepEqual(armarVista([]), {
     sucursales: [],
-    totales: { sucursales: 0, vendedores: 0, comision: 0 },
+    totales: { sucursales: 0, vendedores: 0, comision: 0, sucursales_desactualizadas: 0 },
   });
+});
+
+// ── importes_desactualizados: importe congelado vs. vigencia vigente ──────────
+
+const VIGENCIA_ACTUAL = { anio: 2025, mes: 9, primer: 12000, segundo: 15000, tercer: 30000 };
+
+test('armarVista: importes congelados iguales a la vigencia vigente -> flag false', () => {
+  const vista = armarVista([fila({})], VIGENCIA_ACTUAL);
+  assert.equal(vista.sucursales[0].importes_desactualizados, false);
+  assert.equal(vista.totales.sucursales_desactualizadas, 0);
+});
+
+test('armarVista: un importe congelado distinto de la vigencia vigente -> flag true y contador', () => {
+  const vista = armarVista([fila({ importe_tercer: 50000 })], VIGENCIA_ACTUAL);
+  assert.equal(vista.sucursales[0].importes_desactualizados, true);
+  assert.equal(vista.totales.sucursales_desactualizadas, 1);
+});
+
+test('armarVista: sin vigencia (null u omitida) el flag da false en todas', () => {
+  const filas = [fila({ importe_tercer: 50000 })];
+  assert.equal(armarVista(filas, null).sucursales[0].importes_desactualizados, false);
+  assert.equal(armarVista(filas).sucursales[0].importes_desactualizados, false);
+});
+
+test('armarVista: importes_desactualizados no se dispara por diferencias de centavos', () => {
+  const vigencia = { ...VIGENCIA_ACTUAL, tercer: 30000.0000001 };
+  const vista = armarVista([fila({})], vigencia);
+  assert.equal(vista.sucursales[0].importes_desactualizados, false);
+});
+
+test('armarVista: importes_desactualizados cuenta solo las sucursales afectadas', () => {
+  const vista = armarVista([
+    fila({ sucursal_id: 2, legajo: '1621' }),
+    fila({ sucursal_id: 3, legajo: '1035', importe_primer: 20000 }),
+  ], VIGENCIA_ACTUAL);
+  assert.equal(vista.sucursales.find(s => s.sucursal_id === 2).importes_desactualizados, false);
+  assert.equal(vista.sucursales.find(s => s.sucursal_id === 3).importes_desactualizados, true);
+  assert.equal(vista.totales.sucursales_desactualizadas, 1);
 });
 
 test('validarVigencia acepta una vigencia nueva bien formada', () => {

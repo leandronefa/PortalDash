@@ -177,10 +177,25 @@ guardar.
 
 ### El símbolo ⚠️ al lado de una comisión
 
-Significa que la comisión guardada no coincide con el importe que hoy correspondería
-al escalón alcanzado. Pasa cuando se editaron los importes de una vigencia y ese
-período todavía no fue reprocesado por el proceso automático. El monto que se
-muestra es siempre el que quedó guardado en el cálculo, no uno recalculado.
+Significa que la comisión guardada no coincide con el importe que el proceso dejó
+congelado para el escalón alcanzado **en ese mismo período**. Es una
+desincronización interna del proceso automático (no del importe vigente hoy), y no
+se arregla desde esta pantalla. El monto que se muestra es siempre el que quedó
+guardado en el cálculo, no uno recalculado.
+
+### Aviso de importes vigentes desactualizados
+
+Si se editó una vigencia y el período que estás mirando todavía no fue reprocesado
+por el proceso automático, la página muestra un aviso amarillo arriba del resumen:
+las comisiones que ves fueron calculadas con los importes **anteriores** al cambio,
+y se van a actualizar solas cuando el proceso vuelva a procesar ese período.
+
+### La columna "¿Comisiona?"
+
+Es una marca informativa que trae el proceso automático, pero **no decide si el
+vendedor cobra**: el cálculo de la comisión no la tiene en cuenta. Por eso podés ver
+un vendedor con "¿Comisiona?" en "no" y una comisión mayor a $0 al lado: no es un
+error, cobró por haber alcanzado un escalón igual.
 
 ## 15. Reglas de Supervisores
 

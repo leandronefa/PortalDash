@@ -172,7 +172,7 @@ Página `src/pages/vendedores.js` (ruta `vendedores`, sidebar Cálculos entre To
 | Cálculos | `encargados`, `encargados-millon` | Resultado por sucursal, sin nombres de personas — **blindado, no tocar** |
 | Cálculos | `total` | Ejecuta el cálculo completo (botón "▶ Ejecutar cálculo") + pestañas de resultado y CSV. **Conectada al menú el 2026-07-14** — existía huérfana (sin ruta ni link) desde que se quitó el botón del Dashboard |
 | Cálculos | `resultado-supervisores` | Resultado por supervisor, plazas en una línea por provincia (Retail + Millón), detalle por sucursal — **ÚNICO módulo abierto** (2026-07-06) |
-| Cálculos | `vendedores` (entre Total y Cajeros) | Resultado del job SQL `SP_ComisionesINDO` por sucursal, con modal de vigencias de importes — agregado 2026-08-03 |
+| Cálculos | `vendedores` (entre Total y Cajeros) | Resultado del job SQL `SP_ComisionesINDO` por sucursal, con modal de vigencias de importes — agregado 2026-08-03 — **blindado, no tocar** |
 | AYUDA | `manual` | Manual de uso. El texto vive en `docs/MANUAL.md` y lo sirve `GET /api/manual` — editar el `.md` y recargar la página alcanza, **sin** `npm run build` ni reinicio del servicio |
 
 El ABM de Supervisores (`pages/supervisores.js`) vive en "DATOS" (se movió desde "Cálculos" sin tocar su lógica); la página de resultado (`resultado-supervisores.js`) es la que reemplaza ese rol en "Cálculos".

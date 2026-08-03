@@ -76,13 +76,14 @@ router.get('/', async (req, res) => {
 
     // Scope de supervisor (perfil 8): se filtra ANTES de agrupar.
     const filas = filtrarPorSucursal(r.recordset, req.sucursalesPermitidas);
-    const vista = armarVista(filas);
     const vigencias = await leerVigencias(pool);
+    const vigenciaVigente = vigenciaParaPeriodo(vigencias, req.query.periodo);
+    const vista = armarVista(filas, vigenciaVigente);
 
     res.json({
       ok: true,
       periodo: req.query.periodo,
-      vigencia: vigenciaParaPeriodo(vigencias, req.query.periodo),
+      vigencia: vigenciaVigente,
       ...vista,
     });
   } catch (err) {

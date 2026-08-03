@@ -54,6 +54,7 @@ export async function renderVendedores(container, periodo) {
       </div>
 
       <div id="vend-importes" style="flex-shrink:0;margin-bottom:10px"></div>
+      <div id="vend-desact"   style="flex-shrink:0;margin-bottom:10px"></div>
       <div id="vend-summary"  style="flex-shrink:0;margin-bottom:10px"></div>
 
       <div id="vend-body" style="flex:1;overflow-y:auto;overflow-x:auto;min-height:0">
@@ -132,6 +133,18 @@ export async function renderVendedores(container, periodo) {
          ⚠️ No hay ninguna vigencia de importes cargada para este período: el cálculo resolvería $0.
        </div>`;
 
+  // ── Aviso: importes vigentes cambiaron y este período no se reprocesó ──
+  const sucDesactualizadas = Number(data.totales?.sucursales_desactualizadas) || 0;
+  document.getElementById('vend-desact').innerHTML = sucDesactualizadas > 0
+    ? `<div class="card" style="padding:10px 14px;font-size:13px;color:var(--badge-e-t,#854d0e);
+              background:var(--badge-e-bg,#fef9c3);border:1px solid var(--badge-e-t,#854d0e)">
+         ⚠️ Los importes vigentes cambiaron después de que se calculó este período en
+         ${sucDesactualizadas} sucursal(es): las comisiones que ves abajo son las que se calcularon
+         con los importes <strong>anteriores</strong> a ese cambio. Se van a actualizar solas cuando
+         el job SQL de INDO reprocese este período.
+       </div>`
+    : '';
+
   // ── Estado vacío ──────────────────────────────────────────────────
   if (!sucursales.length) {
     document.getElementById('vend-summary').innerHTML = '';
@@ -174,7 +187,7 @@ export async function renderVendedores(container, periodo) {
       <div class="card" style="flex:1;min-width:180px;padding:10px 14px;border-color:var(--badge-e-t,#854d0e)">
         <div style="font-size:11px;color:var(--color-muted);margin-bottom:2px">⚠️ Desfasados</div>
         <div style="font-size:20px;font-weight:700;color:var(--badge-e-t,#854d0e)">${desfasados}</div>
-        <div style="font-size:10px;color:var(--color-muted)">importes editados sin reprocesar</div>
+        <div style="font-size:10px;color:var(--color-muted)">comisión guardada vs. importe congelado del período</div>
       </div>` : ''}
     </div>`;
 
@@ -196,7 +209,7 @@ export async function renderVendedores(container, periodo) {
               <th style="text-align:right;padding:4px 8px" title="Venta ajustada por días trabajados">Vta calculada</th>
               <th style="text-align:right;padding:4px 8px" title="Ajuste por licencias">Proporcional</th>
               <th style="text-align:center;padding:4px 8px">Lic.</th>
-              <th style="text-align:center;padding:4px 8px">¿Comisiona?</th>
+              <th style="text-align:center;padding:4px 8px" title="Marca informativa del proceso: el cálculo de la comisión NO la usa como filtro. Un vendedor puede tener &quot;no&quot; acá y cobrar comisión igual">¿Comisiona?</th>
               <th style="text-align:center;padding:4px 8px">Esc.</th>
               <th style="text-align:right;padding:4px 8px">Comisión</th>
             </tr>
@@ -216,7 +229,7 @@ export async function renderVendedores(container, periodo) {
                 <td style="padding:4px 8px;text-align:center">${v.comisiona ? '✅' : '—'}</td>
                 <td style="padding:4px 8px;text-align:center">${escBadge(v.escalon)}</td>
                 <td style="padding:4px 8px;text-align:right;font-weight:600">${fmtMoney(v.comision)}${
-                  v.desfasado ? ' <span title="La comisión guardada no coincide con el importe del escalón alcanzado: se editaron importes y el período no se reprocesó">⚠️</span>' : ''}</td>
+                  v.desfasado ? ' <span title="La comisión guardada no coincide con el importe congelado del escalón alcanzado en este período: es una desincronización interna del cálculo, no una edición de importes">⚠️</span>' : ''}</td>
               </tr>`).join('')}
           </tbody>
         </table>

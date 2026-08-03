@@ -1,0 +1,24 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Diverging pair validado (dataviz): faltante = rojo, sobrante = azul.
+     3 escalones por brazo; el "casi cero" NO es un cuarto escalon casi-blanco
+     porque los pasos mas claros de los dos brazos resultaban indistinguibles
+     entre si (normal-vision ΔE 7.4, protan 5.2): un faltante chico y un
+     sobrante chico se veian iguales. El cero es celda vacia. */
+  --falt-1: #f19a9a;  --falt-2: #e34948;  --falt-3: #b02a2a;
+  --sobr-1: #86b6ef;  --sobr-2: #3987e5;  --sobr-3: #1c5cab;
+  --neutro: #f0efec;
+  /* Tinta sobre la celda: el escalon 3 es oscuro y pide texto claro. */
+  --ink-sobre-1: #0b0b0b;  --ink-sobre-2: #0b0b0b;  --ink-sobre-3: #ffffff;
+}
+
+.dark {
+  /* Mismos brazos, escalonados para la superficie oscura: aca el escalon alto
+     es el mas CLARO, asi que la tinta se invierte. */
+  --falt-1: #8f2222;  --falt-2: #c93a3a;  --falt-3: #e66767;
+  --sobr-1: #1c5cab;  --sobr-2: #3987e5;  --sobr-3: #86b6ef;
+  --neutro: #383835;
+  --ink-sobre-1: #ffffff;  --ink-sobre-2: #ffffff;  --ink-sobre-3: #0b0b0b;
+}

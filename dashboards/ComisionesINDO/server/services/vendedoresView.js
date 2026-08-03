@@ -84,3 +84,130 @@ export function periodosAlcanzados(vigencias, vigencia) {
   const anioPrevio = sig.mes === 1 ? sig.anio - 1 : sig.anio;
   return { desde, hasta: fmtPeriodo(anioPrevio, mesPrevio) };
 }
+
+function importeDeEscalon(suc, escalon) {
+  if (escalon === 3) return Number(suc.importe_tercer)  || 0;
+  if (escalon === 2) return Number(suc.importe_segundo) || 0;
+  if (escalon === 1) return Number(suc.importe_primer)  || 0;
+  return 0;
+}
+
+/**
+ * Filas planas del JOIN → sucursales con sus vendedores anidados.
+ *
+ * La comisión que se expone es SIEMPRE la persistida en
+ * tbl_CoVenApp_GrillaComisionesINDO: acá no se recalcula nada. Lo que sí se
+ * deriva es el escalón alcanzado, y de la comparación entre ambos sale
+ * `desfasado` — que significa "se editaron importes y este período no se
+ * volvió a procesar".
+ *
+ * La jornada usada es la CONGELADA (`parcial`, de la grilla del período), no
+ * la actual del legajo: es la que el SP aplicó al dividir por 2.
+ */
+export function armarVista(filas) {
+  const porSucursal = new Map();
+
+  for (const f of filas || []) {
+    const id = Number(f.sucursal_id);
+    if (!porSucursal.has(id)) {
+      porSucursal.set(id, {
+        sucursal_id: id,
+        sucursal_nombre: f.sucursal_nombre || `Sucursal ${id}`,
+        cant_vendedores: Number(f.cant_vendedores) || 0,
+        primer_escalon:  Number(f.primer_escalon)  || 0,
+        segundo_escalon: Number(f.segundo_escalon) || 0,
+        tercer_escalon:  Number(f.tercer_escalon)  || 0,
+        importe_primer:  Number(f.importe_primer)  || 0,
+        importe_segundo: Number(f.importe_segundo) || 0,
+        importe_tercer:  Number(f.importe_tercer)  || 0,
+        total_comision: 0,
+        vendedores: [],
+      });
+    }
+    const suc = porSucursal.get(id);
+
+    const ventaTotal = (Number(f.venta_calculada) || 0) + (Number(f.vta_proporcional) || 0);
+    const escalon = escalonAlcanzado(ventaTotal, {
+      primer: suc.primer_escalon, segundo: suc.segundo_escalon, tercer: suc.tercer_escalon,
+    });
+    const esPart = String(f.parcial || '').trim().toUpperCase() === 'X';
+    const comision = Number(f.comision) || 0;
+    const esperado = esPart ? importeDeEscalon(suc, escalon) / 2 : importeDeEscalon(suc, escalon);
+
+    suc.vendedores.push({
+      legajo: String(f.legajo).trim(),
+      nombre: (f.nombre || '').trim() || `Legajo ${f.legajo}`,
+      jornada: esPart ? 'part' : 'full',
+      jornada_cambio: String(f.parcial_actual || '').trim().toUpperCase() !== String(f.parcial || '').trim().toUpperCase(),
+      venta_real:       Number(f.venta_real)       || 0,
+      dias_venta:       Number(f.dias_venta)       || 0,
+      venta_calculada:  Number(f.venta_calculada)  || 0,
+      vta_proporcional: Number(f.vta_proporcional) || 0,
+      venta_total:      ventaTotal,
+      dias_licencia:    Number(f.dias_licencia)    || 0,
+      comisiona: Number(f.comisiona) === 1,
+      escalon,
+      comision,
+      // Tolerancia de medio peso: los montos son float en SQL.
+      desfasado: Math.abs(comision - esperado) > 0.5,
+    });
+    suc.total_comision += comision;
+  }
+
+  const sucursales = [...porSucursal.values()].sort((a, b) => a.sucursal_id - b.sucursal_id);
+  for (const s of sucursales) {
+    s.vendedores.sort((a, b) => (Number(a.legajo) || 0) - (Number(b.legajo) || 0));
+  }
+
+  return {
+    sucursales,
+    totales: {
+      sucursales: sucursales.length,
+      vendedores: sucursales.reduce((n, s) => n + s.vendedores.length, 0),
+      comision:   sucursales.reduce((n, s) => n + s.total_comision, 0),
+    },
+  };
+}
+
+function esEnteroNoNegativo(v) {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0;
+}
+
+/**
+ * Reglas de negocio del ABM de vigencias. La tabla no tiene PK ni índice
+ * único, así que la unicidad se valida acá.
+ * modo: 'crear' | 'editar' | 'borrar'
+ */
+export function validarVigencia(body, vigencias, modo) {
+  const anio = Number(body?.anio);
+  const mes  = Number(body?.mes);
+
+  if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) {
+    return { ok: false, status: 400, error: 'El año debe ser un entero entre 2020 y 2100' };
+  }
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) {
+    return { ok: false, status: 400, error: 'El mes debe ser un entero entre 1 y 12' };
+  }
+
+  if (modo !== 'borrar') {
+    for (const campo of ['primer', 'segundo', 'tercer']) {
+      if (!esEnteroNoNegativo(body?.[campo])) {
+        return { ok: false, status: 400, error: `El importe del escalón "${campo}" debe ser un entero mayor o igual a 0` };
+      }
+    }
+  }
+
+  const existe = (vigencias || []).some(v => v.anio === anio && v.mes === mes);
+
+  if (modo === 'crear' && existe) {
+    return { ok: false, status: 409, error: `La vigencia ${fmtPeriodo(anio, mes)} ya existe: editala en vez de crearla de nuevo` };
+  }
+  if (modo !== 'crear' && !existe) {
+    return { ok: false, status: 404, error: `No existe la vigencia ${fmtPeriodo(anio, mes)}` };
+  }
+  if (modo === 'borrar' && (vigencias || []).length <= 1) {
+    return { ok: false, status: 409, error: 'No se puede borrar la única vigencia: sin ninguna, el cálculo resolvería importe $0 para todos los períodos' };
+  }
+
+  return { ok: true };
+}

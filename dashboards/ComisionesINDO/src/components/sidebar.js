@@ -15,6 +15,7 @@ const MENU = [
 
   { section: 'Cálculos' },
   { route: 'total',               icon: '🧮', label: 'Total' },
+  { route: 'vendedores',          icon: '🛍️', label: 'Vendedores' },
   { route: 'cajeros',             icon: '🧾', label: 'Cajeros' },
   { route: 'operadores-retail',   icon: '👥', label: 'Operadores Retail' },
   { route: 'operadores-millon',   icon: '👥', label: 'Operadores Millón' },

@@ -592,7 +592,9 @@ import('./server/reporte-parse.js').then(async m => {
 "
 ```
 
-Expected: para `SAP_REPORTE_Z.TXT` ≈ 12.500 registros y ≈ 600 descartadas, **todas** con el motivo de sucursal. Si aparece cualquier otro motivo (campos, fecha, importe), el formato tiene un caso que este parser no cubre: **detenerse e investigarlo**, no ajustar el test.
+Expected (**actualizado el 03/08/2026 a las 17:00**): `SAP_REPORTE_Z.TXT` ≈ 3.400 registros y **0 descartadas**; `SAP_PU_REPORTE_Z.TXT` ≈ 3.400 y 0. El usuario corrigió el reporte en origen a las 12:47 y las ~600 líneas con fecha en el campo de sucursal **ya no vienen**. Cero descartadas es hoy el resultado correcto, no un parser que no detecta nada — los tests unitarios cubren el caso con fixtures.
+
+Si aparece **cualquier** motivo de descarte (sucursal, campos, fecha, importe), el formato trae un caso nuevo: **detenerse e investigarlo**, no ajustar el test.
 
 - [ ] **Step 7: Commit**
 
@@ -921,9 +923,12 @@ test('el nombre viene del mapeo y cae al vacio si falta', () => {
 })
 
 test('una sucursal sin Caja Recaudadora aparece igual si tiene diferencias', () => {
-  // 080, 111, 081 y 102 no tienen cuenta de Caja Recaudadora en los archivos
-  // reales. El criterio de control es la cuenta de diferencias, no la de caja,
-  // asi que no pueden quedar fuera de la matriz.
+  // El criterio de control es la cuenta de diferencias, no la de caja, asi que
+  // una sucursal sin cuenta de Caja Recaudadora no puede quedar fuera de la
+  // matriz. (En los archivos de hoy no hay ninguna asi: las cuatro que estaban
+  // en ese estado -080, 111, 081, 102- dejaron de venir cuando el usuario
+  // corrigio el reporte el 03/08/2026. El caso se cubre igual: es una
+  // propiedad del criterio, no un accidente de los datos de un dia.)
   const rs = [reg('2026-06-03', '111', DIF, -900)]
   const m = construirMatriz(rs, '2026-06', {})
   assert.equal(m.sucursales.length, 1)
@@ -1718,7 +1723,15 @@ curl -s "http://127.0.0.1:3014/api/asiento?empresa=TESI&fecha=2026-06-03&sucursa
 curl -s -o /dev/null -w "%{http_code}\n" "http://127.0.0.1:3014/api/matriz?empresa=INDO&periodo=2026-07"
 ```
 
-Expected: `periodos` con 2026-06/07/08; la matriz de TESI con ~19 sucursales; el asiento de la 020 del 03/06 con una línea de `4.2.002.01.050` en 23.200 y la Caja Recaudadora en −23.200; `400` para INDO. Cortar el server con Ctrl+C.
+Expected: `periodos` con 2026-06/07/08; la matriz de TESI con **17 sucursales** (003…039); `400` para INDO.
+
+Para el asiento, **no hay un valor esperado fijo**: el reporte se regenera y los importes cambian (el 03/08/2026 a las 12:47 cambiaron todos). Derivar el valor esperado del archivo en el momento y comparar:
+
+```bash
+awk -F'|' '{gsub(/\r/,"")} $1 ~ /^03\/06\/2026/ && $2=="020"' "//10.0.0.115/Cegid/SAP_REPORTE_Z.TXT"
+```
+
+El asiento que devuelve la API tiene que traer **exactamente esas líneas**, con `totales.debe == totales.haber` y `esDiferenciaCaja` marcado solo en `4.2.002.01.050`.
 
 - [ ] **Step 8: Commit**
 
@@ -2570,7 +2583,11 @@ Abrir `http://localhost:3014/` y confirmar cada punto:
 4. Clic en una celda abre el panel a la derecha con el asiento; los totales debe/haber coinciden; la línea de Diferencias de Caja está en negrita con su punto de color.
 5. Con el panel abierto se puede clickear otra celda y el panel cambia sin cerrarse.
 6. Cambiar de empresa o de mes cierra el panel.
-7. `TESI` → jun 2026 → sucursal 020 día 03: la celda debe decir `23k`, y el asiento mostrar `4.2.002.01.050` con debe 23.200,00 y `1.1.001.01.024 - Caja Recaudadora Suc 20` con debe 400.050,00 / haber 423.250,00.
+7. `TESI` → jun 2026 → sucursal 020 día 03: la celda y el asiento tienen que coincidir con lo que trae el archivo **en ese momento** (los importes se regeneran, no hay valor fijo). Derivarlo con:
+   ```bash
+   awk -F'|' '{gsub(/\r/,"")} $1 ~ /^03\/06\/2026/ && $2=="020"' "//10.0.0.115/Cegid/SAP_REPORTE_Z.TXT"
+   ```
+   La celda muestra el saldo de la línea `4.2.002.01.050` de esa salida, y el panel las líneas restantes con sus debe/haber.
 8. Consola del navegador sin errores ni warnings de React.
 9. Probar en modo oscuro (el `<html>` con clase `dark`, o el toggle del portal): los brazos siguen distinguiéndose y el texto de las celdas se lee.
 

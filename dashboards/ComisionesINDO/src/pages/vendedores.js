@@ -63,6 +63,37 @@ export async function renderVendedores(container, periodo) {
         </div>
       </div>
 
+      <div id="vend-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:#1e2130;border:1px solid #2e3450;border-radius:8px;padding:24px;width:620px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6);color:#e2e8f0">
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:6px;color:#f1f5f9">Vigencias de importes</h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:16px">
+            Una vigencia rige desde su mes hasta que aparece una posterior. Para cambiar los montos,
+            creá una vigencia nueva: los períodos anteriores no se alteran. El recálculo lo corre el
+            job SQL de INDO, no esta página.
+          </p>
+          <div id="vend-vig-list" style="margin-bottom:16px"></div>
+          <div id="vend-vig-form" style="border-top:1px solid #2e3450;padding-top:14px">
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div><label style="font-size:11px;display:block;margin-bottom:4px;color:#cbd5e1">Año</label>
+                <input id="vend-vig-anio" class="form-control" type="text" inputmode="numeric" style="width:80px;background:#262c42;color:#e2e8f0;border-color:#3e4a6e"></div>
+              <div><label style="font-size:11px;display:block;margin-bottom:4px;color:#cbd5e1">Mes</label>
+                <input id="vend-vig-mes" class="form-control" type="text" inputmode="numeric" style="width:70px;background:#262c42;color:#e2e8f0;border-color:#3e4a6e"></div>
+              <div><label style="font-size:11px;display:block;margin-bottom:4px;color:#cbd5e1">1er escalón</label>
+                <input id="vend-vig-primer" class="form-control" type="text" inputmode="numeric" style="width:110px;background:#262c42;color:#e2e8f0;border-color:#3e4a6e"></div>
+              <div><label style="font-size:11px;display:block;margin-bottom:4px;color:#cbd5e1">2do escalón</label>
+                <input id="vend-vig-segundo" class="form-control" type="text" inputmode="numeric" style="width:110px;background:#262c42;color:#e2e8f0;border-color:#3e4a6e"></div>
+              <div><label style="font-size:11px;display:block;margin-bottom:4px;color:#cbd5e1">3er escalón</label>
+                <input id="vend-vig-tercer" class="form-control" type="text" inputmode="numeric" style="width:110px;background:#262c42;color:#e2e8f0;border-color:#3e4a6e"></div>
+            </div>
+            <div id="vend-vig-aviso" style="font-size:12px;color:#fbbf24;margin-top:10px;min-height:18px"></div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+            <button class="btn btn-secondary" id="vend-vig-cancel">Cerrar</button>
+            <button class="btn btn-primary"   id="vend-vig-save">Guardar</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `;
 
@@ -287,5 +318,141 @@ export async function renderVendedores(container, periodo) {
     if (!filas.length) { showToast('Nada para exportar', 'error'); return; }
     exportToCSV(filas, `VENDEDORES_${periodo}`);
     showToast('CSV exportado', 'success');
+  });
+
+  // ── Modal de vigencias ────────────────────────────────────────────
+  const modal = document.getElementById('vend-modal');
+  let vigencias = [];
+  let editando  = null;   // {anio, mes} si se está editando, null si es alta
+
+  function parseNum(s) {
+    // Los inputs son texto con separador de miles es-AR: "15.000" → 15000
+    const limpio = String(s ?? '').replace(/\./g, '').replace(/\s/g, '').trim();
+    return limpio === '' ? NaN : Number(limpio);
+  }
+
+  function rango(v) {
+    const posteriores = vigencias
+      .filter(x => x.anio * 100 + x.mes > v.anio * 100 + v.mes)
+      .sort((a, b) => (a.anio * 100 + a.mes) - (b.anio * 100 + b.mes));
+    const desde = `${v.anio}-${String(v.mes).padStart(2, '0')}`;
+    if (!posteriores.length) return `${desde} en adelante`;
+    const sig = posteriores[0];
+    const m = sig.mes === 1 ? 12 : sig.mes - 1;
+    const a = sig.mes === 1 ? sig.anio - 1 : sig.anio;
+    return `${desde} a ${a}-${String(m).padStart(2, '0')}`;
+  }
+
+  function renderVigencias() {
+    const vigenteKey = vig ? vig.anio * 100 + vig.mes : null;
+    document.getElementById('vend-vig-list').innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="color:#94a3b8">
+          <th style="text-align:left;padding:4px 6px">Vigencia</th>
+          <th style="text-align:left;padding:4px 6px">Alcanza</th>
+          <th style="text-align:right;padding:4px 6px">1er</th>
+          <th style="text-align:right;padding:4px 6px">2do</th>
+          <th style="text-align:right;padding:4px 6px">3er</th>
+          <th style="padding:4px 6px"></th>
+        </tr></thead>
+        <tbody>
+          ${vigencias.map(v => `
+            <tr>
+              <td style="padding:4px 6px;font-weight:600">${v.anio}-${String(v.mes).padStart(2, '0')}
+                ${v.anio * 100 + v.mes === vigenteKey ? '<span title="Vigente para el período seleccionado" style="color:#4ade80">●</span>' : ''}</td>
+              <td style="padding:4px 6px;color:#94a3b8;font-size:11px">${rango(v)}</td>
+              <td style="padding:4px 6px;text-align:right">$${fmtNum(v.primer)}</td>
+              <td style="padding:4px 6px;text-align:right">$${fmtNum(v.segundo)}</td>
+              <td style="padding:4px 6px;text-align:right">$${fmtNum(v.tercer)}</td>
+              <td style="padding:4px 6px;text-align:right;white-space:nowrap">
+                <button class="btn btn-outline vig-edit" data-anio="${v.anio}" data-mes="${v.mes}" style="font-size:11px;padding:2px 8px">editar</button>
+                <button class="btn btn-outline vig-del"  data-anio="${v.anio}" data-mes="${v.mes}" style="font-size:11px;padding:2px 8px;color:#f87171">borrar</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    document.getElementById('vend-vig-list').querySelectorAll('.vig-edit').forEach(b => {
+      b.addEventListener('click', () => {
+        const v = vigencias.find(x => x.anio === Number(b.dataset.anio) && x.mes === Number(b.dataset.mes));
+        editando = { anio: v.anio, mes: v.mes };
+        document.getElementById('vend-vig-anio').value    = v.anio;
+        document.getElementById('vend-vig-mes').value     = v.mes;
+        document.getElementById('vend-vig-primer').value  = v.primer;
+        document.getElementById('vend-vig-segundo').value = v.segundo;
+        document.getElementById('vend-vig-tercer').value  = v.tercer;
+        document.getElementById('vend-vig-anio').disabled = true;
+        document.getElementById('vend-vig-mes').disabled  = true;
+        document.getElementById('vend-vig-aviso').textContent =
+          `Editar esta vigencia cambia los períodos ${rango(v)} si se los vuelve a calcular.`;
+      });
+    });
+
+    document.getElementById('vend-vig-list').querySelectorAll('.vig-del').forEach(b => {
+      b.addEventListener('click', async () => {
+        const anio = Number(b.dataset.anio), mes = Number(b.dataset.mes);
+        const v = vigencias.find(x => x.anio === anio && x.mes === mes);
+        if (!confirm(`¿Borrar la vigencia ${anio}-${String(mes).padStart(2, '0')}?\n\n` +
+                     `Los períodos ${rango(v)} pasarían a resolver la vigencia anterior si se los recalcula.`)) return;
+        try {
+          await api.delete(`/vendedores/importes/${anio}/${mes}`);
+          showToast('Vigencia borrada', 'success');
+          await cargarVigencias();
+        } catch (err) { showToast(err.message, 'error'); }
+      });
+    });
+  }
+
+  async function cargarVigencias() {
+    const r = await api.get(`/vendedores/importes?periodo=${periodo}`);
+    vigencias = r.vigencias || [];
+    renderVigencias();
+  }
+
+  function limpiarForm() {
+    editando = null;
+    for (const id of ['anio', 'mes', 'primer', 'segundo', 'tercer']) {
+      document.getElementById(`vend-vig-${id}`).value = '';
+    }
+    document.getElementById('vend-vig-anio').disabled = false;
+    document.getElementById('vend-vig-mes').disabled  = false;
+    document.getElementById('vend-vig-aviso').textContent = '';
+  }
+
+  document.getElementById('vend-vigencias').addEventListener('click', async () => {
+    limpiarForm();
+    try {
+      await cargarVigencias();
+      modal.style.display = 'flex';
+    } catch (err) { showToast(err.message, 'error'); }
+  });
+
+  document.getElementById('vend-vig-cancel').addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  document.getElementById('vend-vig-save').addEventListener('click', async () => {
+    const body = {
+      anio:    parseNum(document.getElementById('vend-vig-anio').value),
+      mes:     parseNum(document.getElementById('vend-vig-mes').value),
+      primer:  parseNum(document.getElementById('vend-vig-primer').value),
+      segundo: parseNum(document.getElementById('vend-vig-segundo').value),
+      tercer:  parseNum(document.getElementById('vend-vig-tercer').value),
+    };
+    if (Object.values(body).some(n => !Number.isFinite(n))) {
+      showToast('Completá año, mes y los 3 importes con números', 'error');
+      return;
+    }
+    const etiqueta = `${body.anio}-${String(body.mes).padStart(2, '0')}`;
+    if (!confirm(`${editando ? 'Guardar cambios en' : 'Crear'} la vigencia ${etiqueta}:\n\n` +
+                 `1er $${fmtNum(body.primer)} · 2do $${fmtNum(body.segundo)} · 3er $${fmtNum(body.tercer)}\n\n` +
+                 `Los períodos ya calculados no cambian hasta que el job SQL los reprocese.`)) return;
+    try {
+      if (editando) await api.put(`/vendedores/importes/${editando.anio}/${editando.mes}`, body);
+      else          await api.post('/vendedores/importes', body);
+      showToast(editando ? 'Vigencia actualizada' : 'Vigencia creada', 'success');
+      limpiarForm();
+      await cargarVigencias();
+    } catch (err) { showToast(err.message, 'error'); }
   });
 }

@@ -44,9 +44,14 @@ test('dos lineas de diferencias en el mismo grupo se suman', () => {
   assert.equal(m.sucursales[0].dias['03'], 150)
 })
 
-test('un dia sin diferencia no genera celda', () => {
+test('una sucursal sin ninguna diferencia aparece con la fila vacia', () => {
+  // Decidido por el usuario el 03/08/2026: es confirmacion positiva. La
+  // ausencia de fila seria indistinguible de "no opero" o "no vino en el
+  // archivo"; una fila vacia dice "opero y cerro bien todos los dias".
   const rs = [reg('2026-06-03', '003', VENTA, 5000)]
   const m = construirMatriz(rs, '2026-06', {})
+  assert.equal(m.sucursales.length, 1)
+  assert.equal(m.sucursales[0].codigo, '003')
   assert.deepEqual(m.sucursales[0].dias, {})
   assert.equal(m.sucursales[0].total, 0)
 })
@@ -54,7 +59,9 @@ test('un dia sin diferencia no genera celda', () => {
 test('una diferencia que suma cero no genera celda', () => {
   const rs = [reg('2026-06-03', '003', DIF, 500), reg('2026-06-03', '003', DIF, -500)]
   const m = construirMatriz(rs, '2026-06', {})
+  assert.equal(m.sucursales.length, 1)
   assert.deepEqual(m.sucursales[0].dias, {})
+  assert.equal(m.sucursales[0].total, 0)
 })
 
 test('las columnas son solo los dias presentes en el periodo, ordenados', () => {

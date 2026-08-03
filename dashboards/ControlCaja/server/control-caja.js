@@ -46,9 +46,13 @@ export function construirMatriz(registros, periodo, nombres = {}) {
   let diasConDiferencia = 0
 
   // Construir sucursales desde todas las que aparecen en el periodo.
-  // Una sucursal cuyas diferencias se cancelaron todas no aporta una fila:
-  // no tiene nada que revisar.
-  const todasLasSucursales = [...new Set(delPeriodo.map(r => r.sucursal))].sort()
+  // TODAS las sucursales con actividad en el periodo entran en la matriz,
+  // incluso las que no tuvieron ninguna diferencia: su fila queda vacia con
+  // total 0. Es confirmacion positiva — el usuario ve que la sucursal cerro
+  // bien todos los dias, en vez de tener que deducirlo de una ausencia (que
+  // seria indistinguible de "no opero" o "no vino en el archivo"). Decidido por
+  // el usuario el 03/08/2026.
+  const todasLasSucursales = [...new Set(delPeriodo.map(r => r.sucursal))]
   const sucursales = []
 
   for (const codigo of todasLasSucursales) {

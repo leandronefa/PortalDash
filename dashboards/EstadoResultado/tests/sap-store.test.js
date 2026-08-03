@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { createStore, EMPRESAS } from '../server/sap-store.js'
+import { createStore, EMPRESAS, empresaKeyDesdeLabel, listaDeEmpresas } from '../server/sap-store.js'
 import { EOL } from '../server/sap-format.js'
 
 function tmpStore() {
@@ -21,6 +21,66 @@ const txt = (...lines) => lines.join(EOL) + EOL
 test('EMPRESAS mapea las claves a los nombres de archivo de SAP', () => {
   assert.equal(EMPRESAS.tesi, 'SAP_RESULT.txt')
   assert.equal(EMPRESAS.pueblo, 'SAP_PU_RESULT.txt')
+  assert.equal(EMPRESAS.indo, 'SAP_INDO_RESULT.txt')
+})
+
+test('empresaKeyDesdeLabel resuelve la etiqueta de la UI y rechaza las desconocidas', () => {
+  assert.equal(empresaKeyDesdeLabel('INDO'), 'indo')
+  assert.equal(empresaKeyDesdeLabel('tesi'), 'tesi')
+  assert.equal(empresaKeyDesdeLabel('PUEBLO'), 'pueblo')
+  assert.equal(empresaKeyDesdeLabel('OTRA'), null)
+  assert.equal(empresaKeyDesdeLabel(''), null)
+})
+
+test('listaDeEmpresas expone key, label y filename de todas', () => {
+  const lista = listaDeEmpresas()
+  assert.deepEqual(lista.map(e => e.key), ['tesi', 'pueblo', 'indo'])
+  assert.deepEqual(lista.map(e => e.label), ['TESI', 'PUEBLO', 'INDO'])
+  assert.deepEqual(lista.map(e => e.filename), ['SAP_RESULT.txt', 'SAP_PU_RESULT.txt', 'SAP_INDO_RESULT.txt'])
+})
+
+// Al agregar una empresa, los manifest ya escritos en disco no la tienen. Esa
+// ausencia es legitima (todavia no se cargo nunca) y debe arrancar vacia, sin
+// disparar el fallo ruidoso reservado para manifest ausente/corrupto.
+test('un manifest sin la empresa nueva la arranca vacia en vez de fallar', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP), origen: 'sap' })
+  const p = path.join(store.dir, 'manifest.json')
+  const viejo = JSON.parse(fs.readFileSync(p, 'utf8'))
+  delete viejo.indo
+  fs.writeFileSync(p, JSON.stringify(viejo, null, 2))
+
+  const m = store.readManifest()
+  assert.deepEqual(m.indo, {})
+  assert.equal(m.tesi['2026-01'].origen, 'sap')
+})
+
+// El circuito manual (descargar -> editar -> subir -> el refresh no lo pisa)
+// tiene que valer igual para la empresa nueva que para las dos originales.
+test('INDO conserva sus ajustes manuales frente a un refresh de red', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'indo', texto: txt(ENE_SAP, FEB_SAP), origen: 'sap' })
+  store.merge({ empresaKey: 'indo', texto: txt(FEB_AJUSTADO), origen: 'manual' })
+
+  const r = store.merge({ empresaKey: 'indo', texto: txt(ENE_SAP, FEB_SAP, MAR_SAP), origen: 'sap' })
+
+  assert.deepEqual(r.preservados, ['2026-02'])
+  assert.deepEqual(r.traidos, ['2026-01', '2026-03'])
+  assert.equal(store.readVigente('indo'), txt(ENE_SAP, FEB_AJUSTADO, MAR_SAP))
+  assert.equal(store.readManifest().indo['2026-02'].origen, 'manual')
+})
+
+test('cargar INDO no toca los vigentes de TESI ni PUEBLO', () => {
+  const store = tmpStore()
+  store.merge({ empresaKey: 'tesi', texto: txt(ENE_SAP), origen: 'sap' })
+  store.merge({ empresaKey: 'pueblo', texto: txt(FEB_AJUSTADO), origen: 'manual' })
+  store.merge({ empresaKey: 'indo', texto: txt(MAR_SAP), origen: 'sap' })
+
+  assert.equal(store.readVigente('tesi'), txt(ENE_SAP))
+  assert.equal(store.readVigente('pueblo'), txt(FEB_AJUSTADO))
+  assert.equal(store.readVigente('indo'), txt(MAR_SAP))
+  assert.equal(store.readManifest().pueblo['2026-02'].origen, 'manual')
+  assert.equal(store.readManifest().indo['2026-03'].origen, 'sap')
 })
 
 test('merge inicial desde sap guarda el vigente igual al entrante', () => {
@@ -119,7 +179,7 @@ test('con un periodo manual y el manifest corrupto, un refresh de red no llega a
 
 test('primera corrida legitima: sin manifest y sin ningun vigente, readManifest devuelve vacio', () => {
   const store = tmpStore()
-  assert.deepEqual(store.readManifest(), { tesi: {}, pueblo: {} })
+  assert.deepEqual(store.readManifest(), { tesi: {}, pueblo: {}, indo: {} })
 })
 
 test('manifest ausente pero con un vigente ya cargado hace fallar readManifest (no es primera corrida)', () => {

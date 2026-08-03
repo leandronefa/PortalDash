@@ -120,24 +120,34 @@ aparece `EACCES`/`EPERM` en `daemon\dashestadoresultado.out.log`, es permisos de
 que darle al servicio una cuenta con acceso a `Cegid`. Mientras tanto "Subir files" sigue
 funcionando igual (no depende de la red).
 
-El estado vigente vive en `data-store\` (`SAP_RESULT.txt`, `SAP_PU_RESULT.txt`,
+**Empresas (31/07/2026): TESI, PUEBLO e INDO.** INDO se sumó leyendo `SAP_INDO_RESULT.TXT` de
+la misma ruta de red, con el mismo circuito que las otras dos (refresh, descarga byte a byte,
+ajustes manuales protegidos). El registro único de empresas es `EMPRESAS` en
+`dashboards\EstadoResultado\server\sap-store.js`: agregar otra empresa es **una línea ahí** (el
+selector del tablero y los botones de descarga/subida se derivan de `/api/status`).
+
+El estado vigente vive en `data-store\` (un `.txt` por empresa: `SAP_RESULT.txt`,
+`SAP_PU_RESULT.txt`, `SAP_INDO_RESULT.txt`, más
 `manifest.json`), que marca cada período (mes) de cada empresa como origen `sap` o `manual`:
 una lectura de red nunca pisa un período `manual`, solo otro upload lo reemplaza. No hay
 "restaurar desde SAP" — los originales quedan archivados en `sap-inbox\SAPResultProcesado\`
 (nombre `<timestamp>_<origen>_<archivo>.txt`).
 
-Nuevo endpoint `GET /api/download?empresa=TESI|PUEBLO` sirve el archivo vigente byte a byte
+Nuevo endpoint `GET /api/download?empresa=TESI|PUEBLO|INDO` sirve el archivo vigente byte a byte
 (mismo nombre original), para el circuito **Descargar files → ajustar a mano → Subir files**.
 Verificado end-to-end el 28/07/2026 con TESI: hash de la descarga idéntico al de la red, edición
 de un importe de 2026-06, upload, los 6 períodos pasaron a `manual`, y un refresh posterior no
-los tocó (`traidos: []`, `preservados` los 6 meses) mientras PUEBLO sí se actualizó.
+los tocó (`traidos: []`, `preservados` los 6 meses) mientras PUEBLO sí se actualizó. Repetido el
+31/07/2026 con INDO, con el mismo resultado (hash idéntico, ajuste conservado tras el refresh);
+el estado de prueba se revirtió y hoy las tres empresas están en origen `sap`, 2026-01..2026-06.
 
 Variables nuevas en el `.env`: `SAP_NETWORK_PATH` (fuente real) y `SAP_SOURCE_PATH` (inbox local
 de uploads manuales — pese al nombre, ya no es "la fuente").
 
-Tests: `node --test "tests/*.test.js"` desde `C:\apps\dashboards\EstadoResultado` (28 tests, el
-glob va entre comillas). Pendiente del usuario: verificación visual en navegador (descargas
-simultáneas, punto ámbar de mes ajustado, consola sin errores) — no se pudo hacer en este
+Tests: `node --test "tests/*.test.js"` desde `C:\apps\dashboards\EstadoResultado` (37 tests, el
+glob va entre comillas). Pendiente del usuario: verificación visual en navegador (las 3
+descargas simultáneas, selector con las tres empresas, punto ámbar de mes ajustado, consola sin
+errores) — no se pudo hacer en este
 entorno por falta de la extensión de Chrome.
 
 ---

@@ -1,7 +1,7 @@
 # CONTEXT.md — EstadoResultado
 
 ## Propósito
-Estado de Resultado (**P&L mensual**) para TESI y PUEBLO. Lee archivos exportados desde SAP, los procesa y muestra desglose por sucursal con comparación entre empresas.
+Estado de Resultado (**P&L mensual**) para TESI, PUEBLO e INDO. Lee archivos exportados desde SAP, los procesa y muestra desglose por sucursal con comparación entre empresas.
 
 ## Stack
 - **Frontend**: React 19 + Vite 6.2.3 + TypeScript
@@ -13,9 +13,19 @@ Estado de Resultado (**P&L mensual**) para TESI y PUEBLO. Lee archivos exportado
 - **Archivos SAP** en ruta de red `\\10.0.0.115\Cegid` (read-only, `SAP_NETWORK_PATH`):
   - `SAP_RESULT.txt` → TESI
   - `SAP_PU_RESULT.txt` → PUEBLO
+  - `SAP_INDO_RESULT.txt` → INDO (agregada el 31/07/2026)
   - Formato: pipe-delimited
 - Los archivos leídos se archivan en `sap-inbox\SAPResultProcesado\` con timestamp
-- **Estado vigente**: `data-store\SAP_RESULT.txt`, `SAP_PU_RESULT.txt` y `manifest.json`
+- **Estado vigente**: un `.txt` por empresa en `data-store\` más `manifest.json`
+
+### Registro de empresas (agregar una nueva)
+`EMPRESAS` en `server/sap-store.js` es la **única** lista: clave interna → nombre del archivo
+de SAP. La etiqueta que ve el usuario es la clave en mayúsculas (`indo` → `INDO`), y
+`/api/status` publica el registro completo (`empresas: [{key, label, filename}]`), de donde el
+frontend arma el selector, el botón "Descargar files" y los tooltips. Sumar una empresa es **una
+línea en ese mapa**: no hay que tocar `server.js` ni `App.tsx`. Un manifest ya escrito que no
+tenga la clave nueva la arranca vacía (es lo normal: todavía no se cargó nunca), sin disparar el
+fallo ruidoso reservado para manifest ausente o corrupto.
 
 ## Modelo de datos: el mes, no el archivo
 
@@ -52,7 +62,7 @@ de copias idénticas al año).
 
 ## Igualdad byte a byte
 
-`data-store\SAP_RESULT.txt` / `SAP_PU_RESULT.txt` son el estado vigente y también lo que
+Los `.txt` de `data-store\` (uno por empresa) son el estado vigente y también lo que
 entrega `GET /api/download`. Se reconstruyen concatenando **líneas textuales** por período
 (`server/sap-format.js`), con CRLF y CRLF final, sin BOM. Los importes de SAP vienen como
 `.00` y `-107029809.47`: regenerarlos desde `parseFloat` daría `0.00` y rompería el circuito,
@@ -73,11 +83,11 @@ porque el usuario edita ese mismo archivo y lo devuelve.
 ## Endpoints API
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| GET | `/api/data?empresa=TESI\|PUEBLO` | Datos con caché |
+| GET | `/api/data?empresa=TESI\|PUEBLO\|INDO` | Datos con caché; 400 si la empresa no existe |
 | GET | `/api/status` | Estado del último chequeo (`networkPath`, `manifest`, `manifestError`) |
-| POST | `/api/refresh` | Forzar chequeo inmediato; lee la red y devuelve `{ok, empresas:{tesi,pueblo}}` con `traidos`/`preservados` |
+| POST | `/api/refresh` | Forzar chequeo inmediato; lee la red y devuelve `{ok, empresas:{tesi,pueblo,indo}}` con `traidos`/`preservados` |
 | POST | `/api/upload` | Sube un archivo manual (marca sus períodos `manual`; 409 si hay un refresh en curso) |
-| GET | `/api/download?empresa=TESI\|PUEBLO` | Descarga el vigente byte a byte con su nombre original; 404 si no hay datos |
+| GET | `/api/download?empresa=TESI\|PUEBLO\|INDO` | Descarga el vigente byte a byte con su nombre original; 404 si no hay datos, 400 si la empresa no existe |
 
 ## Refresh
 
@@ -98,9 +108,9 @@ npm run build        # genera dist/
 - `server/sap-store.js` — manifest, merge por período, mutex de escritura
 - `server/sap-format.js` — partición/serialización byte-exacta de los `.txt`
 - `src/` — frontend React
-- `data-store/` — `SAP_RESULT.txt`, `SAP_PU_RESULT.txt`, `manifest.json` (estado vigente)
+- `data-store/` — un `.txt` por empresa (`SAP_RESULT.txt`, `SAP_PU_RESULT.txt`, `SAP_INDO_RESULT.txt`) + `manifest.json` (estado vigente)
 - `sap-inbox/SAPResultProcesado/` — archivos SAP ya procesados (archivo histórico, con `<origen>` en el nombre)
-- `tests/` — 28 tests con el runner de Node
+- `tests/` — 37 tests con el runner de Node
 - `.env` — `PORT`, `CHECK_HOUR`, `SAP_NETWORK_PATH`, `SAP_SOURCE_PATH`
 
 ## Gotchas
@@ -113,7 +123,7 @@ npm run build        # genera dist/
   con `MODULE_NOT_FOUND`). El test de round-trip de `sap-format` valida igualdad byte a byte
   contra los archivos reales de `SAPResultProcesado\`; si falla, el formato cambió — no
   ajustarlo sin entender el diff.
-- **Pendiente del usuario**: verificación visual en navegador (descargas simultáneas de TESI y
-  PUEBLO, punto ámbar de mes ajustado, consola sin errores) — no se hizo porque la extensión de
-  Chrome no está instalada en este entorno.
+- **Pendiente del usuario**: verificación visual en navegador (las 3 descargas simultáneas,
+  selector con TESI/PUEBLO/INDO, punto ámbar de mes ajustado, consola sin errores) — no se hizo
+  porque la extensión de Chrome no está instalada en este entorno.
 - Módulo ESM: no usar `require()`.

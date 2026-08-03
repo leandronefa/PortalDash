@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import multer from 'multer'
-import { createStore, EMPRESAS } from './server/sap-store.js'
+import { createStore, EMPRESAS, listaDeEmpresas, empresaKeyDesdeLabel } from './server/sap-store.js'
 import { leerArchivoDeRed, descripcionDeError } from './server/sap-network.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -22,8 +22,9 @@ const CHECK_HOUR = parseInt(process.env.CHECK_HOUR || '1')
 const store = createStore({ dir: path.join(__dirname, 'data-store') })
 
 const state = {
-  pueblo: null,
-  tesi: null,
+  // Un slot por empresa del registro (state[key] = records | null). Se deriva de
+  // EMPRESAS para que sumar una empresa no exija tocar el estado a mano.
+  ...Object.fromEntries(Object.keys(EMPRESAS).map(key => [key, null])),
   periodo: null,   // e.g. "2026-05" extraído del 5° campo del archivo
   lastUpdate: null,
   lastCheckAt: null,
@@ -108,7 +109,9 @@ function recargarEstadoDesdeStore() {
     const records = parseFile(texto)
     state[key] = records.length > 0 ? records : null
   }
-  state.periodo = extractPeriodo(state.tesi ?? state.pueblo ?? [])
+  // Periodo de referencia: el de la primera empresa que tenga datos cargados.
+  const conDatos = Object.keys(EMPRESAS).map(key => state[key]).find(Boolean)
+  state.periodo = extractPeriodo(conDatos ?? [])
 }
 
 function sellarActualizacion() {
@@ -317,8 +320,11 @@ app.use(express.static(path.join(__dirname, 'dist')))
 
 app.get('/api/data', (req, res) => {
   const empresa = String(req.query.empresa || 'TESI').toUpperCase()
-  const records = empresa === 'PUEBLO' ? state.pueblo : state.tesi
-  res.json({ empresa, records: records ?? null, periodo: state.periodo, lastUpdate: state.lastUpdate })
+  // Empresa desconocida = 400, no un fallback silencioso a TESI: devolver los
+  // numeros de otra empresa bajo el nombre pedido es peor que un error visible.
+  const key = empresaKeyDesdeLabel(empresa)
+  if (!key) return res.status(400).json({ ok: false, message: `Empresa desconocida: ${empresa}` })
+  res.json({ empresa, records: state[key] ?? null, periodo: state.periodo, lastUpdate: state.lastUpdate })
 })
 
 app.get('/api/status', (req, res) => {
@@ -337,8 +343,13 @@ app.get('/api/status', (req, res) => {
     lastUpdate: state.lastUpdate,
     lastCheckAt: state.lastCheckAt,
     isRefreshing: state.isRefreshing,
-    pueblo: { loaded: !!state.pueblo, count: state.pueblo?.length ?? 0 },
-    tesi: { loaded: !!state.tesi, count: state.tesi?.length ?? 0 },
+    // Un bloque por empresa (se mantienen las claves planas tesi/pueblo/... que
+    // ya consumian los clientes) mas el registro completo, que es de donde el
+    // frontend arma el selector y los botones de descarga/subida.
+    ...Object.fromEntries(
+      Object.keys(EMPRESAS).map(key => [key, { loaded: !!state[key], count: state[key]?.length ?? 0 }])
+    ),
+    empresas: listaDeEmpresas(),
     sourcePath: SAP_SOURCE_PATH,
     networkPath: SAP_NETWORK_PATH,
     manifest,
@@ -354,7 +365,8 @@ app.post('/api/refresh', async (req, res) => {
 
 app.get('/api/download', (req, res) => {
   const empresa = String(req.query.empresa || 'TESI').toUpperCase()
-  const key = empresa === 'PUEBLO' ? 'pueblo' : 'tesi'
+  const key = empresaKeyDesdeLabel(empresa)
+  if (!key) return res.status(400).json({ ok: false, message: `Empresa desconocida: ${empresa}` })
   const filename = EMPRESAS[key]
   const p = store.vigentePath(key)
   if (!fs.existsSync(p)) {
@@ -382,7 +394,10 @@ function limpiarArchivosSubidos(files) {
 }
 
 app.post('/api/upload', (req, res) => {
-  upload.array('files', 2)(req, res, async (err) => {
+  // Tope = un archivo por empresa: asi el usuario puede subir de una sola vez
+  // los ajustes de todas. Derivado del registro para que no quede corto al
+  // sumar una empresa nueva (con el 2 fijo, el tercer archivo daba LIMIT_FILE_COUNT).
+  upload.array('files', Object.keys(EMPRESAS).length)(req, res, async (err) => {
     if (err) return res.status(400).json({ ok: false, message: err.message })
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ ok: false, message: 'No se recibieron archivos' })

@@ -2,7 +2,36 @@ import fs from 'fs'
 import path from 'path'
 import { splitIntoPeriodBlocks, serializeBlocks } from './sap-format.js'
 
-export const EMPRESAS = { tesi: 'SAP_RESULT.txt', pueblo: 'SAP_PU_RESULT.txt' }
+// Registro unico de empresas: clave interna -> nombre del archivo que SAP deja
+// en la red (y que el usuario descarga, ajusta y vuelve a subir con ESE nombre).
+// Agregar una empresa es agregar una linea aca: el resto del backend y el
+// selector del frontend se derivan de este mapa.
+export const EMPRESAS = {
+  tesi: 'SAP_RESULT.txt',
+  pueblo: 'SAP_PU_RESULT.txt',
+  indo: 'SAP_INDO_RESULT.txt'
+}
+
+// La etiqueta que ve el usuario es la clave en mayusculas (TESI, PUEBLO, INDO).
+// Mantener esa relacion 1:1 evita una segunda tabla que se pueda desincronizar.
+export function listaDeEmpresas() {
+  return Object.entries(EMPRESAS).map(([key, filename]) => ({
+    key,
+    label: key.toUpperCase(),
+    filename
+  }))
+}
+
+/**
+ * Traduce la etiqueta que llega por querystring a la clave interna.
+ * Devuelve null si no corresponde a ninguna empresa: el llamador contesta 400
+ * en vez de caer por default a TESI, que mostraria datos de otra empresa bajo
+ * el nombre pedido.
+ */
+export function empresaKeyDesdeLabel(label) {
+  const key = String(label ?? '').trim().toLowerCase()
+  return Object.hasOwn(EMPRESAS, key) ? key : null
+}
 
 const MANIFEST = 'manifest.json'
 
@@ -41,7 +70,7 @@ export function createStore({ dir }) {
       if (hayVigente) {
         throw new Error(`manifest.json ausente en ${p} pero hay archivos vigentes en el store`)
       }
-      return { tesi: {}, pueblo: {} }
+      return vacio()
     }
     // Que exista y no parsee (o no sea un objeto plano: array, numero, string,
     // null) es otra cosa: un manifest vacio ahi seria indistinguible de
@@ -56,7 +85,17 @@ export function createStore({ dir }) {
     if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
       throw new Error(`manifest.json corrupto en ${p}: no es un objeto`)
     }
-    return { tesi: raw.tesi ?? {}, pueblo: raw.pueblo ?? {} }
+    // Una empresa sin entrada en el manifest arranca vacia: es el caso normal
+    // al sumar una empresa nueva (el manifest en disco es anterior a ella) y no
+    // tiene nada que ver con el manifest ausente/corrupto de arriba — ahi el
+    // riesgo es pisar ajustes manuales existentes; aca todavia no hay ninguno.
+    return Object.fromEntries(
+      Object.keys(EMPRESAS).map(key => [key, raw[key] ?? {}])
+    )
+  }
+
+  function vacio() {
+    return Object.fromEntries(Object.keys(EMPRESAS).map(key => [key, {}]))
   }
 
   function saveManifest(m) {

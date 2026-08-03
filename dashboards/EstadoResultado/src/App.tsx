@@ -9,7 +9,19 @@ import {
   type SAPRecord, type PLStatement, type BranchSummary, type PLRow, type MatrixPL
 } from '@/src/lib/data-processing'
 
-type Empresa = 'TESI' | 'PUEBLO'
+// La etiqueta de empresa la define el backend (registro EMPRESAS en
+// server/sap-store.js) y llega por /api/status: sumar una empresa no debe
+// requerir tocar el frontend.
+type Empresa = string
+type EmpresaInfo = { key: string; label: Empresa; filename: string }
+
+// Fallback para el primer render y para el caso de /api/status caido: sin esto
+// el selector queda vacio y el tablero no muestra nada hasta que responda.
+const EMPRESAS_FALLBACK: EmpresaInfo[] = [
+  { key: 'tesi', label: 'TESI', filename: 'SAP_RESULT.txt' },
+  { key: 'pueblo', label: 'PUEBLO', filename: 'SAP_PU_RESULT.txt' },
+  { key: 'indo', label: 'INDO', filename: 'SAP_INDO_RESULT.txt' },
+]
 type TabId = 'resumen' | 'pl' | 'sucursal' | 'graficos'
 
 const TABS: { id: TabId; label: string }[] = [
@@ -396,7 +408,8 @@ function MatrixView({ matrix, periodoStr }: { matrix: MatrixPL; periodoStr: stri
 // ─── Main App ─────────────────────────────────────────────────────────────────
 // Origen de cada periodo en el manifest: 'sap' (vino de la red) o 'manual' (ajustado a mano).
 type OrigenPeriodo = { origen: 'sap' | 'manual'; cargadoEn: string }
-type Manifest = { tesi: Record<string, OrigenPeriodo>; pueblo: Record<string, OrigenPeriodo> }
+// Indexado por la clave interna de cada empresa ('tesi', 'pueblo', 'indo', ...).
+type Manifest = Record<string, Record<string, OrigenPeriodo>>
 
 export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -408,6 +421,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('resumen')
   const [sortField, setSortField] = useState<'sucursal' | 'ventasNetas' | 'totalGastos' | 'resultado'>('ventasNetas')
   const [expandedBranches, setExpandedBranches] = useState<Set<string>>(new Set())
+  const [empresas, setEmpresas] = useState<EmpresaInfo[]>(EMPRESAS_FALLBACK)
   const [sourcePath, setSourcePath] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -427,6 +441,7 @@ export default function App() {
     fetch('/api/status')
       .then(r => r.json())
       .then(d => {
+        if (Array.isArray(d.empresas) && d.empresas.length > 0) setEmpresas(d.empresas)
         setSourcePath(d.sourcePath)
         setManifest(d.manifest ?? null)
         // El manifest puede venir null si el manifest.json del servidor esta corrupto/inconsistente.
@@ -496,10 +511,10 @@ export default function App() {
   // Info de ajuste manual del mes visible, para la empresa actualmente seleccionada.
   const ajusteDelPeriodo = useMemo<OrigenPeriodo | null>(() => {
     if (!manifest || !selectedPeriodo) return null
-    const m = empresa === 'PUEBLO' ? manifest.pueblo : manifest.tesi
-    const info = m?.[selectedPeriodo]
+    const key = empresas.find(e => e.label === empresa)?.key ?? empresa.toLowerCase()
+    const info = manifest[key]?.[selectedPeriodo]
     return info?.origen === 'manual' ? info : null
-  }, [manifest, empresa, selectedPeriodo])
+  }, [manifest, empresa, empresas, selectedPeriodo])
 
   // Programa el borrado automatico del banner, cancelando cualquier timer anterior
   // pendiente: si el usuario encadena Actualizar -> Subir files, el timer del primer
@@ -517,7 +532,7 @@ export default function App() {
     try {
       const r = await (await fetch('/api/refresh', { method: 'POST' })).json()
       const partes: string[] = []
-      for (const [key, label] of [['tesi', 'TESI'], ['pueblo', 'PUEBLO']] as const) {
+      for (const { key, label } of empresas) {
         const e = r.empresas?.[key]
         if (!e) continue
         if (!e.ok) { partes.push(`${label}: ${e.error ?? 'no se pudo actualizar'}`); continue }
@@ -572,10 +587,8 @@ export default function App() {
     setUploadMsg(null)
     // Nombres reales de SAP: el usuario los edita a mano y los vuelve a subir, y el
     // backend valida el upload por nombre de archivo — no se puede dejar vacio.
-    const targets: Array<{ empresa: 'TESI' | 'PUEBLO'; filename: string }> = [
-      { empresa: 'TESI', filename: 'SAP_RESULT.txt' },
-      { empresa: 'PUEBLO', filename: 'SAP_PU_RESULT.txt' },
-    ]
+    const targets: Array<{ empresa: Empresa; filename: string }> =
+      empresas.map(e => ({ empresa: e.label, filename: e.filename }))
     const fallas: string[] = []
     let bajados = 0
     try {
@@ -610,9 +623,9 @@ export default function App() {
         }
       }
       if (fallas.length === 0) {
-        setUploadMsg({ ok: true, text: 'Se descargaron los 2 archivos' })
+        setUploadMsg({ ok: true, text: `Se descargaron los ${targets.length} archivos` })
       } else if (bajados > 0) {
-        setUploadMsg({ ok: false, text: `Se descargo 1 archivo. Fallo: ${fallas.join(' · ')}` })
+        setUploadMsg({ ok: false, text: `Se descargaron ${bajados} archivo(s). Fallo: ${fallas.join(' · ')}` })
       } else {
         setUploadMsg({ ok: false, text: `No se pudo descargar ningun archivo. ${fallas.join(' · ')}` })
       }
@@ -652,11 +665,11 @@ export default function App() {
           <div className="flex items-center gap-3 flex-wrap justify-end">
             {/* Company selector */}
             <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden text-sm font-medium">
-              {(['TESI', 'PUEBLO'] as Empresa[]).map(emp => (
+              {empresas.map(({ key, label: emp }) => (
                 <button
-                  key={emp}
+                  key={key}
                   onClick={() => setEmpresa(emp)}
-                  className={`px-5 py-2 transition-colors ${
+                  className={`px-4 py-2 transition-colors ${
                     empresa === emp
                       ? 'bg-indigo-600 text-white'
                       : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -733,7 +746,7 @@ export default function App() {
               onClick={handleDownload}
               disabled={downloading}
               className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
-              title="Descargar SAP_RESULT.txt y SAP_PU_RESULT.txt tal como están cargados, para ajustarlos y volver a subirlos"
+              title={`Descargar ${empresas.map(e => e.filename).join(', ')} tal como están cargados, para ajustarlos y volver a subirlos`}
             >
               <Download className={`w-4 h-4 ${downloading ? 'animate-pulse' : ''}`} />
               Descargar files
@@ -742,7 +755,7 @@ export default function App() {
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
-              title={`Subir SAP_RESULT.txt y/o SAP_PU_RESULT.txt desde tu PC`}
+              title={`Subir desde tu PC uno o varios de: ${empresas.map(e => e.filename).join(', ')}`}
             >
               <Upload className={`w-4 h-4 ${uploading ? 'animate-pulse' : ''}`} />
               Subir files

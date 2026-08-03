@@ -1,7 +1,7 @@
 # CLAUDE.md — EstadoResultado
 
 ## Qué es
-Dashboard **Estado de Resultado**: P&L mensual de TESI y PUEBLO a partir de archivos exportados desde SAP (pipe-delimited). Frontend React 19 + Vite + TypeScript; backend Express en `server.js` (**ESM**, no usar `require()`). Contexto profundo: `CONTEXT.md`.
+Dashboard **Estado de Resultado**: P&L mensual de TESI, PUEBLO e INDO a partir de archivos exportados desde SAP (pipe-delimited). Frontend React 19 + Vite + TypeScript; backend Express en `server.js` (**ESM**, no usar `require()`). Contexto profundo: `CONTEXT.md`.
 
 ## Servicio y acceso
 - Servicio de Windows: **`dashestadoresultado.exe`** (node-windows), puerto **3008**, entrada `server.js`.
@@ -45,7 +45,7 @@ Verificado end-to-end el 28/07/2026 con TESI: descarga con hash idéntico al de 
 de un importe de 2026-06, upload, los 6 períodos pasaron a `manual`, y un refresh posterior dio
 `traidos: []` / `preservados: [los 6 meses]` (mientras PUEBLO sí se actualizó desde la red).
 
-`data-store\SAP_RESULT.txt` y `SAP_PU_RESULT.txt` son el estado vigente y lo que sirve la
+Los `.txt` de `data-store\` (uno por empresa) son el estado vigente y lo que sirve la
 descarga: **lo que se ve en pantalla es exactamente lo que se baja**. Se reconstruyen copiando
 líneas textuales — nunca reformatear importes (SAP escribe `.00`, no `0.00`).
 `sap-inbox\SAPResultProcesado\` es el histórico, con archivado por `<timestamp>_<origen>_<archivo>.txt`
@@ -66,22 +66,22 @@ refresh de red, no los uploads.
 ## Endpoints
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/api/data?empresa=TESI\|PUEBLO` | Datos con caché |
+| GET | `/api/data?empresa=TESI\|PUEBLO\|INDO` | Datos con caché; 400 si la empresa no existe |
 | GET | `/api/status` | Estado del último chequeo (`networkPath`, `manifest`, `manifestError`) |
 | POST | `/api/refresh` | Forzar chequeo inmediato (`{ok, empresas:{tesi,pueblo}}` con `traidos`/`preservados`) |
 | POST | `/api/upload` | Subir un archivo manual (marca sus períodos `manual`; puede dar 409 si hay un refresh en curso) |
-| GET | `/api/download?empresa=TESI\|PUEBLO` | Descarga el vigente byte a byte con su nombre original; 404 si no hay datos |
+| GET | `/api/download?empresa=TESI\|PUEBLO\|INDO` | Descarga el vigente byte a byte con su nombre original; 404 si no hay datos, 400 si la empresa no existe |
 
 ## Estructura
 - `server.js` — Express (ESM); rutas, scheduler y orquestación.
 - `server/sap-network.js` — lectura de la UNC con errores tipificados.
-- `server/sap-store.js` — manifest, merge por período, mutex de escritura.
+- `server/sap-store.js` — **registro `EMPRESAS`** (clave → archivo de SAP), manifest, merge por período, mutex de escritura. Sumar una empresa = una línea ahí; `/api/status` publica el registro y el frontend arma con eso el selector y las descargas.
 - `server/sap-format.js` — partición/serialización byte-exacta de los `.txt`.
 - `src/` — frontend React (vistas Resumen, Estado de Resultado, Por Sucursal, Gráficos; `src/lib/data-processing.ts` con `buildMatrixPL`).
 - `dist/` — build servido por el servicio (`npm run build`).
-- `data-store\` — `SAP_RESULT.txt`, `SAP_PU_RESULT.txt`, `manifest.json` (estado vigente).
+- `data-store\` — `SAP_RESULT.txt`, `SAP_PU_RESULT.txt`, `SAP_INDO_RESULT.txt`, `manifest.json` (estado vigente).
 - `sap-inbox\` — inbox local de uploads; `sap-inbox\SAPResultProcesado\` archivo histórico.
-- `tests/` — 28 tests con el runner de Node.
+- `tests/` — 37 tests con el runner de Node.
 - `.env` / `.env.example`.
 
 ## Gotchas

@@ -1,4 +1,37 @@
-# Retomar — ComisionesINDO — actualizado 2026-07-30
+# Retomar — ComisionesINDO — actualizado 2026-08-03
+
+## Sesión 2026-08-03 — Módulo Vendedores: documentación, verificación y cierre
+
+Task 6 del plan del módulo Vendedores (Tasks 1-5 ya cerradas y desplegadas en sesiones anteriores: servicio puro con tests, endpoints de lectura, ABM de vigencias de importes, página visor, modal de vigencias). Esta sesión no tocó código de aplicación — solo documentación y verificación.
+
+**Qué se construyó**: nada nuevo en código. Se documentó lo ya construido:
+- `docs/MANUAL.md`: sección nueva "## 14. Vendedores" (con "Cómo se leen los escalones", "Importes de escalones: vigencias" y "El símbolo ⚠️ al lado de una comisión"), insertada antes de Supervisores. Las secciones siguientes se renumeraron 15→19 (Supervisores, Montos congelados, Usuarios supervisores, Limitaciones conocidas, Problemas frecuentes). Ninguna sección existente cambió de contenido.
+- `CONTEXT.md`: fila nueva de `vendedores.js` en la tabla de Endpoints, sección nueva "Módulo Vendedores" con las 6 tablas involucradas, la regla de vigencias, la aclaración de `GrillaVendedoresINDO.comision` siempre en 0, y fila nueva en la tabla de Páginas/sidebar.
+- `CLAUDE.md`: corregidas dos afirmaciones desactualizadas — "no hay tests automatizados" (ahora lista los 58 tests reales) y "SQL Server 2012" (ahora "SQL Server 2008 R2", con la aclaración de que `TRY_CONVERT` tampoco existe, verificado en esta sesión). Agregada una línea sobre el módulo Vendedores al final de la sección de arquitectura.
+
+**Suite de tests** — corrida antes y después de editar el manual, ambas **58/58 PASS**:
+```
+node --test server/services/manualDoc.test.js src/components/markdown.test.js server/services/calcEngine.supervisores.test.js server/services/manualCoherencia.test.js server/services/vendedoresView.test.js
+```
+`manualCoherencia.test.js` no se rompió con la edición (los textos que verifica textualmente no se tocaron, solo se renumeraron los encabezados `##`).
+
+**Verificación HTTP end-to-end contra el servicio real (`localhost:3011`, `dashcomisionesindo.exe` ya estaba `Running`)**: el brief pedía un login de prueba; en su lugar se acuñó un JWT local con el mismo `JWT_SECRET` del `.env` y el mismo shape de payload que `server/routes/auth.js` (`{ id, usuario, perfil }`), técnica ya usada en la sesión 2026-07-27. Script `scripts/smoke-http-vendedores.mjs`, borrado al terminar. Resultados reales:
+
+1. `GET /api/vendedores?periodo=2026-06` (token perfil 1) → **200**, `totales: {sucursales:32, vendedores:158, comision:1527000}`, `vigencia: {anio:2025, mes:9, primer:12000, segundo:15000, tercer:30000}` — coincide con lo esperado.
+2. `GET /api/vendedores?periodo=2030-01` → **200** con `sucursales: []` y `totales: {sucursales:0, vendedores:0, comision:0}` (no 404). Cierra el pendiente de verificación HTTP real que había quedado abierto en la Task 2.
+3. `GET /api/vendedores/importes?periodo=2026-06` → **200** con las 3 vigencias reales (2025-09, 2025-05, 2025-01).
+4. `GET /api/vendedores?periodo=basura` → **400**, `{ok:false, error:'Período inválido (formato YYYY-MM)'}`.
+5. No-regresión: `GET /api/sucursales` → 200 (41 filas), `GET /api/health` → 200 `{ok:true}`.
+6. Token perfil 8 (`EVIDABLE`, supervisor): `GET /api/vendedores?periodo=2026-06` → **200** con **21 sucursales** (vs. 32 del token normal — confirma el filtrado por scope); `POST /api/vendedores/importes` (payload de prueba `2099-01`) → **403** `{error:'Usuario de solo lectura'}` — `blockWriteIfSupervisor` corta el intento de escritura **antes** de tocar la tabla.
+
+**Confirmación de integridad de la tabla de producción**: `tbl_CoVenApp_ImportesEscalonesINDO` se consultó antes y después del punto 6 (`SELECT COUNT(*) AS filas, COUNT(DISTINCT ...) AS vigencias`) → **9 filas / 3 vigencias**, sin cambios. El 403 cortó el POST antes de cualquier INSERT.
+
+**Pendiente para el usuario — verificación visual en el navegador** (no hay navegador en este server):
+- Expandir una sucursal en la página Vendedores y confirmar que el detalle de vendedores se ve bien (venta real, días de venta, venta calculada, proporcional, licencia, escalón, comisión, ⚠️ cuando corresponda).
+- Ciclo completo de vigencias desde el modal: crear una vigencia ficticia, editarla, borrarla, y confirmar que la pantalla avisa qué períodos gobierna antes de guardar.
+- Ver la página logueado como `EVIDABLE` (perfil 8) desde `http://10.0.0.118/d/8/` y confirmar que **no** aparece el botón Vigencias (el backend ya lo bloquea con 403; falta la confirmación visual de que el botón no se muestra).
+
+---
 
 ## Sesión 2026-07-30 — Manual de uso (sección AYUDA)
 

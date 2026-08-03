@@ -28,13 +28,13 @@ npm run client
 npm run build
 ```
 
-No hay tests automatizados. La verificación es manual contra los datos reales de SQL Server.
+Tests: `node --test server/services/manualDoc.test.js src/components/markdown.test.js server/services/calcEngine.supervisores.test.js server/services/manualCoherencia.test.js server/services/vendedoresView.test.js` (58 tests). Cubren el motor de Supervisores, el parser del manual, la coherencia manual↔motor y la vista de Vendedores. El resto se verifica manualmente contra los datos reales de SQL Server.
 
 ---
 
 ## Arquitectura general
 
-**Stack**: Node.js v24, ES Modules, Express 4, Vite 6, Vanilla JS SPA, SQL Server 2012.
+**Stack**: Node.js v24, ES Modules, Express 4, Vite 6, Vanilla JS SPA, SQL Server 2008 R2.
 
 - **Frontend** (Vite, puerto 5173): SPA sin framework. `src/app.js` es el router: maneja rutas como strings simples (`'cajeros'`, `'visor-montos'`), renderiza la función correspondiente pasando `(container, periodoActual)`.
 - **Backend** (Express, puerto 3000): API REST pura. `server/index.js` registra todos los routers bajo `/api/*`.
@@ -47,7 +47,7 @@ No hay tests automatizados. La verificación es manual contra los datos reales d
 | `getPool()` | `server/config/db.js` | `db_Cegid` (10.0.0.115) | Tablas propias de la app (montos, ranking, objetivos, resultados) |
 | `getPoolBC()` | `server/config/dbBeClever.js` | `BeClever` (mismo server) | SPs de BeClever: ventas, cobranzas, objetivos Millón |
 
-**Importante**: SQL Server 2012 — `DATEFROMPARTS` no está disponible. Para construir fechas usar:
+**Importante**: SQL Server 2008 R2 — ni `DATEFROMPARTS` ni `TRY_CONVERT` están disponibles (verificado 2026-08-03: la query falla con "'TRY_CONVERT' is not a recognized built-in function name"). Para construir fechas usar `CAST`:
 ```sql
 CAST(CAST(@yr AS VARCHAR(4)) + '-' + RIGHT('0'+CAST(@mo AS VARCHAR(2)),2) + '-01' AS DATE)
 ```
@@ -57,6 +57,8 @@ CAST(CAST(@yr AS VARCHAR(4)) + '-' + RIGHT('0'+CAST(@mo AS VARCHAR(2)),2) + '-01
 - Tablas **propias nuevas** (en `db_Cegid`): prefijo `tbl_CoVenAppINDO_`
 - Tablas **existentes** de vendedores (en `db_Cegid`): prefijo `tbl_CoVenApp_`
 - Tablas de **BeClever**: `dbo.COMERCIO`, `METRIX.dbo.OBJETIVOS_MILLON`, etc.
+
+**Módulo Vendedores**: su cálculo es **externo** (job SQL `SP_ComisionesINDO`, que además genera el `.xls` y lo manda por mail) — el dashboard solo lee el resultado vía `server/routes/vendedores.js` y `server/services/vendedoresView.js`, no hay recálculo desde la web. Detalle completo en `CONTEXT.md`.
 
 ---
 

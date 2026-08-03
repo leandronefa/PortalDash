@@ -88,7 +88,7 @@ Los montos de comisión varían según la categoría de la sucursal, con estos m
 - **B**: 1,15
 - **C**: 1,00
 
-Este multiplicador se aplica en un **único** lugar del sistema: cuando editás el monto de **Categoría C** en el ABM de Montos, el sistema calcula y graba **ya multiplicados** los valores de B y A. Por eso el motor de cálculo no vuelve a multiplicar esos montos — ya vienen así guardados. La única excepción es Operadores Retail, que reconstruye el monto desde la fila de categoría C y aplica el multiplicador él mismo — ver la sección 17.
+Este multiplicador se aplica en un **único** lugar del sistema: cuando editás el monto de **Categoría C** en el ABM de Montos, el sistema calcula y graba **ya multiplicados** los valores de B y A. Por eso el motor de cálculo no vuelve a multiplicar esos montos — ya vienen así guardados. La única excepción es Operadores Retail, que reconstruye el monto desde la fila de categoría C y aplica el multiplicador él mismo — ver la sección 18.
 
 Los **cajeros nunca llevan multiplicador**: su monto es el mismo para cualquier categoría de sucursal.
 
@@ -120,7 +120,69 @@ El encargado Retail cobra por dos componentes **independientes**: el escalón de
 
 El encargado Millón cobra **solo** por el escalón de efectivo. No tiene componente de participación.
 
-## 14. Reglas de Supervisores
+## 14. Vendedores
+
+Muestra las comisiones de los vendedores del período, una fila por sucursal.
+
+**El cálculo de este módulo NO lo hace el dashboard.** Lo corre un proceso automático
+de la base de datos (`SP_ComisionesINDO`), que además genera la planilla de
+comisiones y la manda por mail. Esta página solamente muestra el resultado: no hay
+botón de recalcular, y si un período no aparece es porque el proceso todavía no lo
+procesó.
+
+### Cómo se leen los escalones
+
+Cada sucursal tiene tres umbrales de venta, calculados a partir del objetivo de
+ventas del mes:
+
+| Escalón | Umbral |
+|---|---|
+| Primer escalón | objetivo de ventas × 0,97 |
+| Segundo escalón | primer escalón × 1,10 |
+| Tercer escalón | segundo escalón × 1,15 |
+
+Los tres se dividen por la **cantidad de vendedores** de la sucursal, que no es un
+conteo simple: un vendedor full time cuenta 1 y un part time cuenta 0,5, y solo se
+cuentan los que tienen **más de 5 días de venta** en el mes. Por eso la columna
+"Vend." puede mostrar valores como 2,5 o 3,5.
+
+Lo que se compara contra los umbrales es la **venta calculada más el ajuste
+proporcional** de cada vendedor, de mayor a menor: si llega al tercer escalón cobra
+el importe del tercero, si no llega pero alcanza el segundo cobra el del segundo, y
+así. Si no llega al primero, no cobra.
+
+**Un vendedor part time cobra la mitad del importe** del escalón que alcanzó.
+
+Al hacer clic en una sucursal se abre el detalle de sus vendedores: venta real, días
+de venta, venta calculada, ajuste proporcional, días de licencia, el escalón
+alcanzado y la comisión.
+
+### Importes de escalones: vigencias
+
+Los importes que se pagan por cada escalón se cargan desde el botón **Vigencias**.
+Funcionan por fecha de vigencia: una vigencia rige **desde su mes en adelante**,
+hasta que se carga otra posterior.
+
+Para cambiar los montos, **creá una vigencia nueva** con el mes desde el cual
+empiezan a valer. Los períodos anteriores siguen resolviendo la vigencia vieja, así
+que los resultados ya calculados no se alteran.
+
+La tarjeta de arriba de la página muestra qué importes rigen para el período que
+tenés seleccionado y de qué vigencia salen.
+
+Editar o borrar una vigencia ya cargada también se puede (sirve para corregir una
+carga equivocada), pero afecta a todos los períodos que esa vigencia gobierna **si
+alguna vez se los vuelve a calcular**. La pantalla te avisa cuáles son antes de
+guardar.
+
+### El símbolo ⚠️ al lado de una comisión
+
+Significa que la comisión guardada no coincide con el importe que hoy correspondería
+al escalón alcanzado. Pasa cuando se editaron los importes de una vigencia y ese
+período todavía no fue reprocesado por el proceso automático. El monto que se
+muestra es siempre el que quedó guardado en el cálculo, no uno recalculado.
+
+## 15. Reglas de Supervisores
 
 Estas son las reglas vigentes desde el 16 de julio de 2026.
 
@@ -141,19 +203,19 @@ Además del pago por sucursal, existe un **plus por plaza** (plaza = provincia):
 
 **Millón** (mira solo efectivo): no paga por sucursal. Si **todas** las sucursales Millón asignadas al supervisor en una provincia llegaron por efectivo, la plaza paga **$23.000 una sola vez**.
 
-## 15. Montos congelados por período
+## 16. Montos congelados por período
 
 La primera vez que se calcula un período, el sistema guarda una foto de los montos vigentes en ese momento. Si más adelante volvés a calcular ese mismo período, **siempre** se usa esa foto — no importa qué hayas cambiado después en el ABM de Montos.
 
 El ABM sigue funcionando con normalidad: seguís editando el valor "vivo", que es el que se usa para los períodos **nuevos**. Esto existe para que recalcular un mes ya cerrado no te cambie lo que ya se liquidó.
 
-## 16. Usuarios supervisores: acceso de solo lectura
+## 17. Usuarios supervisores: acceso de solo lectura
 
 Los usuarios con perfil supervisor ven el tablero completo de la aplicación, pero en **modo de solo lectura**: no tienen controles de edición ni botones de cálculo. Además, solo ven los datos de las sucursales que tienen asignadas.
 
 En el resultado de la pantalla Supervisores, cada usuario supervisor ve **únicamente su propio registro** — no el de los demás supervisores.
 
-## 17. Limitaciones conocidas
+## 18. Limitaciones conocidas
 
 - **Cajeros no se recalcula con el botón de Total**: necesita los overrides de jornada que se cargan en su propia pantalla, así que siempre hay que calcularlo aparte. La pestaña Cajeros de Total se calcula sin los overrides de jornada, así que ahí los part-time pueden aparecer con el monto full. El resultado válido de Cajeros es siempre el de la pantalla Cajeros, calculado con su botón propio — no liquides cajeros desde Total.
 - **Descongelar un período no tiene botón en la pantalla**, y es a propósito. Si un período se calculó por error antes de terminar de cargar los montos correctos, pedile al **equipo técnico** que borre la foto de ese período para que el próximo cálculo tome los valores nuevos.
@@ -161,12 +223,12 @@ En el resultado de la pantalla Supervisores, cada usuario supervisor ve **única
 - El escalón **E1 en ámbar** puede mostrarse en verde en períodos que no se recalcularon con la versión actual del sistema.
 - **Operadores Retail** reconstruye su monto desde la fila de categoría C multiplicada, en lugar de leer directamente las filas A/B cargadas en Montos. Es una inconsistencia conocida frente al resto del motor, y puede dar diferencias puntuales en sucursales de categoría A y B.
 
-## 18. Problemas frecuentes
+## 19. Problemas frecuentes
 
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
 | Una pantalla de resultado aparece vacía | No se ejecutó el cálculo de ese período | Andá a Cálculos → Total → ▶ Ejecutar cálculo |
-| Cambiaste un monto y no se refleja en el resultado | El período ya tiene sus montos congelados (ver sección 15) | Es esperado — ese período usa la foto que se guardó la primera vez que se calculó |
-| A un supervisor no le aparece el plus de plaza | Alguna sucursal de esa provincia no llegó a participación (ver sección 14) | Revisá el detalle de sucursales de esa plaza en el resultado de Supervisores |
+| Cambiaste un monto y no se refleja en el resultado | El período ya tiene sus montos congelados (ver sección 16) | Es esperado — ese período usa la foto que se guardó la primera vez que se calculó |
+| A un supervisor no le aparece el plus de plaza | Alguna sucursal de esa provincia no llegó a participación (ver sección 15) | Revisá el detalle de sucursales de esa plaza en el resultado de Supervisores |
 | Una sucursal no aparece en ninguna pantalla | Está deshabilitada | Revisá su estado en Sucursales Retail y, si corresponde, volvé a habilitarla |
 | Aparece "Sin autorización" o te vuelve al login | La sesión venció | Volvé a iniciar sesión |

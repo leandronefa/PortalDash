@@ -120,6 +120,7 @@ Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpi
 | `supervisores.js` | `/api/supervisores` | CRUD de supervisores + asignación de sucursales |
 | `sucursales.js`, `ranking.js`, `objetivos.js` | `/api/*` | ABM de datos maestros |
 | `operadores.js`, `millon.js`, `datos.js` | `/api/*` | Datos auxiliares (jornadas, sucursales Millón, cache de originaciones) |
+| `vendedores.js` | `/api/vendedores` | `GET /` (resultado del período, con `attachScope`/`filtrarPorSucursal`), `GET /importes` (vigencias), `POST /importes`, `PUT /importes/:anio/:mes`, `DELETE /importes/:anio/:mes` — los tres últimos con `blockWriteIfSupervisor` (403 para perfil 8) |
 
 `GET /calculo/encargados`, `/encargados-millon` y `/supervisores` leen del **último `CalculoHistorial` guardado** — no recalculan al vuelo. Si se agrega un campo nuevo al resultado de `/ejecutar`, hay que re-ejecutar el cálculo completo desde la página **Total** para que el historial lo tenga.
 
@@ -136,6 +137,31 @@ Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpi
 
 ---
 
+## Módulo Vendedores (`server/routes/vendedores.js`, `server/services/vendedoresView.js`)
+
+**El cálculo lo hace enteramente un job batch de SQL Server (`SP_ComisionesINDO`)**, que además genera un `.xls` de comisiones y lo manda por mail. El dashboard **solo lee** el resultado — no hay endpoint de recálculo.
+
+- **Umbrales por sucursal** (`sp_CoVenApp_LlenarEscalonesINDO`): objetivo de ventas × 0,97 = primer escalón, × 1,10 = segundo, × 1,15 sobre el segundo = tercero; los tres divididos por la cantidad de vendedores (full time pesa 1, part time 0,5), contando solo a quienes tienen más de 5 días de venta.
+- **Comisión** (`sp_CoVenApp_CalcularComisionesINDO`): compara `venta calculada + proporcional` contra los umbrales de mayor a menor con `>=`; part time cobra la mitad del importe del escalón alcanzado.
+- **Vigencias de importes**: los importes de cada escalón funcionan por vigencia — una vigencia rige desde su `(año, mes)` en adelante hasta que aparece otra posterior (`vigenciaParaPeriodo()` en `vendedoresView.js` resuelve cuál aplica a un período dado). El ABM nuevo (`POST`/`PUT`/`DELETE /api/vendedores/importes`) permite crear, editar y borrar vigencias desde la web — antes solo se cargaban por SQL directo. Es la **única** escritura del módulo.
+- **El ⚠️** que puede mostrar la vista (`armarVista()`) significa que la comisión guardada (`GrillaComisionesINDO.comision`) no coincide con el importe del escalón alcanzado según la vigencia vigente: se editaron importes y ese período no fue reprocesado por el job.
+- La vista usa la jornada **congelada** del período (columna `parcial` de la grilla), no la actual del legajo (`Vendedores.GCL_TEMPSPARTIEL`) — si difieren, `armarVista()` lo señala.
+
+### Tablas involucradas (prefijo `tbl_CoVenApp_`, sin el `INDO` de las tablas propias del dashboard)
+
+| Tabla | Descripción |
+|---|---|
+| `tbl_CoVenApp_GrillaVendedoresINDO` | Venta por vendedor/período (venta real, días de venta, venta calculada, proporcional, días de licencia, jornada congelada). **Su columna `comision` está siempre en 0** — no es la comisión real |
+| `tbl_CoVenApp_GrillaComisionesINDO` | La comisión real pagada por vendedor/período |
+| `tbl_CoVenApp_EscalonesINDO` | Por sucursal/período: cantidad de vendedores (ya ponderada), los 3 umbrales y los 3 importes congelados que se pagaron |
+| `tbl_CoVenApp_ImportesEscalonesINDO` | Las vigencias de importes — la única tabla que el dashboard escribe |
+| `tbl_CoVenApp_Vendedores` | Nombres y jornada actual del legajo (`GCL_TEMPSPARTIEL`) |
+| `tbl_CoVenAppINDO_Sucursales` | Nombre de sucursal (join, tabla propia del dashboard) |
+
+Página `src/pages/vendedores.js` (ruta `vendedores`, sidebar Cálculos entre Total y Cajeros) + modal de vigencias. Igual que el resto del módulo Cálculos, respeta `attachScope`/`blockWriteIfSupervisor`: perfil 8 ve menos sucursales (filtro por scope) y no puede tocar vigencias.
+
+---
+
 ## Páginas (`src/pages/`) y sidebar
 
 | Sección sidebar | Ruta | Estado |
@@ -146,6 +172,7 @@ Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpi
 | Cálculos | `encargados`, `encargados-millon` | Resultado por sucursal, sin nombres de personas — **blindado, no tocar** |
 | Cálculos | `total` | Ejecuta el cálculo completo (botón "▶ Ejecutar cálculo") + pestañas de resultado y CSV. **Conectada al menú el 2026-07-14** — existía huérfana (sin ruta ni link) desde que se quitó el botón del Dashboard |
 | Cálculos | `resultado-supervisores` | Resultado por supervisor, plazas en una línea por provincia (Retail + Millón), detalle por sucursal — **ÚNICO módulo abierto** (2026-07-06) |
+| Cálculos | `vendedores` (entre Total y Cajeros) | Resultado del job SQL `SP_ComisionesINDO` por sucursal, con modal de vigencias de importes — agregado 2026-08-03 |
 | AYUDA | `manual` | Manual de uso. El texto vive en `docs/MANUAL.md` y lo sirve `GET /api/manual` — editar el `.md` y recargar la página alcanza, **sin** `npm run build` ni reinicio del servicio |
 
 El ABM de Supervisores (`pages/supervisores.js`) vive en "DATOS" (se movió desde "Cálculos" sin tocar su lógica); la página de resultado (`resultado-supervisores.js`) es la que reemplaza ese rol en "Cálculos".

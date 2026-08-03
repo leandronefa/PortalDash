@@ -881,9 +881,14 @@ test('dos lineas de diferencias en el mismo grupo se suman', () => {
   assert.equal(m.sucursales[0].dias['03'], 150)
 })
 
-test('un dia sin diferencia no genera celda', () => {
+test('una sucursal sin ninguna diferencia aparece con la fila vacia', () => {
+  // Decidido por el usuario el 03/08/2026: es confirmacion positiva. La
+  // ausencia de fila seria indistinguible de "no opero" o "no vino en el
+  // archivo"; una fila vacia dice "opero y cerro bien todos los dias".
   const rs = [reg('2026-06-03', '003', VENTA, 5000)]
   const m = construirMatriz(rs, '2026-06', {})
+  assert.equal(m.sucursales.length, 1)
+  assert.equal(m.sucursales[0].codigo, '003')
   assert.deepEqual(m.sucursales[0].dias, {})
   assert.equal(m.sucursales[0].total, 0)
 })
@@ -892,6 +897,7 @@ test('una diferencia que suma cero no genera celda', () => {
   const rs = [reg('2026-06-03', '003', DIF, 500), reg('2026-06-03', '003', DIF, -500)]
   const m = construirMatriz(rs, '2026-06', {})
   assert.deepEqual(m.sucursales[0].dias, {})
+  assert.equal(m.sucursales[0].total, 0)
 })
 
 test('las columnas son solo los dias presentes en el periodo, ordenados', () => {
@@ -1044,8 +1050,17 @@ export function construirMatriz(registros, periodo, nombres = {}) {
   let sobrantes = 0
   let diasConDiferencia = 0
 
+  // TODAS las sucursales con actividad en el periodo entran en la matriz,
+  // incluso las que no tuvieron ninguna diferencia: su fila queda vacia con
+  // total 0. Es confirmacion positiva — el usuario ve que la sucursal cerro
+  // bien todos los dias, en vez de tener que deducirlo de una ausencia (que
+  // seria indistinguible de "no opero" o "no vino en el archivo"). Decidido por
+  // el usuario el 03/08/2026.
+  const todasLasSucursales = [...new Set(delPeriodo.map(r => r.sucursal))]
+
   const sucursales = []
-  for (const [codigo, porDia] of porSucursal) {
+  for (const codigo of todasLasSucursales) {
+    const porDia = porSucursal.get(codigo) ?? new Map()
     const celdas = {}
     let total = 0
     for (const [dia, valor] of porDia) {
@@ -1057,9 +1072,6 @@ export function construirMatriz(registros, periodo, nombres = {}) {
       if (valor > 0) faltantes += valor
       else sobrantes += valor
     }
-    // Una sucursal cuyas diferencias se cancelaron todas no aporta una fila:
-    // no tiene nada que revisar.
-    if (Object.keys(celdas).length === 0) continue
     sucursales.push({ codigo, nombre: nombres[codigo] ?? '', dias: celdas, total })
   }
 

@@ -123,7 +123,8 @@ npm run build        # genera dist/
   con `MODULE_NOT_FOUND`). El test de round-trip de `sap-format` valida igualdad byte a byte
   contra los archivos reales de `SAPResultProcesado\`; si falla, el formato cambió — no
   ajustarlo sin entender el diff.
-- **Pendiente del usuario**: verificación visual en navegador (las 3 descargas simultáneas,
-  selector con TESI/PUEBLO/INDO, punto ámbar de mes ajustado, consola sin errores) — no se hizo
-  porque la extensión de Chrome no está instalada en este entorno.
+- **Validado por el usuario (03/08/2026)**: la vista de INDO en el navegador y sus números
+  contra el Excel de contabilidad. Sigue sin verificarse en navegador el resto del checklist
+  visual (las 3 descargas simultáneas, punto ámbar de mes ajustado, consola sin errores): no se
+  puede hacer desde acá porque la extensión de Chrome no está instalada en este entorno.
 - Módulo ESM: no usar `require()`.

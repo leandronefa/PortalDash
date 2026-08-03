@@ -145,10 +145,10 @@ Variables nuevas en el `.env`: `SAP_NETWORK_PATH` (fuente real) y `SAP_SOURCE_PA
 de uploads manuales — pese al nombre, ya no es "la fuente").
 
 Tests: `node --test "tests/*.test.js"` desde `C:\apps\dashboards\EstadoResultado` (37 tests, el
-glob va entre comillas). Pendiente del usuario: verificación visual en navegador (las 3
-descargas simultáneas, selector con las tres empresas, punto ámbar de mes ajustado, consola sin
-errores) — no se pudo hacer en este
-entorno por falta de la extensión de Chrome.
+glob va entre comillas). El usuario validó en el navegador (03/08/2026) la vista de INDO y sus
+números contra el Excel de contabilidad. Sigue pendiente el resto del checklist visual (las 3
+descargas simultáneas, punto ámbar de mes ajustado, consola sin errores) — no se puede hacer en
+este entorno por falta de la extensión de Chrome.
 
 ---
 

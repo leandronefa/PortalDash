@@ -89,6 +89,6 @@ refresh de red, no los uploads.
 - El `PORT` que inyecta el servicio pisa al del `.env`; mantener 3008 único.
 - Los archivos SAP traen varios períodos (campo 5 `YYYY-MM`); la UI muestra un mes a la vez (selector en el header, default el más reciente).
 - Tests: `node --test "tests/*.test.js"` desde la carpeta del dashboard (**el glob va entre comillas**: sin comillas falla en git-bash con `MODULE_NOT_FOUND`). El test de round-trip de `sap-format` valida igualdad byte a byte contra los archivos reales de `sap-inbox\SAPResultProcesado\`; si falla, el formato cambió — no ajustarlo sin entender el diff.
-- **Pendiente del usuario**: falta la verificación visual en navegador (dos descargas simultáneas, punto ámbar de un mes ajustado, consola sin errores) — no se pudo hacer porque la extensión de Chrome no está instalada en este entorno.
+- **Validado por el usuario (03/08/2026)**: la vista de INDO y sus números contra el Excel de contabilidad. Sigue pendiente el resto del checklist visual (las 3 descargas simultáneas, punto ámbar de un mes ajustado, consola sin errores) — no se puede hacer desde acá porque la extensión de Chrome no está instalada en este entorno.
 - No commitear `.env` ni exponer sus valores.
 - Pedir confirmación antes de reinstalar el servicio o tocar `.env` (regla de `C:\apps\dashboards\CLAUDE.md`).

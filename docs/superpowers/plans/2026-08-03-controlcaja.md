@@ -2538,9 +2538,10 @@ export function PanelAsiento({ asiento, cargando, error, onCerrar }: Props) {
 
 - [ ] **Step 3: Montar los dos en `src/App.tsx`**
 
-Agregar los dos componentes a los imports, y **fusionar** `getAsiento` y `type Asiento` en el `import` de `@/src/lib/api` que ya existe (no agregar un segundo `import` del mismo módulo):
+Agregar los dos componentes a los imports, sumar `useRef` al import de React, y **fusionar** `getAsiento` y `type Asiento` en el `import` de `@/src/lib/api` que ya existe (no agregar un segundo `import` del mismo módulo):
 
 ```tsx
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { MatrizDiferencias } from '@/src/components/MatrizDiferencias'
 import { PanelAsiento } from '@/src/components/PanelAsiento'
 // el import existente queda:
@@ -2555,21 +2556,33 @@ Agregar el estado del panel, después del estado de `error`:
   const [asiento, setAsiento] = useState<Asiento | null>(null)
   const [asientoCargando, setAsientoCargando] = useState(false)
   const [asientoError, setAsientoError] = useState<string | null>(null)
+  // Numero del ultimo pedido de asiento. Sin esto, un pedido lento de la empresa
+  // X que resuelve DESPUES de uno de la empresa Y pisa los datos de Y: el panel
+  // muestra el asiento de otra empresa bajo un encabezado que dice la correcta.
+  // Falla en silencio, y en un tablero contable eso es peor que un error visible.
+  const pedidoAsiento = useRef(0)
 
   const abrirAsiento = useCallback(async (fechaISO: string, sucursal: string) => {
+    const pedido = ++pedidoAsiento.current
     setSeleccion({ fechaISO, sucursal })
     setAsientoCargando(true); setAsientoError(null)
     try {
-      setAsiento(await getAsiento(empresa, fechaISO, sucursal))
+      const a = await getAsiento(empresa, fechaISO, sucursal)
+      if (pedido !== pedidoAsiento.current) return   // llego tarde: ya hay otro pedido
+      setAsiento(a)
     } catch (e) {
+      if (pedido !== pedidoAsiento.current) return
       setAsientoError((e as ApiError).message); setAsiento(null)
     } finally {
-      setAsientoCargando(false)
+      if (pedido === pedidoAsiento.current) setAsientoCargando(false)
     }
   }, [empresa])
 
   const cerrarAsiento = useCallback(() => {
-    setSeleccion(null); setAsiento(null); setAsientoError(null)
+    // Invalida cualquier pedido en vuelo: si uno resuelve despues de cerrar, su
+    // resultado ya no corresponde a nada de lo que se esta viendo.
+    pedidoAsiento.current++
+    setSeleccion(null); setAsiento(null); setAsientoError(null); setAsientoCargando(false)
   }, [])
 
   // Al cambiar de empresa o de mes, el asiento abierto pertenece a otro

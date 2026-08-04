@@ -162,6 +162,23 @@ Registrar en el portal (Administración → Dashboards, puerto 3012) para accede
 - Tablas `tbl_CtrlAcceso_*` se crean solas al arrancar el servicio (idempotente).
 - Gotcha: el SQL de 10.0.0.115 no soporta `LEAD` → los KPIs usan `CROSS APPLY` (detalle en el CLAUDE.md del dashboard).
 
+## ControlCaja — matriz de Diferencias de Caja (04/08/2026)
+
+Servicio `dashcontrolcaja.exe`, puerto **3014** (solo loopback), carpeta `C:\apps\dashboards\ControlCaja`.
+Pendiente de registrar en el portal (Administración → Dashboards, puerto 3014); hasta entonces la
+URL vía proxy es `/d/<id>/` con el ID que asigne el portal en ese momento.
+
+- Matriz sucursal × día con las Diferencias de Caja que SAP reporta (cuenta
+  `4.2.002.01.050 - Diferencias de Caja`), por empresa (TESI/PUEBLO) y por mes, con drill-down al
+  asiento del día.
+- Lee `\\10.0.0.115\Cegid\SAP_REPORTE_Z.TXT` y `SAP_PU_REPORTE_Z.TXT` **directo de la red,
+  read-only**: a diferencia de EstadoResultado no hay descarga, upload, `data-store` ni manifest —
+  la fuente de verdad es siempre el archivo de la red, con caché en memoria invalidada por
+  `mtime`+`size`.
+- Instalado el 04/08/2026: `npm run build` limpio, servicio arrancado y verificado escuchando en
+  `127.0.0.1:3014` (log de arranque con las tres líneas esperadas, incluida
+  `Fuente SAP (red, solo lectura)`).
+
 ## Particularidades / problemas resueltos (importante)
 
 1. **El PORT lo fija el servicio** (variable de entorno) y tiene prioridad sobre el `PORT` del `.env`. Así se evitan choques (antes varios usaban el mismo puerto y solo arrancaba uno → `EADDRINUSE`).

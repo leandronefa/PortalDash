@@ -1,4 +1,4 @@
-import { RefreshCw, AlertTriangle } from 'lucide-react'
+import { RefreshCw, AlertTriangle, Sun, Moon } from 'lucide-react'
 import type { Empresa } from '@/src/lib/api'
 import { formatoFrescura, formatoMes } from '@/src/lib/formato'
 
@@ -13,6 +13,8 @@ type Props = {
   descartadas: number
   cargando: boolean
   onRefrescar: () => void
+  dark: boolean
+  onDark: (d: boolean) => void
 }
 
 export function Encabezado(p: Props) {
@@ -57,6 +59,13 @@ export function Encabezado(p: Props) {
               className="inline-flex items-center gap-1.5 rounded border border-slate-300 dark:border-slate-600 px-2.5 py-1 text-sm disabled:opacity-50">
         <RefreshCw className={`w-4 h-4 ${p.cargando ? 'animate-spin' : ''}`} aria-hidden />
         Refrescar
+      </button>
+
+      <button onClick={() => p.onDark(!p.dark)}
+              title={p.dark ? 'Modo claro' : 'Modo oscuro'}
+              aria-label={p.dark ? 'Modo claro' : 'Modo oscuro'}
+              className="inline-flex items-center justify-center rounded border border-slate-300 dark:border-slate-600 p-1.5">
+        {p.dark ? <Sun className="w-4 h-4" aria-hidden /> : <Moon className="w-4 h-4" aria-hidden />}
       </button>
     </header>
   )

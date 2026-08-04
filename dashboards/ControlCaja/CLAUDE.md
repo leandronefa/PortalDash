@@ -62,12 +62,15 @@ Tres respuestas distintas, y la diferencia importa:
 - El `PORT` que inyecta el servicio pisa al del `.env`; mantener 3014 único.
 - **Las fechas del archivo se manejan como strings** (`'2026-06-03'`), nunca con `Date`: parsear
   `dd/mm/yyyy` a `Date` y reformatear es la vía clásica a que el día 1 aparezca en el mes anterior.
-- ~600 líneas por archivo traen una **fecha en el campo de sucursal** (cuentas de compras). Se
-  ignoran y el tablero muestra el conteo. El usuario va a corregir el reporte en origen: cuando el
-  contador llegue a cero, es que se corrigió. Si aparece un motivo de descarte **distinto**, el
-  formato cambió — investigar, no ajustar el parser a ciegas.
-- La paleta del semáforo está **validada** con el skill `dataviz` (CVD ΔE 11,5 light / 10,6 dark).
-  No cambiar los hexes de `src/index.css` sin re-correr `scripts/validate_palette.js`.
+- Hasta el 03/08/2026 llegaban ~600 líneas por archivo con una **fecha en el campo de sucursal**
+  (cuentas de compras); se ignoraban y el tablero mostraba el conteo. El usuario corrigió el
+  reporte en origen esa fecha y el contador está en cero. Si vuelve a subir, o aparece un motivo de
+  descarte **distinto** al de la sucursal, el formato cambió — investigar, no ajustar el parser a
+  ciegas para volver a poner el contador en verde.
+- La paleta del semáforo está **validada** con el skill `dataviz` (CVD ΔE 11,5 light / 10,6 dark,
+  contra un umbral ≥8). El validador (`scripts/validate_palette.js`) no está vendorizado en este
+  repo — vive en el skill. No cambiar los hexes de `src/index.css` sin volver a correr esa
+  validación desde el skill `dataviz`.
 - Tests: `node --test "tests/*.test.js"` (**el glob entre comillas**: sin comillas falla en git-bash
   con `MODULE_NOT_FOUND`).
 - No commitear `.env`. Pedir confirmación antes de reinstalar el servicio o tocar `.env`.

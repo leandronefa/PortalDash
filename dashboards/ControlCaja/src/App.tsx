@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { ApiError, getEmpresas, getMatriz, getPeriodos, type Empresa, type Matriz } from '@/src/lib/api'
+import { ApiError, getAsiento, getEmpresas, getMatriz, getPeriodos,
+         type Asiento, type Empresa, type Matriz } from '@/src/lib/api'
 import { Encabezado } from '@/src/components/Encabezado'
 import { TarjetasResumen } from '@/src/components/TarjetasResumen'
+import { MatrizDiferencias } from '@/src/components/MatrizDiferencias'
+import { PanelAsiento } from '@/src/components/PanelAsiento'
 
 export default function App() {
   const [empresas, setEmpresas] = useState<Empresa[]>([])
@@ -18,6 +21,31 @@ export default function App() {
   const [matriz, setMatriz] = useState<Matriz | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [seleccion, setSeleccion] = useState<{ fechaISO: string; sucursal: string } | null>(null)
+  const [asiento, setAsiento] = useState<Asiento | null>(null)
+  const [asientoCargando, setAsientoCargando] = useState(false)
+  const [asientoError, setAsientoError] = useState<string | null>(null)
+
+  const abrirAsiento = useCallback(async (fechaISO: string, sucursal: string) => {
+    setSeleccion({ fechaISO, sucursal })
+    setAsientoCargando(true); setAsientoError(null)
+    try {
+      setAsiento(await getAsiento(empresa, fechaISO, sucursal))
+    } catch (e) {
+      setAsientoError((e as ApiError).message); setAsiento(null)
+    } finally {
+      setAsientoCargando(false)
+    }
+  }, [empresa])
+
+  const cerrarAsiento = useCallback(() => {
+    setSeleccion(null); setAsiento(null); setAsientoError(null)
+  }, [])
+
+  // Al cambiar de empresa o de mes, el asiento abierto pertenece a otro
+  // contexto: dejarlo abierto mostraria el detalle de un dia que ya no esta en
+  // la matriz de al lado.
+  useEffect(() => { cerrarAsiento() }, [empresa, periodo, cerrarAsiento])
 
   // 1) Empresas (una sola vez).
   useEffect(() => {
@@ -106,7 +134,16 @@ export default function App() {
         </p>
       )}
 
-      {/* La matriz y el panel del asiento se agregan en la Tarea 9. */}
+      {!error && matriz && matriz.sucursales.length > 0 && (
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
+          <div className="min-w-0 flex-1">
+            <MatrizDiferencias matriz={matriz} onCelda={abrirAsiento} seleccion={seleccion} />
+          </div>
+          {seleccion && (
+            <PanelAsiento asiento={asiento} cargando={asientoCargando} error={asientoError} onCerrar={cerrarAsiento} />
+          )}
+        </div>
+      )}
     </div>
   )
 }

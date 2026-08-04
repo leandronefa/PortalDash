@@ -2750,7 +2750,15 @@ por fecha+sucursal en los archivos de SAP, así que "suma de saldos ≠ 0" **no*
 | GET | `/api/matriz?empresa=…&periodo=YYYY-MM` | Matriz, totales y resumen |
 | GET | `/api/asiento?empresa=…&fecha=YYYY-MM-DD&sucursal=NNN` | Asiento completo del día |
 
-400 si la empresa/período/fecha son inválidos; **503** si la UNC no responde (con el motivo).
+Tres respuestas distintas, y la diferencia importa:
+
+- **400** — empresa, período, fecha o sucursal inválidos. Una empresa desconocida **nunca** cae por
+  defecto a TESI: mostrar los números de una empresa bajo el nombre de otra es peor que un error.
+- **503** (no 500) — la UNC no responde, con el motivo tipificado. El tablero está bien; la fuente
+  no está disponible.
+- **200 con matriz vacía** — el mes no tiene datos. **No es un 404**: "no hay datos de este mes" y
+  "no se pudo leer" son dos problemas distintos con dos acciones distintas, y la UI los muestra
+  diferente (cartel de reintento vs. "no hay diferencias registradas en este mes").
 
 ## Estructura
 - `server/reporte-source.js` — `stat`+`readFile` de la UNC con errores tipificados.

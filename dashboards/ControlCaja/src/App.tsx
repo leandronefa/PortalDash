@@ -29,6 +29,10 @@ export default function App() {
   const [matriz, setMatriz] = useState<Matriz | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Status de la ultima falla, para distinguir 503 (la red no responde, tiene
+  // sentido reintentar) de 400 (la app pidio algo invalido: reintentar el mismo
+  // pedido nunca puede arreglarlo). Antes los dos se veian identicos.
+  const [errorStatus, setErrorStatus] = useState<number | null>(null)
   const [seleccion, setSeleccion] = useState<{ fechaISO: string; sucursal: string } | null>(null)
   const [asiento, setAsiento] = useState<Asiento | null>(null)
   const [asientoCargando, setAsientoCargando] = useState(false)
@@ -76,7 +80,7 @@ export default function App() {
   useEffect(() => {
     getEmpresas()
       .then(r => { setEmpresas(r.empresas); setEmpresa(r.empresas[0]?.clave ?? '') })
-      .catch((e: ApiError) => { setError(e.message); setCargando(false) })
+      .catch((e: ApiError) => { setError(e.message); setErrorStatus(e.status); setCargando(false) })
   }, [])
 
   // Ultimo `periodo` conocido, sin ser dependencia de `cargarPeriodos`: si lo
@@ -104,7 +108,7 @@ export default function App() {
   const cargarPeriodos = useCallback(async (emp: string): Promise<string> => {
     if (!emp) return ''
     const pedido = ++pedidoPeriodos.current
-    setCargando(true); setError(null)
+    setCargando(true); setError(null); setErrorStatus(null)
     try {
       const r = await getPeriodos(emp)
       if (pedido !== pedidoPeriodos.current) return ''   // llego tarde: ya hay otro pedido
@@ -124,7 +128,7 @@ export default function App() {
       return resuelto
     } catch (e) {
       if (pedido !== pedidoPeriodos.current) return ''   // llego tarde: ya hay otro pedido
-      setError((e as ApiError).message); setMatriz(null)
+      setError((e as ApiError).message); setErrorStatus((e as ApiError).status); setMatriz(null)
       return ''
     } finally {
       // El spinner solo lo apaga el pedido vigente: si este pedido llego tarde,
@@ -147,14 +151,14 @@ export default function App() {
   const cargarMatriz = useCallback(async (emp: string, per: string) => {
     if (!emp || !per) return
     const pedido = ++pedidoMatriz.current
-    setCargando(true); setError(null)
+    setCargando(true); setError(null); setErrorStatus(null)
     try {
       const m = await getMatriz(emp, per)
       if (pedido !== pedidoMatriz.current) return   // llego tarde: ya hay otro pedido
       setMatriz(m)
     } catch (e) {
       if (pedido !== pedidoMatriz.current) return
-      setError((e as ApiError).message); setMatriz(null)
+      setError((e as ApiError).message); setErrorStatus((e as ApiError).status); setMatriz(null)
     } finally {
       if (pedido === pedidoMatriz.current) setCargando(false)
     }
@@ -192,14 +196,22 @@ export default function App() {
       {error && (
         // El mensaje viene del backend ya redactado (ENOENT / permisos / red).
         // Nunca una pantalla en blanco ni datos viejos disfrazados de frescos.
+        //
+        // 400 y 503 se distinguen a proposito: un 400 es un pedido invalido de
+        // la propia app (empresa/periodo/fecha mal armados) y reintentar el
+        // mismo pedido no puede arreglarlo nunca — antes los dos casos se veian
+        // identicos, con el mismo boton de Reintentar en los dos.
         <div className="rounded border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950 p-4 mb-4">
           <div className="flex items-center gap-2 font-medium">
-            <AlertTriangle className="w-4 h-4" aria-hidden /> No se pudieron traer los datos
+            <AlertTriangle className="w-4 h-4" aria-hidden />
+            {errorStatus === 400 ? 'Hay un problema en la aplicación' : 'No se pudieron traer los datos'}
           </div>
           <p className="text-sm mt-1">{error}</p>
-          <button onClick={refrescar} className="mt-3 rounded border border-amber-400 px-2.5 py-1 text-sm">
-            Reintentar
-          </button>
+          {errorStatus !== 400 && (
+            <button onClick={refrescar} className="mt-3 rounded border border-amber-400 px-2.5 py-1 text-sm">
+              Reintentar
+            </button>
+          )}
         </div>
       )}
 

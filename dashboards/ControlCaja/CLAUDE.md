@@ -59,6 +59,8 @@ Tres respuestas distintas, y la diferencia importa:
 ## Gotchas
 - Tras cambiar `src/`, correr `npm run build`: el servicio sirve `dist/` desde disco (no hace falta
   reiniciar), pero un `dist` viejo muestra features desactualizadas → pedir Ctrl+F5 tras un deploy.
+  **Cambios en `server/` sí necesitan `Restart-Service dashcontrolcaja.exe`** — el proceso de Node
+  tiene el código viejo cargado en memoria hasta que se reinicia.
 - El `PORT` que inyecta el servicio pisa al del `.env`; mantener 3014 único.
 - **Las fechas del archivo se manejan como strings** (`'2026-06-03'`), nunca con `Date`: parsear
   `dd/mm/yyyy` a `Date` y reformatear es la vía clásica a que el día 1 aparezca en el mes anterior.

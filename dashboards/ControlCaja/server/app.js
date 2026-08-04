@@ -79,6 +79,14 @@ export function crearApp({ cache, nombres = {}, dirname }) {
     res.json({ empresa: d.clave, ...construirAsiento(d.registros, fecha, sucursal) })
   })
 
+  // Una ruta /api/* que no matcheo ninguna de arriba: 404 JSON, no el index.
+  // Sin esto caia en el catch-all de abajo, el cliente recibia HTML donde
+  // esperaba JSON, y `res.json()` tiraba "Unexpected token '<'" — un error
+  // real disfrazado de uno de parseo.
+  app.get('/api/*', (req, res) => {
+    res.status(404).json({ ok: false, message: `Ruta no encontrada: ${req.path}` })
+  })
+
   // SPA: cualquier otra ruta sirve el index para que /d/16/ y los refrescos
   // dentro del iframe del portal no den 404.
   app.get('*', (req, res) => {

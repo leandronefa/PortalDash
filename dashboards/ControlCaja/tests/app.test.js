@@ -105,6 +105,30 @@ test('un periodo sin datos da 200 con matriz vacia, no 404', async () => {
   assert.equal(j.resumen.diasTotales, 0)
 })
 
+test('sucursal con formato invalido en asiento da 400', async () => {
+  for (const sucursal of ['99', 'abc']) {
+    const r = await fetch(`${base}/api/asiento?empresa=TESI&fecha=2026-06-03&sucursal=${sucursal}`)
+    assert.equal(r.status, 400, sucursal)
+    assert.match((await r.json()).message, /sucursal/i)
+  }
+})
+
+test('una ruta /api/* desconocida da 404 JSON, no el index de la SPA', async () => {
+  // Sin esto, el catch-all de la SPA devolvia 200 con index.html: el cliente
+  // esperaba JSON y `res.json()` tiraba "Unexpected token '<'" — un 404 real
+  // disfrazado de un error de parseo.
+  const r = await fetch(`${base}/api/rutaInexistente`)
+  assert.equal(r.status, 404)
+  const j = await r.json()
+  assert.match(j.message, /no encontrada/i)
+})
+
+test('una ruta que no es /api sigue cayendo en el index de la SPA', async () => {
+  const r = await fetch(`${base}/alguna/ruta/del/portal`)
+  assert.equal(r.status, 200)
+  assert.match(r.headers.get('content-type') ?? '', /html/)
+})
+
 test('si la UNC falla, la API responde 503 con el motivo', async () => {
   const app = crearApp({ cache: cacheFake({ falla: 'ETIMEDOUT' }), nombres: {}, dirname: process.cwd() })
   const s = app.listen(0)

@@ -48,7 +48,11 @@ export function MatrizDiferencias({ matriz, onCelda, seleccion }: Props) {
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* max-h fija: sin ella el contenedor solo scrollea horizontal (su alto
+          se ajusta al contenido) y el header `sticky top-0` no tiene contra que
+          fijarse. Con un eje vertical real, el header queda fijo igual que la
+          columna de sucursal. */}
+      <div className="overflow-auto max-h-[75vh]">
         <table className="border-collapse text-sm tabular-nums">
           <caption className="sr-only">
             Diferencias de caja por sucursal y día. Valores positivos son faltantes, negativos sobrantes.

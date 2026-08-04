@@ -85,14 +85,29 @@ export default function App() {
   const periodoRef = useRef('')
   useEffect(() => { periodoRef.current = periodo }, [periodo])
 
+  // Numero del ultimo pedido de periodos. Sin esto, dos llamadas superpuestas a
+  // cargarPeriodos (Refrescar apretado dos veces rapido, o un cambio de empresa
+  // mientras un pedido anterior todavia esta en vuelo — se llama tanto desde el
+  // efecto de la linea de abajo como desde `refrescar`) pueden resolver fuera de
+  // orden: la mas vieja pisaria con datos viejos los 5 valores que escribe,
+  // entre ellos periodosArchivo/periodosDescartadas (el contador de descartadas
+  // es la alarma temprana de "cambio el formato de SAP": si una respuesta vieja
+  // puede pisarlo, la alarma deja de ser confiable) y periodosDe (que existe
+  // justamente para que el efecto de la matriz sepa si el par empresa+periodo es
+  // coherente; escribirlo desde una respuesta vieja reabre esa misma carrera).
+  // Mismo patron que pedidoAsiento y pedidoMatriz.
+  const pedidoPeriodos = useRef(0)
+
   // 2) Periodos de la empresa elegida. Default: el mas reciente. Devuelve el
   // periodo resuelto para que quien encadena una carga de matriz (refrescar)
   // pida el mes correcto y no el que quedo en el closure de un render viejo.
   const cargarPeriodos = useCallback(async (emp: string): Promise<string> => {
     if (!emp) return ''
+    const pedido = ++pedidoPeriodos.current
     setCargando(true); setError(null)
     try {
       const r = await getPeriodos(emp)
+      if (pedido !== pedidoPeriodos.current) return ''   // llego tarde: ya hay otro pedido
       setPeriodos(r.periodos)
       setPeriodosArchivo(r.archivo)
       setPeriodosDescartadas(r.descartadas)
@@ -105,11 +120,16 @@ export default function App() {
       // Recien ahora el par (empresa, periodo) es coherente y el efecto de la
       // matriz puede correr. Va DESPUES de setPeriodo a proposito.
       setPeriodosDe(emp)
-      if (r.periodos.length === 0) { setMatriz(null); setCargando(false) }
+      if (r.periodos.length === 0) setMatriz(null)
       return resuelto
     } catch (e) {
-      setError((e as ApiError).message); setMatriz(null); setCargando(false)
+      if (pedido !== pedidoPeriodos.current) return ''   // llego tarde: ya hay otro pedido
+      setError((e as ApiError).message); setMatriz(null)
       return ''
+    } finally {
+      // El spinner solo lo apaga el pedido vigente: si este pedido llego tarde,
+      // uno mas nuevo ya esta en vuelo y sigue necesitando el spinner prendido.
+      if (pedido === pedidoPeriodos.current) setCargando(false)
     }
   }, [])
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { ApiError, getAsiento, getEmpresas, getMatriz, getPeriodos,
          type Asiento, type Empresa, type Matriz } from '@/src/lib/api'
@@ -25,21 +25,33 @@ export default function App() {
   const [asiento, setAsiento] = useState<Asiento | null>(null)
   const [asientoCargando, setAsientoCargando] = useState(false)
   const [asientoError, setAsientoError] = useState<string | null>(null)
+  // Numero del ultimo pedido de asiento. Sin esto, un pedido lento de la empresa
+  // X que resuelve DESPUES de uno de la empresa Y pisa los datos de Y: el panel
+  // muestra el asiento de otra empresa bajo un encabezado que dice la correcta.
+  // Falla en silencio, y en un tablero contable eso es peor que un error visible.
+  const pedidoAsiento = useRef(0)
 
   const abrirAsiento = useCallback(async (fechaISO: string, sucursal: string) => {
+    const pedido = ++pedidoAsiento.current
     setSeleccion({ fechaISO, sucursal })
     setAsientoCargando(true); setAsientoError(null)
     try {
-      setAsiento(await getAsiento(empresa, fechaISO, sucursal))
+      const a = await getAsiento(empresa, fechaISO, sucursal)
+      if (pedido !== pedidoAsiento.current) return   // llego tarde: ya hay otro pedido
+      setAsiento(a)
     } catch (e) {
+      if (pedido !== pedidoAsiento.current) return
       setAsientoError((e as ApiError).message); setAsiento(null)
     } finally {
-      setAsientoCargando(false)
+      if (pedido === pedidoAsiento.current) setAsientoCargando(false)
     }
   }, [empresa])
 
   const cerrarAsiento = useCallback(() => {
-    setSeleccion(null); setAsiento(null); setAsientoError(null)
+    // Invalida cualquier pedido en vuelo: si uno resuelve despues de cerrar, su
+    // resultado ya no corresponde a nada de lo que se esta viendo.
+    pedidoAsiento.current++
+    setSeleccion(null); setAsiento(null); setAsientoError(null); setAsientoCargando(false)
   }, [])
 
   // Al cambiar de empresa o de mes, el asiento abierto pertenece a otro

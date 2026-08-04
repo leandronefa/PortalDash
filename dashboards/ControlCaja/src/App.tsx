@@ -9,6 +9,12 @@ export default function App() {
   const [empresa, setEmpresa] = useState('')
   const [periodos, setPeriodos] = useState<string[]>([])
   const [periodo, setPeriodo] = useState('')
+  // A que empresa corresponden los periodos ya cargados. Sin este dato, cambiar
+  // de empresa dispara el efecto de la matriz en el mismo render con el periodo
+  // de la empresa ANTERIOR (el efecto de periodos solo arranca un fetch async y
+  // no alcanza a corregirlo), y se ve un error espurio o el mes equivocado antes
+  // de que se acomode.
+  const [periodosDe, setPeriodosDe] = useState('')
   const [matriz, setMatriz] = useState<Matriz | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -31,6 +37,9 @@ export default function App() {
       // si no, se cae al mas reciente. Cambiar de empresa no deberia sacarte del
       // mes que estabas mirando cuando ese mes existe en las dos.
       setPeriodo(prev => (prev && r.periodos.includes(prev) ? prev : r.periodos[r.periodos.length - 1] ?? ''))
+      // Recien ahora el par (empresa, periodo) es coherente y el efecto de la
+      // matriz puede correr. Va DESPUES de setPeriodo a proposito.
+      setPeriodosDe(emp)
       if (r.periodos.length === 0) { setMatriz(null); setCargando(false) }
     } catch (e) {
       setError((e as ApiError).message); setMatriz(null); setCargando(false)
@@ -52,7 +61,13 @@ export default function App() {
     }
   }, [])
 
-  useEffect(() => { void cargarMatriz(empresa, periodo) }, [empresa, periodo, cargarMatriz])
+  useEffect(() => {
+    // Guarda contra la carrera: mientras los periodos cargados sigan siendo de
+    // otra empresa, el `periodo` de este render no le corresponde y pedir la
+    // matriz con ese par daria un 400 o el mes equivocado.
+    if (periodosDe !== empresa) return
+    void cargarMatriz(empresa, periodo)
+  }, [empresa, periodo, periodosDe, cargarMatriz])
 
   // Refrescar: vuelve a pedir periodos y matriz. El backend hace stat de la UNC
   // y reparsea solo si el archivo cambio, asi que esto es barato.

@@ -191,8 +191,34 @@ guardado en el cálculo, no uno recalculado.
 
 Si se editó una vigencia y el período que estás mirando todavía no fue reprocesado
 por el proceso automático, la página muestra un aviso amarillo arriba del resumen:
-las comisiones que ves fueron calculadas con los importes **anteriores** al cambio,
-y se van a actualizar solas cuando el proceso vuelva a procesar ese período.
+las comisiones que ves fueron calculadas con los importes **anteriores** al cambio.
+Podés corregirlas en el momento con **↻ Reprocesar**, o esperar a que el proceso
+automático las levante solo.
+
+### Cuándo se calcula, y el botón ↻ Reprocesar
+
+El cálculo de Vendedores lo corre un proceso automático de la base **todos los días
+a las 09:00**. En cada corrida se pregunta si quedó algún mes sin liquidar: si no
+hay ninguno, no hace nada. Por eso, en la práctica, cada mes se liquida solo el día
+1 a la mañana, apenas cierra el mes anterior.
+
+Si necesitás que un mes ya liquidado se recalcule antes —por ejemplo porque
+cambiaste los importes, o porque entraron ventas tarde— usá **↻ Reprocesar**, arriba
+a la derecha. Reprocesa el período que tenés seleccionado y:
+
+- vuelve a calcular las comisiones de todos los vendedores de ese mes;
+- vuelve a leer las ventas del origen, así que los números pueden moverse por algo
+  más que los importes;
+- **genera la planilla y la manda por mail**, igual que la liquidación mensual. Si
+  reprocesás, quien la recibe va a tener dos correos del mismo mes: vale el último.
+
+Tarda unos 15 segundos. El botón queda en "Reprocesando…" y la pantalla se
+actualiza sola cuando termina. Si algo falla, te lo dice.
+
+El botón no siempre se puede usar. Te va a frenar, explicándote por qué, si el mes
+todavía no cerró, si ese mes nunca se liquidó, si ya hay un reproceso en curso, o si
+hay un mes anterior sin liquidar (en ese caso el proceso tomaría ese y no el que
+pediste).
 
 ### La columna "¿Comisiona?"
 

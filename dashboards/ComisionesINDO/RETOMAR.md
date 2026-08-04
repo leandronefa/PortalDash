@@ -1,4 +1,24 @@
-# Retomar — ComisionesINDO — actualizado 2026-08-03
+# Retomar — ComisionesINDO — actualizado 2026-08-04
+
+## Sesión 2026-08-04 — Vendedores: pestaña en Montos y botón de reproceso
+
+Dos pedidos del usuario sobre el módulo Vendedores recién terminado.
+
+**1. Pestaña "Vendedores" en DATOS → Montos.** El ABM de importes estaba solo en el botón `💰 Vigencias` de la página Vendedores, mientras los montos de los otros 7 roles viven en el visor de Montos. Ahora está en las dos partes, contra los mismos endpoints (`src/pages/visor-montos.js`, tab type `vendedores`). No sigue el patrón de las otras pestañas porque estos importes no tienen categoría C que cascadee a B y A: es una fila por vigencia con su rango de períodos alcanzados, editar, borrar y crear. `renderVisorMontos` ahora recibe el período para marcar cuál vigencia rige.
+
+**2. Botón `↻ Reprocesar` en la página Vendedores.** Antes había que resetear banderas por SQL a mano.
+
+- **Cómo se calcula (relevado, no supuesto)**: job del Agent `Job_CoVenApp_ComisionesINDO`, habilitado, **diario a las 09:00**, un paso: `EXEC dbo.SP_ComisionesINDO`. Historial: 01/08 09:00 corrió 11 s (procesó julio), 02/08 al 04/08 corrieron 0 s (nada pendiente). O sea que cada mes se liquida solo el día 1 a la mañana.
+- El botón resetea las 6 banderas de la fila del período y arranca el job con `sp_start_job`. **Manda el mail a nelida.rojo**, decisión explícita del usuario: si se reprocesó, el destinatario debe recibir la planilla corregida, y así se usa el mismo camino que la corrida mensual sin tocar SQL.
+- ⚠️ **La fila de un período es la del primer día del mes siguiente**: 2026-07 → fila `2026-08-01`. Con test.
+- Cinco guardas antes de disparar y espera activa hasta que la fila vuelve a `enviado=1`. Detalle completo en `CONTEXT.md`.
+- **Verificado por API** (sin disparar ningún reproceso real): `GET /reproceso?periodo=2026-07` → `estado: ok`, `fila_proceso: 2026-08-01`, última corrida 04/08 09:00 exitosa; `2030-01` → `sin_fila`; período malformado → 400; **perfil 8 → 403**; `POST 2030-01` → 404 con el motivo; `POST 2026-08` → 409 ("no tiene comisiones calculadas"). Tests: **76/76**. Build + `Restart-Service` hechos, `/api/health` 200.
+
+**Estado de julio 2026 al cerrar la sesión** (sin tocar): calculado con la vigencia 2025-09 (12.000/15.000/30.000), 156 vendedores, 32 sucursales, **$442.500**. Su fila de proceso es `idFechaCalculo = 20` (`fecha = 2026-08-01`) con las 6 banderas en 1. El usuario dijo que el recálculo lo hace él.
+
+**Pendiente de verificación**: el botón de reproceso **nunca se disparó de verdad** — no se ejecutó ningún reproceso para no mandar un mail no pedido. La primera corrida real es la prueba que falta, y conviene mirarla con el log del servicio a mano (`server\daemon\dashcomisionesindo.err.log`, el reproceso loguea quién lo pidió). También sigue pendiente la verificación visual en navegador de todo el módulo.
+
+---
 
 ## Sesión 2026-08-03 — Módulo Vendedores: documentación, verificación y cierre
 

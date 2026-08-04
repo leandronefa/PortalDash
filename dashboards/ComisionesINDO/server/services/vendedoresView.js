@@ -239,3 +239,83 @@ export function validarVigencia(body, vigencias, modo) {
 
   return { ok: true };
 }
+
+// ── Reproceso de un período ──────────────────────────────────────────────────
+
+/**
+ * Fila de `tbl_CoVenApp_FechaCalculoINDO` que le corresponde a un período.
+ *
+ * ⚠️ La fila de un período es la del PRIMER DÍA DEL MES SIGUIENTE: el SP procesa
+ * el mes anterior a su propia fecha (`MONTH(DATEADD(MONTH, -1, @FechaProceso))`).
+ * O sea, el período 2026-07 vive en la fila `fecha = 2026-08-01`. Confundir esto
+ * reprocesaría el mes equivocado, así que va con test.
+ *
+ * Devuelve `{anio, mes, fecha: 'YYYY-MM-01'}` o `null` si el período es inválido.
+ */
+export function filaDePeriodo(periodo) {
+  if (!/^\d{4}-\d{2}$/.test(String(periodo || ''))) return null;
+  const [anio, mes] = String(periodo).split('-').map(Number);
+  if (mes < 1 || mes > 12) return null;
+  const sigMes  = mes === 12 ? 1 : mes + 1;
+  const sigAnio = mes === 12 ? anio + 1 : anio;
+  return { anio: sigAnio, mes: sigMes, fecha: `${sigAnio}-${String(sigMes).padStart(2, '0')}-01` };
+}
+
+/**
+ * Las guardas que tienen que pasar antes de disparar un reproceso. Recibe datos
+ * ya leídos de la DB — no consulta nada.
+ *
+ * @param periodo            'YYYY-MM' pedido
+ * @param fila               {idFechaCalculo, fecha:'YYYY-MM-DD'} | null
+ * @param hoy                'YYYY-MM-DD'
+ * @param pendienteAnterior  {fecha:'YYYY-MM-DD'} | null — período pendiente más viejo que el pedido
+ * @param jobCorriendo       boolean
+ * @param tieneDatos         boolean — el período tiene comisiones calculadas
+ */
+export function evaluarReproceso({ periodo, fila, hoy, pendienteAnterior, jobCorriendo, tieneDatos }) {
+  if (!fila) {
+    return { ok: false, status: 404,
+      error: `No hay fila de proceso para el período ${periodo}: el cálculo de vendedores nunca lo incluyó` };
+  }
+  if (!tieneDatos) {
+    return { ok: false, status: 409,
+      error: `El período ${periodo} no tiene comisiones calculadas: no hay nada que reprocesar` };
+  }
+  if (String(fila.fecha) > String(hoy)) {
+    return { ok: false, status: 409,
+      error: `El período ${periodo} se procesa a partir del ${fila.fecha}: todavía no cerró` };
+  }
+  if (jobCorriendo) {
+    return { ok: false, status: 409,
+      error: 'Ya hay un reproceso en curso: esperá a que termine' };
+  }
+  if (pendienteAnterior) {
+    // El SP toma SIEMPRE el pendiente más viejo, así que reprocesaría ese y no el pedido.
+    return { ok: false, status: 409,
+      error: `Hay un período anterior pendiente (fila ${pendienteAnterior.fecha}) y el proceso toma siempre el más viejo: se reprocesaría ese en vez de ${periodo}` };
+  }
+  return { ok: true };
+}
+
+/**
+ * Estado de un reproceso, para que la página sepa si seguir esperando.
+ *
+ * La señal de que terminó bien NO es que el job se detuvo, sino que la fila del
+ * período volvió a `enviado = 1`: es lo último que hace el SP.
+ *
+ * Ojo con 'pendiente': `sp_start_job` vuelve ANTES de que el job aparezca como
+ * corriendo, así que justo después de disparar el estado es 'pendiente' por unos
+ * segundos. La página tiene que seguir esperando mientras sea 'corriendo' o
+ * 'pendiente', y recién tomar 'pendiente' como final si se agota el tiempo (ahí
+ * significa que el job no arrancó y lo va a levantar la corrida de las 09:00).
+ *
+ * @param enviado       boolean — la fila del período está marcada como enviada
+ * @param jobCorriendo  boolean
+ * @param ultima        {exito: boolean, mensaje: string} | null — última corrida del job
+ */
+export function estadoReproceso({ enviado, jobCorriendo, ultima }) {
+  if (jobCorriendo) return 'corriendo';
+  if (enviado) return 'ok';
+  if (ultima && ultima.exito === false) return 'error';
+  return 'pendiente';
+}

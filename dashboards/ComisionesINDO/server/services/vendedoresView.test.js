@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   escalonAlcanzado, agruparVigencias, vigenciaParaPeriodo, periodosAlcanzados,
-  armarVista, validarVigencia,
+  armarVista, validarVigencia, filaDePeriodo, evaluarReproceso, estadoReproceso,
 } from './vendedoresView.js';
 
 const UMBRALES = { primer: 100, segundo: 110, tercer: 126.5 };
@@ -255,4 +255,88 @@ test('validarVigencia acepta monto 0 (escalon que no paga)', () => {
 test('validarVigencia en modo borrar no exige montos', () => {
   const r = validarVigencia({ anio: 2025, mes: 5 }, VIGENCIAS, 'borrar');
   assert.deepEqual(r, { ok: true });
+});
+
+// ── Reproceso ────────────────────────────────────────────────────────────────
+
+test('filaDePeriodo apunta al primer dia del mes SIGUIENTE (el SP procesa el mes anterior a su fecha)', () => {
+  assert.deepEqual(filaDePeriodo('2026-07'), { anio: 2026, mes: 8, fecha: '2026-08-01' });
+  assert.deepEqual(filaDePeriodo('2026-01'), { anio: 2026, mes: 2, fecha: '2026-02-01' });
+});
+
+test('filaDePeriodo cruza el fin de anio', () => {
+  assert.deepEqual(filaDePeriodo('2026-12'), { anio: 2027, mes: 1, fecha: '2027-01-01' });
+});
+
+test('filaDePeriodo rechaza periodos malformados', () => {
+  for (const p of ['2026-13', '2026-00', 'basura', '2026-7', '', null, undefined]) {
+    assert.equal(filaDePeriodo(p), null, String(p));
+  }
+});
+
+const CTX_OK = {
+  periodo: '2026-07',
+  fila: { idFechaCalculo: 20, fecha: '2026-08-01' },
+  hoy: '2026-08-04',
+  pendienteAnterior: null,
+  jobCorriendo: false,
+  tieneDatos: true,
+};
+
+test('evaluarReproceso acepta cuando pasan las cinco guardas', () => {
+  assert.deepEqual(evaluarReproceso(CTX_OK), { ok: true });
+});
+
+test('evaluarReproceso rechaza si no existe la fila de proceso', () => {
+  const r = evaluarReproceso({ ...CTX_OK, fila: null });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 404);
+});
+
+test('evaluarReproceso rechaza un periodo sin comisiones calculadas', () => {
+  const r = evaluarReproceso({ ...CTX_OK, tieneDatos: false });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 409);
+  assert.match(r.error, /nada que reprocesar/);
+});
+
+test('evaluarReproceso rechaza un periodo que todavia no cerro', () => {
+  const r = evaluarReproceso({ ...CTX_OK, hoy: '2026-07-20' });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 409);
+  assert.match(r.error, /todavia no cerro|todavía no cerró/);
+});
+
+test('evaluarReproceso acepta el dia exacto en que la fila se vuelve procesable', () => {
+  assert.deepEqual(evaluarReproceso({ ...CTX_OK, hoy: '2026-08-01' }), { ok: true });
+});
+
+test('evaluarReproceso rechaza si el job ya esta corriendo', () => {
+  const r = evaluarReproceso({ ...CTX_OK, jobCorriendo: true });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 409);
+  assert.match(r.error, /en curso/);
+});
+
+test('evaluarReproceso rechaza si hay un periodo anterior pendiente (el SP tomaria ese)', () => {
+  const r = evaluarReproceso({ ...CTX_OK, pendienteAnterior: { fecha: '2026-07-01' } });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 409);
+  assert.match(r.error, /2026-07-01/);
+});
+
+test('estadoReproceso: la senal de exito es la fila enviada, no que el job se detuvo', () => {
+  assert.equal(estadoReproceso({ enviado: true,  jobCorriendo: false, ultima: null }), 'ok');
+  assert.equal(estadoReproceso({ enviado: false, jobCorriendo: true,  ultima: null }), 'corriendo');
+  assert.equal(estadoReproceso({ enviado: true,  jobCorriendo: true,  ultima: null }), 'corriendo',
+    'si el job sigue corriendo no se declara ok todavia');
+});
+
+test('estadoReproceso: job detenido con la fila pendiente y ultima corrida fallida es error', () => {
+  assert.equal(estadoReproceso({ enviado: false, jobCorriendo: false, ultima: { exito: false, mensaje: 'fallo' } }), 'error');
+});
+
+test('estadoReproceso: la ventana justo despues de disparar es pendiente, no error', () => {
+  assert.equal(estadoReproceso({ enviado: false, jobCorriendo: false, ultima: { exito: true, mensaje: 'ok' } }), 'pendiente');
+  assert.equal(estadoReproceso({ enviado: false, jobCorriendo: false, ultima: null }), 'pendiente');
 });

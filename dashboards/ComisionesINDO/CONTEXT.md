@@ -120,7 +120,7 @@ Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpi
 | `supervisores.js` | `/api/supervisores` | CRUD de supervisores + asignación de sucursales |
 | `sucursales.js`, `ranking.js`, `objetivos.js` | `/api/*` | ABM de datos maestros |
 | `operadores.js`, `millon.js`, `datos.js` | `/api/*` | Datos auxiliares (jornadas, sucursales Millón, cache de originaciones) |
-| `vendedores.js` | `/api/vendedores` | `GET /` (resultado del período, con `attachScope`/`filtrarPorSucursal`), `GET /importes` (vigencias), `POST /importes`, `PUT /importes/:anio/:mes`, `DELETE /importes/:anio/:mes` — los tres últimos con `blockWriteIfSupervisor` (403 para perfil 8) |
+| `vendedores.js` | `/api/vendedores` | `GET /` (resultado del período, con `attachScope`/`filtrarPorSucursal`), `GET /importes` (vigencias), `POST /importes`, `PUT /importes/:anio/:mes`, `DELETE /importes/:anio/:mes`, `GET /reproceso` (estado), `POST /reproceso` (dispara) — todos los no-GET con `blockWriteIfSupervisor` (403 para perfil 8) |
 
 `GET /calculo/encargados`, `/encargados-millon` y `/supervisores` leen del **último `CalculoHistorial` guardado** — no recalculan al vuelo. Si se agrega un campo nuevo al resultado de `/ejecutar`, hay que re-ejecutar el cálculo completo desde la página **Total** para que el historial lo tenga.
 
@@ -143,7 +143,15 @@ Suc01 (cerrada): `activa=0` desde 2026-07-03, el motor la filtra; queda la limpi
 
 - **Umbrales por sucursal** (`sp_CoVenApp_LlenarEscalonesINDO`): objetivo de ventas × 0,97 = primer escalón, × 1,10 = segundo, × 1,15 sobre el segundo = tercero; los tres divididos por la cantidad de vendedores (full time pesa 1, part time 0,5), contando solo a quienes tienen más de 5 días de venta.
 - **Comisión** (`sp_CoVenApp_CalcularComisionesINDO`): compara `venta calculada + proporcional` contra los umbrales de mayor a menor con `>=`; part time cobra la mitad del importe del escalón alcanzado.
-- **Vigencias de importes**: los importes de cada escalón funcionan por vigencia — una vigencia rige desde su `(año, mes)` en adelante hasta que aparece otra posterior (`vigenciaParaPeriodo()` en `vendedoresView.js` resuelve cuál aplica a un período dado). El ABM nuevo (`POST`/`PUT`/`DELETE /api/vendedores/importes`) permite crear, editar y borrar vigencias desde la web — antes solo se cargaban por SQL directo. Es la **única** escritura del módulo.
+- **Vigencias de importes**: los importes de cada escalón funcionan por vigencia — una vigencia rige desde su `(año, mes)` en adelante hasta que aparece otra posterior (`vigenciaParaPeriodo()` en `vendedoresView.js` resuelve cuál aplica a un período dado). El ABM nuevo (`POST`/`PUT`/`DELETE /api/vendedores/importes`) permite crear, editar y borrar vigencias desde la web — antes solo se cargaban por SQL directo.
+
+- **Reproceso de un período (2026-08-04)**: el cálculo lo corre el job del Agent **`Job_CoVenApp_ComisionesINDO`**, habilitado, **diario a las 09:00** (`EXEC dbo.SP_ComisionesINDO`, que toma la fila más vieja de `tbl_CoVenApp_FechaCalculoINDO` con `enviado=0`). `POST /api/vendedores/reproceso` pone en cero las 6 banderas de la fila del período (el bloque `REPROCESAR` comentado en el SP) y arranca el job con `msdb.dbo.sp_start_job` — el mismo camino que la corrida mensual, así que **manda el mail** a nelida.rojo con la planilla. La conexión del dashboard es `sa`, por eso puede arrancar jobs.
+  - ⚠️ **La fila de un período es la del primer día del mes SIGUIENTE** (`filaDePeriodo()`): el período 2026-07 vive en la fila `fecha = 2026-08-01`, porque el SP procesa `MONTH(DATEADD(MONTH,-1,@FechaProceso))`. Está cubierto con test; equivocarlo reprocesaría otro mes.
+  - Cinco guardas en `evaluarReproceso()` (pura, con test por guarda): existe la fila, el período tiene comisiones, la fecha de la fila ya pasó, el job no está corriendo, y no hay un pendiente más viejo (el SP tomaría ese).
+  - `GET /api/vendedores/reproceso?periodo=` devuelve el estado para que la página espere. La señal de fin es que **la fila volvió a `enviado=1`** (lo último que hace el SP), no que el job se detuvo. `sp_start_job` retorna antes de que el job figure como corriendo, así que `'pendiente'` es normal los primeros segundos: la página sigue esperando en `'corriendo'` y `'pendiente'`, y solo toma `'pendiente'` como final al agotar los 3 minutos.
+  - Si `sp_start_job` falla, la fila queda pendiente a propósito: la corrida de las 09:00 la levanta igual, y la respuesta trae `job_iniciado: false` para avisarlo.
+
+Escrituras del módulo: solo `tbl_CoVenApp_ImportesEscalonesINDO` (vigencias) y las banderas de `tbl_CoVenApp_FechaCalculoINDO` (reproceso). Nada más.
 - **El ⚠️** que puede mostrar la vista (`armarVista()`) significa que la comisión guardada (`GrillaComisionesINDO.comision`) no coincide con el importe del escalón alcanzado según la vigencia vigente: se editaron importes y ese período no fue reprocesado por el job.
 - La vista usa la jornada **congelada** del período (columna `parcial` de la grilla), no la actual del legajo (`Vendedores.GCL_TEMPSPARTIEL`) — si difieren, `armarVista()` lo señala.
 

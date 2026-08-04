@@ -50,6 +50,9 @@ export async function renderVendedores(container, periodo) {
           <button id="vend-export" class="btn btn-outline" style="font-size:12px;padding:6px 12px">↓ CSV</button>
           <button id="vend-vigencias" class="btn btn-primary"
             style="font-size:12px;padding:6px 12px${isSupervisorReadonly() ? ';display:none' : ''}">💰 Vigencias</button>
+          <button id="vend-reproc" class="btn btn-outline"
+            title="Vuelve a calcular este período con los importes vigentes"
+            style="font-size:12px;padding:6px 12px${isSupervisorReadonly() ? ';display:none' : ''}">↻ Reprocesar</button>
         </div>
       </div>
 
@@ -140,10 +143,17 @@ export async function renderVendedores(container, periodo) {
               background:var(--badge-e-bg,#fef9c3);border:1px solid var(--badge-e-t,#854d0e)">
          ⚠️ Los importes vigentes cambiaron después de que se calculó este período en
          ${sucDesactualizadas} sucursal(es): las comisiones que ves abajo son las que se calcularon
-         con los importes <strong>anteriores</strong> a ese cambio. Se van a actualizar solas cuando
-         el job SQL de INDO reprocese este período.
+         con los importes <strong>anteriores</strong> a ese cambio. Para actualizarlas ahora usá
+         <strong>↻ Reprocesar</strong>; si no, se corrigen solas la próxima vez que el proceso
+         automático levante este período.
        </div>`
     : '';
+
+  // Con importes desactualizados, reprocesar es la acción esperada: se resalta.
+  if (sucDesactualizadas > 0 && !isSupervisorReadonly()) {
+    const b = document.getElementById('vend-reproc');
+    if (b) { b.classList.remove('btn-outline'); b.classList.add('btn-primary'); }
+  }
 
   // ── Estado vacío ──────────────────────────────────────────────────
   if (!sucursales.length) {
@@ -468,5 +478,69 @@ export async function renderVendedores(container, periodo) {
       limpiarForm();
       await cargarVigencias();
     } catch (err) { showToast(err.message, 'error'); }
+  });
+
+  // ── Reprocesar el período ─────────────────────────────────────────
+  // El cálculo lo corre el job SQL, no el tablero: esto pone la fila del período
+  // en cero y arranca ese job. La señal de que terminó es que el backend informa
+  // estado 'ok' (la fila volvió a quedar enviada), no que el job se detuvo.
+  const btnReproc = document.getElementById('vend-reproc');
+
+  async function esperarReproceso() {
+    const INTERVALO = 3000, MAX = 60;   // hasta 3 minutos
+    for (let i = 0; i < MAX; i++) {
+      await new Promise(r => setTimeout(r, INTERVALO));
+      // Si el usuario se fue de la página, cortar el sondeo.
+      if (!document.body.contains(btnReproc)) return null;
+      let st;
+      try { st = await api.get(`/vendedores/reproceso?periodo=${periodo}`); }
+      catch { continue; }               // un error de red suelto no aborta la espera
+      if (st.estado === 'ok')    return 'ok';
+      if (st.estado === 'error') return st.ultima_corrida?.mensaje || 'El job terminó con error';
+      // 'corriendo' y 'pendiente' siguen esperando: sp_start_job vuelve antes de
+      // que el job figure como corriendo, así que 'pendiente' es normal al principio.
+    }
+    return 'timeout';
+  }
+
+  btnReproc.addEventListener('click', async () => {
+    if (!confirm(
+      `¿Reprocesar el período ${periodo}?\n\n`
+      + `• Vuelve a calcular las comisiones de todos los vendedores del mes con los importes vigentes.\n`
+      + `• Vuelve a leer las ventas del origen, así que si entraron ventas tarde los números pueden `
+      + `moverse por algo más que los importes.\n`
+      + `• Genera la planilla y la MANDA POR MAIL a nelida.rojo@valenet.com.ar (con copia a `
+      + `leandro.nefa@valenet.com.ar).\n\n`
+      + `Tarda unos 15 segundos. Lo corre el proceso de la base, igual que la liquidación mensual.`
+    )) return;
+
+    const textoOriginal = btnReproc.textContent;
+    btnReproc.disabled = true;
+    btnReproc.textContent = '⏳ Reprocesando…';
+    try {
+      const r = await api.post('/vendedores/reproceso', { periodo });
+      if (r.job_iniciado === false) {
+        showToast('El período quedó pendiente: no se pudo arrancar el job, lo va a levantar la corrida de las 09:00', 'error');
+        btnReproc.disabled = false;
+        btnReproc.textContent = textoOriginal;
+        return;
+      }
+      const res = await esperarReproceso();
+      if (res === null) return;                       // se fue de la página
+      if (res === 'ok') {
+        showToast(`Período ${periodo} reprocesado`, 'success');
+        renderVendedores(container, periodo);         // recarga con los números nuevos
+        return;
+      }
+      if (res === 'timeout') {
+        showToast('El reproceso está tardando más de lo esperado: recargá en un rato para ver el resultado', 'error');
+      } else {
+        showToast(`El reproceso falló: ${res}`, 'error');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    btnReproc.disabled = false;
+    btnReproc.textContent = textoOriginal;
   });
 }

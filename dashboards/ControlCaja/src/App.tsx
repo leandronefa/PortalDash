@@ -247,14 +247,14 @@ export default function App() {
       )}
 
       {!error && matriz && matriz.sucursales.length > 0 && (
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
-          <div className="min-w-0 flex-1">
-            <MatrizDiferencias matriz={matriz} onCelda={abrirAsiento} seleccion={seleccion} />
-          </div>
-          {seleccion && (
-            <PanelAsiento asiento={asiento} cargando={asientoCargando} error={asientoError} onCerrar={cerrarAsiento} />
-          )}
-        </div>
+        <MatrizDiferencias matriz={matriz} onCelda={abrirAsiento} seleccion={seleccion} />
+      )}
+
+      {/* Modal, no un sidebar: se renderiza fuera del flujo de la matriz para
+          que se vea de entrada (centrado, con fondo oscurecido) sin importar
+          cuan larga sea la tabla de arriba. */}
+      {seleccion && (
+        <PanelAsiento asiento={asiento} cargando={asientoCargando} error={asientoError} onCerrar={cerrarAsiento} />
       )}
     </div>
   )

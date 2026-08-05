@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Search } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { cn } from '@/src/lib/utils'
 import { calcularEscala, estiloDeCelda, formatoImporte, formatoImporteCorto } from '@/src/lib/formato'
 import { filtrarSucursales, totalesDeFilas } from '@/src/lib/filtroSucursales'
+import { diasDeLaSemana, totalSemanas, ultimaSemana } from '@/src/lib/semanas'
 import type { Matriz } from '@/src/lib/api'
 
 type Props = {
@@ -22,6 +23,20 @@ export function MatrizDiferencias({ matriz, onCelda, seleccion }: Props) {
   const [ocultas, setOcultas] = useState<ReadonlySet<string>>(new Set())
   const [listaAbierta, setListaAbierta] = useState(false)
   const listaRef = useRef<HTMLDivElement>(null)
+
+  // Vista semanal: parte las columnas del mes en bloques de 7 dias (por
+  // posicion, ver src/lib/semanas.ts) con navegacion anterior/siguiente,
+  // ademas del selector de mes que ya existe -- no en su lugar. Se queda
+  // dentro del mes cargado: cambiar de mes es responsabilidad del selector de
+  // arriba, esto solo acota las columnas dentro de lo que ya esta en pantalla.
+  const [vistaSemanal, setVistaSemanal] = useState(false)
+  const [semanaIndex, setSemanaIndex] = useState(0)
+
+  // Al cambiar de mes o de empresa, la semana por defecto es la mas reciente
+  // (mismo criterio que el selector de mes, que arranca en el mas nuevo). Sin
+  // esto, un semanaIndex que tenia sentido para un mes de 31 dias quedaria
+  // fuera de rango en uno de 28.
+  useEffect(() => { setSemanaIndex(ultimaSemana(matriz.dias)) }, [matriz.periodo, matriz.empresa, matriz.dias])
 
   // El universo de sucursales es el de la empresa, no el del mes: si se oculta
   // una sucursal y despues se cambia de mes, tiene que seguir oculta (es una
@@ -54,23 +69,30 @@ export function MatrizDiferencias({ matriz, onCelda, seleccion }: Props) {
   }, [matriz.sucursales, ordenPorCodigo, filtroTexto, ocultas])
 
   // La escala se calcula sobre TODAS las celdas del mes, no solo las filas
-  // filtradas, para que la intensidad no cambie de significado al filtrar (un
-  // color de nivel 3 sigue queriendo decir "grande para el mes", no "grande
-  // entre las sucursales que quedaron visibles").
+  // filtradas ni la ventana de dias visible, para que la intensidad no
+  // cambie de significado al filtrar (un color de nivel 3 sigue queriendo
+  // decir "grande para el mes", no "grande entre lo que quedo visible").
   const escala = useMemo(
     () => calcularEscala(matriz.sucursales.flatMap(s => Object.values(s.dias))),
     [matriz.sucursales]
   )
 
-  // Los totales del pie reflejan SOLO las filas visibles: mostrar el total del
-  // mes completo mientras se filtra a una sola sucursal seria mentir sobre lo
-  // que se esta viendo.
-  const { totalesPorDia, granTotal } = useMemo(
-    () => totalesDeFilas(filas, matriz.dias),
-    [filas, matriz.dias]
+  const totalDeSemanas = totalSemanas(matriz.dias)
+  // Las columnas que se muestran: el mes completo, o solo la semana elegida.
+  const diasVisibles = useMemo(
+    () => (vistaSemanal ? diasDeLaSemana(matriz.dias, semanaIndex) : matriz.dias),
+    [matriz.dias, vistaSemanal, semanaIndex]
   )
 
-  const hayFiltroActivo = filtroTexto.trim() !== '' || ocultas.size > 0
+  // Los totales del pie reflejan SOLO las filas y los dias visibles: mostrar
+  // el total del mes completo mientras se filtra a una sola sucursal o a una
+  // semana seria mentir sobre lo que se esta viendo.
+  const { totalesPorDia, granTotal } = useMemo(
+    () => totalesDeFilas(filas, diasVisibles),
+    [filas, diasVisibles]
+  )
+
+  const hayFiltroActivo = filtroTexto.trim() !== '' || ocultas.size > 0 || vistaSemanal
 
   const th = 'sticky top-0 z-20 bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-medium'
   const sucursalCol = 'sticky left-0 z-10 bg-white dark:bg-slate-900 px-2 py-1 text-left whitespace-nowrap'
@@ -139,6 +161,33 @@ export function MatrizDiferencias({ matriz, onCelda, seleccion }: Props) {
           Ordenar por código
         </label>
 
+        <label className="flex items-center gap-1.5 text-xs">
+          <input type="checkbox" checked={vistaSemanal} onChange={e => setVistaSemanal(e.target.checked)} />
+          Vista semanal
+        </label>
+
+        {vistaSemanal && (
+          <div className="flex items-center gap-1 text-xs">
+            <button
+              onClick={() => setSemanaIndex(i => Math.max(0, i - 1))}
+              disabled={semanaIndex === 0}
+              aria-label="Semana anterior"
+              className="rounded border border-slate-300 dark:border-slate-600 p-1 disabled:opacity-30 disabled:cursor-not-allowed bg-white dark:bg-slate-900"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" aria-hidden />
+            </button>
+            <span className="tabular-nums">Semana {semanaIndex + 1}/{totalDeSemanas}</span>
+            <button
+              onClick={() => setSemanaIndex(i => Math.min(totalDeSemanas - 1, i + 1))}
+              disabled={semanaIndex >= totalDeSemanas - 1}
+              aria-label="Semana siguiente"
+              className="rounded border border-slate-300 dark:border-slate-600 p-1 disabled:opacity-30 disabled:cursor-not-allowed bg-white dark:bg-slate-900"
+            >
+              <ChevronRight className="w-3.5 h-3.5" aria-hidden />
+            </button>
+          </div>
+        )}
+
         {/* Leyenda: la identidad nunca depende solo del color. */}
         <span className="flex items-center gap-3 text-xs ml-auto">
           <span className="flex items-center gap-1">
@@ -174,18 +223,26 @@ export function MatrizDiferencias({ matriz, onCelda, seleccion }: Props) {
           <thead>
             <tr>
               <th scope="col" className={cn(th, 'sticky left-0 z-30 text-left')}>Sucursal</th>
-              {matriz.dias.map(d => <th scope="col" key={d} className={th}>{d}</th>)}
+              {diasVisibles.map(d => <th scope="col" key={d} className={th}>{d}</th>)}
               <th scope="col" className={cn(th, 'text-right')}>Total</th>
             </tr>
           </thead>
           <tbody>
-            {filas.map(s => (
+            {filas.map(s => {
+              // El total de la fila tambien respeta la ventana visible (semana
+              // o mes completo), por la misma razon que el total del pie: si
+              // se esta filtrando o viendo solo una semana, la columna Total
+              // tiene que sumar lo que efectivamente se ve, no el mes entero.
+              // Cuando no hay ventana (diasVisibles === matriz.dias), esta
+              // cuenta coincide con `s.total` que ya manda el backend.
+              const totalFila = diasVisibles.reduce((acc, d) => acc + (s.dias[d] ?? 0), 0)
+              return (
               <tr key={s.codigo} className="border-t border-slate-100 dark:border-slate-800">
                 <th scope="row" className={cn(sucursalCol, 'font-normal')}>
                   <span className="font-medium">{s.codigo}</span>
                   {s.nombre && <span className="text-slate-500 dark:text-slate-400"> — {s.nombre}</span>}
                 </th>
-                {matriz.dias.map(d => {
+                {diasVisibles.map(d => {
                   const v = s.dias[d]
                   const activa = seleccion?.fechaISO === `${matriz.periodo}-${d}` && seleccion?.sucursal === s.codigo
                   // Un dia sin diferencia (v == null) sigue siendo clickeable:
@@ -214,16 +271,17 @@ export function MatrizDiferencias({ matriz, onCelda, seleccion }: Props) {
                     </td>
                   )
                 })}
-                <td className="px-2 py-1 text-right font-medium whitespace-nowrap">{formatoImporte(s.total)}</td>
+                <td className="px-2 py-1 text-right font-medium whitespace-nowrap">{formatoImporte(totalFila)}</td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-slate-300 dark:border-slate-600">
               <th scope="row" className={cn(sucursalCol, 'font-medium')}>
                 {hayFiltroActivo ? 'Total filtrado' : 'Total por día'}
               </th>
-              {matriz.dias.map(d => (
+              {diasVisibles.map(d => (
                 <td key={d} className="px-1.5 py-1 text-right text-xs whitespace-nowrap">
                   {totalesPorDia[d] != null ? formatoImporteCorto(totalesPorDia[d]) : ''}
                 </td>

@@ -66,6 +66,16 @@ test('un dia sin ninguna celda entre las filas dadas no aparece en totalesPorDia
   assert.equal(r.granTotal, 0)
 })
 
+test('totalesDeFilas con una ventana de dias mas chica que la fila no suma los dias de afuera', () => {
+  // Con una ventana semanal, el gran total tiene que salir de sumar SOLO los
+  // dias visibles, no del total del mes entero que ya trae cada fila
+  // (fila.total). Con la fila completa (03 y 04) el total seria -21700; con
+  // la ventana acotada al 03, tiene que ser el de esa columna sola: -23200.
+  const r = totalesDeFilas([FILAS[0]], ['03'])
+  assert.deepEqual(r.totalesPorDia, { '03': -23200 })
+  assert.equal(r.granTotal, -23200)
+})
+
 test('totalesDeFilas con lista vacia de filas no rompe', () => {
   const r = totalesDeFilas([], ['03', '04'])
   assert.deepEqual(r.totalesPorDia, {})

@@ -19,11 +19,17 @@ export function filtrarSucursales(
 }
 
 /**
- * Recalcula el total por dia y el gran total SOLO sobre las filas dadas. El
- * pie de la matriz tiene que reflejar lo que esta filtrado, no el mes
- * completo: mostrar el total sin filtrar seria mentir sobre lo que se ve.
- * Mismo criterio que el backend: un dia sin ninguna celda entre las filas
- * dadas no entra en totalesPorDia (ausencia de dato, no un cero).
+ * Recalcula el total por dia y el gran total SOLO sobre las filas y los dias
+ * dados. El pie de la matriz tiene que reflejar lo que esta filtrado (por
+ * sucursal Y por ventana de dias, p.ej. una semana), no el mes completo:
+ * mostrar el total sin filtrar seria mentir sobre lo que se ve. Mismo
+ * criterio que el backend: un dia sin ninguna celda entre las filas dadas no
+ * entra en totalesPorDia (ausencia de dato, no un cero).
+ *
+ * granTotal se deriva de totalesPorDia (no de `fila.total`, que es el total
+ * del MES ENTERO calculado por el backend): si `dias` es una ventana mas
+ * chica que el mes completo, sumar `fila.total` incluiria dias que no estan
+ * en la ventana visible.
  */
 export function totalesDeFilas(filas: SucursalFila[], dias: string[]) {
   const totalesPorDia: Record<string, number> = {}
@@ -38,6 +44,6 @@ export function totalesDeFilas(filas: SucursalFila[], dias: string[]) {
     }
     if (tieneAlguna) totalesPorDia[dia] = suma
   }
-  const granTotal = filas.reduce((acc, f) => acc + f.total, 0)
+  const granTotal = Object.values(totalesPorDia).reduce((acc, v) => acc + v, 0)
   return { totalesPorDia, granTotal }
 }

@@ -147,6 +147,10 @@ export function MatrizDiferencias({ matriz, onCelda, seleccion }: Props) {
           <span className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: 'var(--sobr-2)' }} aria-hidden /> Sobrante
           </span>
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-sm border border-slate-300 dark:border-slate-600" style={{ backgroundColor: 'var(--neutro)' }} aria-hidden />
+            Sin diferencia (clic para ver el día)
+          </span>
         </span>
       </div>
 
@@ -183,21 +187,29 @@ export function MatrizDiferencias({ matriz, onCelda, seleccion }: Props) {
                 </th>
                 {matriz.dias.map(d => {
                   const v = s.dias[d]
-                  if (v == null) return <td key={d} className="px-1 py-0.5" />
                   const activa = seleccion?.fechaISO === `${matriz.periodo}-${d}` && seleccion?.sucursal === s.codigo
+                  // Un dia sin diferencia (v == null) sigue siendo clickeable:
+                  // "sin diferencia en la cuenta de control" no es lo mismo que
+                  // "sin movimientos" -- casi siempre hubo ventas, tarjetas,
+                  // etc. ese dia, y antes esa celda quedaba vacia sin forma de
+                  // verlos. Fondo neutro (--neutro) en vez de la escala de
+                  // color, para no insinuar un faltante o un sobrante que no
+                  // existe.
                   return (
                     <td key={d} className="p-0.5">
                       <button
                         onClick={() => onCelda(`${matriz.periodo}-${d}`, s.codigo)}
-                        style={estiloDeCelda(v, escala)}
+                        style={v == null ? { backgroundColor: 'var(--neutro)' } : estiloDeCelda(v, escala)}
                         // 2px de aire entre celdas y anillo en la seleccionada:
                         // los fills no se tocan y la celda activa se distingue
                         // sin depender del color de fondo.
-                        className={cn('w-full min-w-16 rounded px-1.5 py-1 text-xs text-right',
+                        className={cn('w-full min-w-16 h-6 rounded px-1.5 py-1 text-xs text-right',
                                       activa && 'ring-2 ring-offset-1 ring-slate-900 dark:ring-white')}
-                        title={`${s.codigo} · día ${d} · ${v > 0 ? 'faltante' : 'sobrante'} ${formatoImporte(Math.abs(v))} — clic para ver el asiento`}
+                        title={v == null
+                          ? `${s.codigo} · día ${d} · sin diferencia — clic para ver el detalle del día`
+                          : `${s.codigo} · día ${d} · ${v > 0 ? 'faltante' : 'sobrante'} ${formatoImporte(Math.abs(v))} — clic para ver el asiento`}
                       >
-                        {formatoImporteCorto(v)}
+                        {v == null ? '' : formatoImporteCorto(v)}
                       </button>
                     </td>
                   )

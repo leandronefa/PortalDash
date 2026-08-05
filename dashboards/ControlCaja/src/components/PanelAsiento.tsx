@@ -46,8 +46,8 @@ export function PanelAsiento({ asiento, cargando, error, onCerrar }: Props) {
             <thead>
               <tr className="text-slate-500 dark:text-slate-400 text-left">
                 <th scope="col" className="py-1 font-medium">Cuenta</th>
-                <th scope="col" className="py-1 font-medium text-right">Debe</th>
-                <th scope="col" className="py-1 font-medium text-right">Haber</th>
+                <th scope="col" className="py-1 pl-4 font-medium text-right">Debe</th>
+                <th scope="col" className="py-1 pl-4 font-medium text-right">Haber</th>
               </tr>
             </thead>
             <tbody>
@@ -63,16 +63,20 @@ export function PanelAsiento({ asiento, cargando, error, onCerrar }: Props) {
                     <span className="text-slate-500 dark:text-slate-400">{l.cuentaCodigo}</span>{' '}
                     {l.cuentaNombre}
                   </td>
-                  <td className="py-1 text-right whitespace-nowrap">{l.debe ? formatoImporte(l.debe) : ''}</td>
-                  <td className="py-1 text-right whitespace-nowrap">{l.haber ? formatoImporte(l.haber) : ''}</td>
+                  <td className="py-1 pl-4 text-right whitespace-nowrap">{l.debe ? formatoImporte(l.debe) : ''}</td>
+                  <td className="py-1 pl-4 text-right whitespace-nowrap border-l border-slate-100 dark:border-slate-700">{l.haber ? formatoImporte(l.haber) : ''}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-slate-300 dark:border-slate-600 font-semibold">
-                <td className="py-1">Totales</td>
-                <td className="py-1 text-right whitespace-nowrap">{formatoImporte(asiento.totales.debe)}</td>
-                <td className="py-1 text-right whitespace-nowrap">{formatoImporte(asiento.totales.haber)}</td>
+              {/* Fondo, mas padding y una linea vertical entre Debe y Haber:
+                  con datos de SAP los dos totales suelen ser iguales (cuadra),
+                  asi que sin una separacion marcada dos numeros identicos
+                  pegados uno al otro se leian como un solo bloque confuso. */}
+              <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/60 font-semibold text-sm">
+                <td className="py-2">Totales</td>
+                <td className="py-2 pl-4 text-right whitespace-nowrap">{formatoImporte(asiento.totales.debe)}</td>
+                <td className="py-2 pl-4 text-right whitespace-nowrap border-l border-slate-300 dark:border-slate-600">{formatoImporte(asiento.totales.haber)}</td>
               </tr>
             </tfoot>
           </table>

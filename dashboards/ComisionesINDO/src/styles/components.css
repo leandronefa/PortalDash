@@ -280,6 +280,7 @@ tfoot td { padding: 8px 10px; white-space: nowrap; border-top: 2px solid var(--c
 .manual-table th, .manual-table td {
   border: 1px solid var(--color-border); padding: 6px 10px;
   text-align: left; vertical-align: top;
+  white-space: normal;       /* pisa el `nowrap` de la tabla de datos genérica (thead th / tbody td más arriba) */
   overflow-wrap: anywhere;   /* corta también un token largo sin espacios */
 }
 .manual-table th { background: var(--color-bg); font-weight: 700; }

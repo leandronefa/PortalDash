@@ -1,6 +1,7 @@
 import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 import { exportToCSV } from '../components/exportExcel.js';
+import { resolverMontosParaCalculo } from '../utils/confirmMontos.js';
 
 const TABS = [
   { key: 'sucursales',  label: 'Sucursales' },
@@ -67,10 +68,12 @@ export async function renderTotal(container, periodo) {
   }
 
   container.querySelector('#btn-calc').addEventListener('click', async () => {
+    const usarMontosActuales = await resolverMontosParaCalculo(periodo);
+    if (usarMontosActuales === null) return;
     const btn = container.querySelector('#btn-calc');
     btn.disabled = true; btn.textContent = 'Calculando…';
     try {
-      const res = await api.post('/calculo/ejecutar', { periodo });
+      const res = await api.post('/calculo/ejecutar', { periodo, usarMontosActuales });
       resultado = res.resultado;
       renderActiveTab();
       container.querySelector('#calc-info').textContent =

@@ -171,12 +171,12 @@ router.patch('/:usuario/jornada', async (req, res) => {
 
 // ── POST /api/operadores/calcular — calcular y guardar para el período ─────────
 router.post('/calcular', async (req, res) => {
-  const { periodo } = req.body;
+  const { periodo, usarMontosActuales = false } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Período requerido' });
 
   try {
     const pool = await getPool();
-    const resultado = await calcularYGuardarOperadores(pool, periodo);
+    const resultado = await calcularYGuardarOperadores(pool, periodo, { forzarActuales: !!usarMontosActuales });
     res.json(resultado);
   } catch (err) { console.error('[OP CALC]', err); res.status(500).json({ error: err.message }); }
 });
@@ -184,7 +184,7 @@ router.post('/calcular', async (req, res) => {
 // Recalcula Operadores Retail (indicadores G/O/R por operador) y persiste en
 // tbl_CoVenAppINDO_ResultadoOperadores. Se usa desde /calcular y desde
 // POST /api/calculo/ejecutar (Dashboard) — cálculo puro, sin overrides de usuario.
-export async function calcularYGuardarOperadores(pool, periodo) {
+export async function calcularYGuardarOperadores(pool, periodo, { forzarActuales = false } = {}) {
     await ensureTables(pool);
     const [yr, mo] = periodo.split('-').map(Number);
 
@@ -202,7 +202,7 @@ export async function calcularYGuardarOperadores(pool, periodo) {
            .query('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjConsumo WHERE periodo=@periodo'),
       pool.request().input('periodo', sql.VarChar, periodo)
            .query('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjEfectivo WHERE periodo=@periodo'),
-      cargarMontosDelPeriodo(pool, periodo),
+      cargarMontosDelPeriodo(pool, periodo, { forzarActuales }),
       pool.request().query('SELECT usuario, jornada FROM dbo.tbl_CoVenAppINDO_OperadoresJornada'),
       pool.request().query("SELECT UPPER(LTRIM(RTRIM(Usuario))) AS id_usuario, LTRIM(RTRIM(Nombre)) AS nombre FROM dbo.tbl_QlikData_Usuarios"),
     ]);

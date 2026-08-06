@@ -1,6 +1,7 @@
 import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 import { exportToCSV } from '../components/exportExcel.js';
+import { resolverMontosParaCalculo } from '../utils/confirmMontos.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -346,11 +347,13 @@ export async function renderOperadores(container, periodo, tipo = 'all') {
   });
 
   container.querySelector('#btn-calcular').addEventListener('click', async () => {
+    const usarMontosActuales = await resolverMontosParaCalculo(periodo);
+    if (usarMontosActuales === null) return;
     const btn = container.querySelector('#btn-calcular');
     btn.disabled = true;
     btn.textContent = 'Calculando…';
     try {
-      const res = await api.post('/operadores/calcular', { periodo });
+      const res = await api.post('/operadores/calcular', { periodo, usarMontosActuales });
       allData = res.resultado || [];
       container.querySelector('#op-info').textContent =
         `Calculado ahora — ${allData.length} operadores · $ ${fmtMoney(res.total_monto)}`;

@@ -19,8 +19,8 @@ El período que elegís se guarda solo: si cerrás la aplicación y volvés a en
 Para liquidar un período completo, seguí estos cuatro pasos en orden:
 
 1. Revisá los datos maestros del período en las pantallas de DATOS: Sucursales, Montos, Objetivos y Supervisores (con sus sucursales asignadas). Es el momento de corregir cualquier valor antes de calcular.
-2. Andá a **Cálculos → Total** y apretá **▶ Ejecutar cálculo**. Este botón sincroniza los objetivos desde BeClever, recalcula el ranking de categorías A/B/C, y corre todo el motor de una sola vez: Total, Operadores Retail, Operadores Millón, Encargados Retail, Encargados Millón y Supervisores. El resultado queda guardado. Hoy es el **único** disparador del cálculo completo.
-3. Andá a **Cálculos → Cajeros** y apretá su botón propio de cálculo. Cajeros queda aparte porque necesita los overrides de jornada (full-time / part-time) que se cargan en esa misma pantalla.
+2. Andá a **Cálculos → Total** y apretá **▶ Ejecutar cálculo**. Este botón sincroniza los objetivos desde BeClever, recalcula el ranking de categorías A/B/C, y corre todo el motor de una sola vez: Total, Operadores Retail, Operadores Millón, Encargados Retail, Encargados Millón y Supervisores. El resultado queda guardado. Hoy es el **único** disparador del cálculo completo. Si el período ya se había calculado antes y editaste montos en el ABM, te va a preguntar si querés usar los montos históricos o los actuales — ver sección 16.
+3. Andá a **Cálculos → Cajeros** y apretá su botón propio de cálculo. Cajeros queda aparte porque necesita los overrides de jornada (full-time / part-time) que se cargan en esa misma pantalla. También puede preguntarte histórico/actual si corresponde.
 4. Recorré los resultados por rol en las pantallas de Cálculos y exportá los CSV que necesites.
 
 ## 4. Pantallas de DATOS
@@ -104,7 +104,13 @@ La jornada (full-time o part-time) viene cargada desde el sistema, pero la podé
 
 ### Retail
 
-Los operadores Retail se miden con tres indicadores: **G**, **O** y **R**. Los indicadores G, O y R se miden a nivel de la sucursal, así que valen igual para todos sus operadores. **G es la puerta** de O y R: sin G no se cobran esos dos componentes, aunque el componente por escalón se cobra igual.
+Los operadores Retail se miden con tres indicadores, todos calculados a nivel de la sucursal (valen igual para todos sus operadores):
+
+- **G — Participación**: la participación de ventas real de la sucursal (VTA/VTATOT) contra su objetivo de participación.
+- **O — Ticket promedio**: el crédito promedio real contra el objetivo de ticket promedio.
+- **R — Operaciones**: la cantidad de operaciones real contra el objetivo de operaciones.
+
+**G es la puerta** de O y R: sin G (es decir, si no supera la tolerancia del −4%) no se cobran los componentes de O ni R, aunque el componente por escalón se cobra igual.
 
 ### Millón
 
@@ -114,7 +120,7 @@ Los operadores Millón se miden **solo por efectivo**. El objetivo de la sucursa
 
 ### Retail
 
-El encargado Retail cobra por dos componentes **independientes**: el escalón de consumo y la participación (indicador G). Son independientes entre sí — un encargado puede cobrar uno sin cobrar el otro.
+El encargado Retail cobra por dos componentes **independientes**: el escalón de consumo y la participación (indicador **G** — ver su definición en la sección 12). Son independientes entre sí — un encargado puede cobrar uno sin cobrar el otro.
 
 ### Millón
 
@@ -234,7 +240,7 @@ Estas son las reglas vigentes desde el 16 de julio de 2026.
 **Retail** (mira solo consumo, con dos indicadores por sucursal):
 
 - **Pesos**: llega si el escalón de consumo es 1 o más (con la tolerancia del 4%).
-- **Participación**: llega si el indicador G es mayor a −4% (el mismo indicador que usa Encargados). Si la sucursal no tiene objetivo de participación cargado, **no llega** a participación.
+- **Participación**: llega si el indicador G es mayor a −4% (el mismo indicador **G** que usa Encargados y Operadores — ver su definición en la sección 12). Si la sucursal no tiene objetivo de participación cargado, **no llega** a participación.
 
 Según esos dos indicadores, la sucursal paga esto por supervisor:
 
@@ -254,6 +260,18 @@ La primera vez que se calcula un período, el sistema guarda una foto de los mon
 
 El ABM sigue funcionando con normalidad: seguís editando el valor "vivo", que es el que se usa para los períodos **nuevos**. Esto existe para que recalcular un mes ya cerrado no te cambie lo que ya se liquidó.
 
+### Elegir entre históricos y actuales al recalcular
+
+Si editaste algo en el ABM de Montos y volvés a apretar un botón de cálculo de un período que ya tenía su foto congelada, el sistema te avisa con un diálogo: **"⚠️ Los montos del ABM cambiaron"**. Ahí elegís:
+
+- **Usar históricos**: calcula con la foto congelada de siempre, sin tocar nada.
+- **Usar actuales**: calcula con los valores que tenés hoy en el ABM, y esos valores quedan guardados como la **nueva** foto congelada del período — de ahí en adelante, cualquier otro recálculo de ese mismo período va a usar estos valores nuevos, hasta que vuelvas a editar el ABM.
+- **Cancelar**: no calcula nada.
+
+Si no cambiaste nada en el ABM desde la última vez, el diálogo no aparece — el cálculo sigue directo con el histórico, como siempre.
+
+Este diálogo aparece en los botones de **Cajeros**, **Operadores Retail**, **Operadores Millón** y en **▶ Ejecutar cálculo** de Total (que de paso cubre Encargados Retail, Encargados Millón y Supervisores, ya que se calculan junto con Total). **Vendedores queda afuera**: su cálculo lo corre un proceso aparte de la base de datos, no pasa por este mecanismo — ver sección 14.
+
 ## 17. Usuarios supervisores: acceso de solo lectura
 
 Los usuarios con perfil supervisor ven el tablero completo de la aplicación, pero en **modo de solo lectura**: no tienen controles de edición ni botones de cálculo. Además, solo ven los datos de las sucursales que tienen asignadas.
@@ -263,7 +281,7 @@ En el resultado de la pantalla Supervisores, cada usuario supervisor ve **única
 ## 18. Limitaciones conocidas
 
 - **Cajeros no se recalcula con el botón de Total**: necesita los overrides de jornada que se cargan en su propia pantalla, así que siempre hay que calcularlo aparte. La pestaña Cajeros de Total se calcula sin los overrides de jornada, así que ahí los part-time pueden aparecer con el monto full. El resultado válido de Cajeros es siempre el de la pantalla Cajeros, calculado con su botón propio — no liquides cajeros desde Total.
-- **Descongelar un período no tiene botón en la pantalla**, y es a propósito. Si un período se calculó por error antes de terminar de cargar los montos correctos, pedile al **equipo técnico** que borre la foto de ese período para que el próximo cálculo tome los valores nuevos.
+- **Descongelar un período por completo (sin usar los valores actuales) no tiene botón en la pantalla.** Para eso podés usar "Usar actuales" en el diálogo de la sección 16, que regenera la foto con lo que hoy tenés en el ABM. Si en cambio necesitás volver a un valor **anterior** que ya no está cargado en el ABM, pedile al **equipo técnico** que borre la foto de ese período por la base.
 - El aviso amarillo **"los datos guardados son del formato anterior"** significa que ese resultado se generó con reglas viejas. Se resuelve re-ejecutando el cálculo del período desde Total (el aviso todavía dice "desde el Dashboard": ignoralo, el botón está en Total).
 - El escalón **E1 en ámbar** puede mostrarse en verde en períodos que no se recalcularon con la versión actual del sistema.
 - **Operadores Retail** reconstruye su monto desde la fila de categoría C multiplicada, en lugar de leer directamente las filas A/B cargadas en Montos. Es una inconsistencia conocida frente al resto del motor, y puede dar diferencias puntuales en sucursales de categoría A y B.
@@ -273,7 +291,7 @@ En el resultado de la pantalla Supervisores, cada usuario supervisor ve **única
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
 | Una pantalla de resultado aparece vacía | No se ejecutó el cálculo de ese período | Andá a Cálculos → Total → ▶ Ejecutar cálculo |
-| Cambiaste un monto y no se refleja en el resultado | El período ya tiene sus montos congelados (ver sección 16) | Es esperado — ese período usa la foto que se guardó la primera vez que se calculó |
+| Cambiaste un monto y no se refleja en el resultado | El período ya tiene sus montos congelados (ver sección 16) | Volvé a calcular y, si el diálogo pregunta histórico/actual, elegí **Usar actuales** |
 | A un supervisor no le aparece el plus de plaza | Alguna sucursal de esa provincia no llegó a participación (ver sección 15) | Revisá el detalle de sucursales de esa plaza en el resultado de Supervisores |
 | Una sucursal no aparece en ninguna pantalla | Está deshabilitada | Revisá su estado en Sucursales Retail y, si corresponde, volvé a habilitarla |
 | Aparece "Sin autorización" o te vuelve al login | La sesión venció | Volvé a iniciar sesión |

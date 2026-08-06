@@ -1,6 +1,7 @@
 import { api, isSupervisorReadonly } from '../api/client.js';
 import { showToast } from '../components/toast.js';
 import { exportToCSV } from '../components/exportExcel.js';
+import { resolverMontosParaCalculo } from '../utils/confirmMontos.js';
 
 function fmtMoney(v) {
   if (!v && v !== 0) return '—';
@@ -277,10 +278,12 @@ export async function renderCajeros(container, periodo) {
 
   // ─── Calcular ─────────────────────────────────────────────────────
   container.querySelector('#btn-calcular').addEventListener('click', async () => {
+    const usarMontosActuales = await resolverMontosParaCalculo(periodo);
+    if (usarMontosActuales === null) return;
     const btn = container.querySelector('#btn-calcular');
     btn.disabled = true; btn.textContent = 'Calculando…';
     try {
-      const res = await api.post('/calculo/cajeros', { periodo, overrides });
+      const res = await api.post('/calculo/cajeros', { periodo, overrides, usarMontosActuales });
       aplicarResultado(res, false);
       showToast(`Guardado — ${res.comisionan} cajero${res.comisionan !== 1 ? 's' : ''} comisionan — $${fmtMoney(res.total_monto)}`, 'success');
     } catch (err) {

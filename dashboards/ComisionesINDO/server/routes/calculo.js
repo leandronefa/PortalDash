@@ -9,7 +9,7 @@ import { calcularYGuardarRanking } from './ranking.js';
 import { sincronizarObjetivos } from './objetivos.js';
 import { calcularYGuardarOperadores } from './operadores.js';
 import { calcularYGuardarOperadoresMillon } from './millon.js';
-import { cargarMontosDelPeriodo } from '../services/montosHistorial.js';
+import { cargarMontosDelPeriodo, diffMontosPeriodo } from '../services/montosHistorial.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -95,7 +95,7 @@ async function cargarReporteBC(periodo) {
   }));
 }
 
-async function cargarContexto(pool, periodo) {
+async function cargarContexto(pool, periodo, { forzarActuales = false } = {}) {
   const p = (q) => pool.request().input('periodo', sql.VarChar, periodo).query(q);
   const [yr, mo] = periodo.split('-').map(Number);
 
@@ -112,7 +112,7 @@ async function cargarContexto(pool, periodo) {
     p('SELECT * FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo=@periodo'),
     p('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjConsumo WHERE periodo=@periodo'),
     p('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjEfectivo WHERE periodo=@periodo'),
-    cargarMontosDelPeriodo(pool, periodo),
+    cargarMontosDelPeriodo(pool, periodo, { forzarActuales }),
     pool.request().query('SELECT idEncargado, apellido_nombre, codSucursal FROM dbo.tbl_CoVenApp_encargados'),
     pool.request().query("SELECT NRO_VENDEDOR, LTRIM(RTRIM(ISNULL(APELLIDO,'')+' '+ISNULL(NOMBRE,''))) as nombre, TIPO, GCL_TEMPSPARTIEL as gclTemps FROM dbo.tbl_CoVenApp_Vendedores WHERE COMISIONA=1"),
     // Cajeros: sucursal actual desde VendedoresDetalleDiaria
@@ -201,10 +201,24 @@ async function cargarContexto(pool, periodo) {
   };
 }
 
+// GET /api/calculo/montos-diff?periodo=YYYY-MM
+// Compara la foto congelada de montos del período contra los valores vivos
+// del ABM, para que el frontend sepa si debe preguntar histórico/actual
+// antes de calcular.
+router.get('/montos-diff', async (req, res) => {
+  const { periodo } = req.query;
+  if (!periodo) return res.status(400).json({ error: 'Período requerido' });
+  try {
+    const pool = await getPool();
+    const diff = await diffMontosPeriodo(pool, periodo);
+    res.json(diff);
+  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
+});
+
 // POST /api/calculo/cajeros  { periodo, overrides: { "NRO_VENDEDOR": "part"|"full" } }
 // Cálculo independiente solo de cajeros (carga ligera, sin reporte ni encargados)
 router.post('/cajeros', async (req, res) => {
-  const { periodo, overrides = {} } = req.body;
+  const { periodo, overrides = {}, usarMontosActuales = false } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Período requerido' });
 
   try {
@@ -218,7 +232,7 @@ router.post('/cajeros', async (req, res) => {
       pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Sucursales WHERE id < 300 AND activa=1 ORDER BY id'),
       pool.request().input('periodo', sql.VarChar, periodo).query('SELECT * FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo=@periodo'),
       pool.request().input('periodo', sql.VarChar, periodo).query('SELECT * FROM dbo.tbl_CoVenAppINDO_ObjConsumo WHERE periodo=@periodo'),
-      cargarMontosDelPeriodo(pool, periodo),
+      cargarMontosDelPeriodo(pool, periodo, { forzarActuales: !!usarMontosActuales }),
       pool.request()
         .query(`
           SELECT v.NRO_VENDEDOR,
@@ -349,7 +363,7 @@ router.get('/cajeros', async (req, res) => {
 
 // POST /api/calculo/ejecutar  { periodo: "2026-03" }
 router.post('/ejecutar', async (req, res) => {
-  const { periodo } = req.body;
+  const { periodo, usarMontosActuales = false } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Período requerido' });
   try {
     const pool = await getPool();
@@ -362,7 +376,11 @@ router.post('/ejecutar', async (req, res) => {
     // del cálculo completo — si no, las sucursales sin fila en Ranking caen al
     // fallback 'C' y se pierden las categorías A/B reales del período.
     await calcularYGuardarRanking(pool, periodo);
-    const ctx  = await cargarContexto(pool, periodo);
+    // Si el usuario eligió usar los montos actuales, cargarContexto regenera acá
+    // la foto congelada de MontosHistorial con los valores vivos del ABM — las
+    // llamadas siguientes a calcularYGuardarOperadores(Millon) ya la leen
+    // regenerada, no hace falta repetirles el flag.
+    const ctx  = await cargarContexto(pool, periodo, { forzarActuales: !!usarMontosActuales });
     const sucursalResultados = calcularTotal(ctx);
     const cajeros      = calcularCajeros(ctx, sucursalResultados);
     const operadores   = calcularOperadores(ctx, sucursalResultados);

@@ -305,11 +305,11 @@ router.get('/operadores/resultado', async (req, res) => {
 
 // POST /api/millon/operadores/calcular
 router.post('/operadores/calcular', async (req, res) => {
-  const { periodo } = req.body;
+  const { periodo, usarMontosActuales = false } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Período requerido' });
   try {
     const pool = await getPool();
-    const resultado = await calcularYGuardarOperadoresMillon(pool, periodo);
+    const resultado = await calcularYGuardarOperadoresMillon(pool, periodo, { forzarActuales: !!usarMontosActuales });
     res.json(resultado);
   } catch (err) { console.error('[OP_MILLON CALC]', err); res.status(500).json({ error: err.message }); }
 });
@@ -317,7 +317,7 @@ router.post('/operadores/calcular', async (req, res) => {
 // Recalcula Operadores Millón (venta efectivo vs objetivo individual) y persiste
 // en tbl_CoVenAppINDO_ResultadoOpMillon. Se usa desde /operadores/calcular y desde
 // POST /api/calculo/ejecutar (Dashboard) — cálculo puro, sin overrides de usuario.
-export async function calcularYGuardarOperadoresMillon(pool, periodo) {
+export async function calcularYGuardarOperadoresMillon(pool, periodo, { forzarActuales = false } = {}) {
     await ensureTables(pool);
     await ensureResultTable(pool);
 
@@ -354,7 +354,7 @@ export async function calcularYGuardarOperadoresMillon(pool, periodo) {
       pool.request()
         .input('periodo', sql.VarChar(7), periodo)
         .query(`SELECT sucursal_id, categoria FROM dbo.tbl_CoVenAppINDO_Ranking WHERE periodo = @periodo`),
-      cargarMontosDelPeriodo(pool, periodo),
+      cargarMontosDelPeriodo(pool, periodo, { forzarActuales }),
       pool.request().query(`SELECT UPPER(LTRIM(RTRIM(Usuario))) AS id_usuario, LTRIM(RTRIM(Nombre)) AS nombre FROM dbo.tbl_QlikData_Usuarios`),
       pool.request().query(`SELECT usuario, jornada FROM dbo.tbl_CoVenAppINDO_OperadoresJornada`),
     ]);

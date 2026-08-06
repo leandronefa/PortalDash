@@ -19,7 +19,7 @@ export async function ensureMontosHistorialTable(pool) {
 // Lee las 6 fuentes de montos "vivas" (valor actual del ABM) tal cual las
 // carga hoy calculo.js::cargarContexto — sin filtro de período, son tablas
 // de configuración global por categoría/escalón.
-async function leerMontosVivos(pool) {
+export async function leerMontosVivos(pool) {
   const [montosR, montosVendR, montoSupR, montosPresR, montosCajR, multR] = await Promise.all([
     pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_Montos'),
     pool.request().query('SELECT * FROM dbo.tbl_CoVenAppINDO_MontosVendedor'),
@@ -42,8 +42,15 @@ async function leerMontosVivos(pool) {
 // y la devuelve tal cual (sin importar qué se haya editado después en el
 // ABM); si es la primera vez que se calcula ese período, la crea a partir
 // de los valores vivos actuales y la persiste.
-export async function cargarMontosDelPeriodo(pool, periodo) {
+// `forzarActuales: true` salta la foto existente y la regenera con los
+// valores vivos de HOY (usado cuando el usuario elige explícitamente
+// recalcular con los montos actuales del ABM).
+export async function cargarMontosDelPeriodo(pool, periodo, { forzarActuales = false } = {}) {
   await ensureMontosHistorialTable(pool);
+
+  if (forzarActuales) {
+    return regenerarMontosDelPeriodo(pool, periodo);
+  }
 
   const existente = await pool.request()
     .input('periodo', sql.VarChar, periodo)
@@ -75,6 +82,63 @@ export async function cargarMontosDelPeriodo(pool, periodo) {
     }
     throw err;
   }
+}
+
+// Sobreescribe (o crea) la foto congelada de un período con los valores
+// vivos actuales del ABM — adopta el "actual" como el nuevo "histórico"
+// de ese período de acá en adelante.
+export async function regenerarMontosDelPeriodo(pool, periodo) {
+  await ensureMontosHistorialTable(pool);
+  const snapshot = await leerMontosVivos(pool);
+  await pool.request()
+    .input('periodo', sql.VarChar, periodo)
+    .input('json', sql.NVarChar(sql.MAX), JSON.stringify(snapshot))
+    .query(`
+      MERGE dbo.tbl_CoVenAppINDO_MontosHistorial AS target
+      USING (SELECT @periodo AS periodo) AS src
+      ON target.periodo = src.periodo
+      WHEN MATCHED THEN UPDATE SET montos_json = @json, fecha_snapshot = GETDATE()
+      WHEN NOT MATCHED THEN INSERT (periodo, montos_json) VALUES (@periodo, @json);
+    `);
+  return snapshot;
+}
+
+// Serializa cada una de las 6 fuentes de montos de forma estable (sin
+// importar el orden de filas que devuelva el SELECT) para poder comparar
+// dos fotos por igualdad de contenido.
+function serializarMontos(snapshot) {
+  const canon = (rows) => (rows || []).map(r => JSON.stringify(r)).sort().join('|');
+  return {
+    montos:            canon(snapshot.montos),
+    montosVendedor:    canon(snapshot.montosVendedor),
+    montosSupervisor:  canon(snapshot.montosSupervisor),
+    montosPrestamaos:  canon(snapshot.montosPrestamaos),
+    montosCajero:      canon(snapshot.montosCajero),
+    multiplicadores:   canon(snapshot.multiplicadores),
+  };
+}
+
+// Compara la foto congelada de un período contra los montos vivos del ABM.
+// `hayFoto: false` significa que el período todavía no se calculó nunca —
+// no hay nada con qué comparar, la primera corrida va a crear la foto sola.
+export async function diffMontosPeriodo(pool, periodo) {
+  await ensureMontosHistorialTable(pool);
+
+  const existente = await pool.request()
+    .input('periodo', sql.VarChar, periodo)
+    .query('SELECT montos_json, fecha_snapshot FROM dbo.tbl_CoVenAppINDO_MontosHistorial WHERE periodo = @periodo');
+
+  if (!existente.recordset.length) {
+    return { hayFoto: false, distinto: false, fechaSnapshot: null };
+  }
+
+  const historial = JSON.parse(existente.recordset[0].montos_json);
+  const vivo = await leerMontosVivos(pool);
+  const a = serializarMontos(historial);
+  const b = serializarMontos(vivo);
+  const distinto = Object.keys(a).some(k => a[k] !== b[k]);
+
+  return { hayFoto: true, distinto, fechaSnapshot: existente.recordset[0].fecha_snapshot };
 }
 
 // Para cada período que ya tiene algo calculado (en cualquiera de las 4

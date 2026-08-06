@@ -165,8 +165,7 @@ Registrar en el portal (Administración → Dashboards, puerto 3012) para accede
 ## ControlCaja — matriz de Diferencias de Caja (04/08/2026)
 
 Servicio `dashcontrolcaja.exe`, puerto **3014** (solo loopback), carpeta `C:\apps\dashboards\ControlCaja`.
-Pendiente de registrar en el portal (Administración → Dashboards, puerto 3014); hasta entonces la
-URL vía proxy es `/d/<id>/` con el ID que asigne el portal en ese momento.
+Registrado en el portal el 06/08/2026 (Dashboard Id **16**); URL vía proxy `/d/16/`.
 
 - Matriz sucursal × día con las Diferencias de Caja que SAP reporta (cuenta
   `4.2.002.01.050 - Diferencias de Caja`), por empresa (TESI/PUEBLO) y por mes, con drill-down al

@@ -25,7 +25,7 @@ Desde jul 2026 los usuarios **no** acceden por `http://10.0.0.118:PUERTO`: el po
 | `DashMeLi` | `dashmeli.exe` | 3010 | `/d/13/` | `server.js` | Stock dep. 198/199 + MercadoLibre; tokens OAuth se renuevan solos. |
 | `ControlAcceso` | `dashcontrolacceso.exe` | 3012 | `/d/14/` | `server.cjs` | Portería: ingreso/egreso de vehículos. Login propio con roles PORTERO/ADMIN. |
 | `APCWeb` | `dashapcweb` | 3013 | `/d/15/` | `publish\APCWeb.exe` | **ASP.NET Core 9** (no Node). Versión web de `C:\apps\ActualizarPreciosCostos` (Desktop intocable; objetos SQL propios `APCWeb_`). Login contra `SP_VALIDAR_INICIO_SESION_APPS`. Exports UNC requieren cuenta de servicio con permisos (LocalSystem no escribe en `\\vmapp...`). Ver `APCWeb\CLAUDE.md`. |
-| `ControlCaja` | `dashcontrolcaja.exe` | 3014 | `/d/<id>/` (pendiente de registrar en el portal) | `server.js` | Solo lectura de `SAP_REPORTE_Z` / `SAP_PU_REPORTE_Z` en `\\10.0.0.115\Cegid`: matriz sucursal × día de Diferencias de Caja. Sin uploads ni store. |
+| `ControlCaja` | `dashcontrolcaja.exe` | 3014 | `/d/16/` | `server.js` | Solo lectura de `SAP_REPORTE_Z` / `SAP_PU_REPORTE_Z` en `\\10.0.0.115\Cegid`: matriz sucursal × día de Diferencias de Caja. Sin uploads ni store. |
 
 ## Operación
 

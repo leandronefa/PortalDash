@@ -7,7 +7,7 @@ backend Express en `server.js` (**ESM**, no usar `require()`).
 
 ## Servicio y acceso
 - Servicio de Windows: **`dashcontrolcaja.exe`** (node-windows), puerto **3014**, entrada `server.js`.
-- **Los usuarios acceden SOLO vía el portal**: `http://10.0.0.118/d/<id>/`. El puerto 3014 directo
+- **Los usuarios acceden SOLO vía el portal**: `http://10.0.0.118/d/16/`. El puerto 3014 directo
   queda solo para diagnóstico local (`http://localhost:3014`).
 - Diagnóstico en primer plano:
   ```powershell

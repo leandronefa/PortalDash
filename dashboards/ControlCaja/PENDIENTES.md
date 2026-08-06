@@ -7,8 +7,9 @@
 ## Estado actual
 
 Dashboard funcionando en producción: servicio `dashcontrolcaja.exe`, puerto **3014**,
-arranque automático. 99 tests, `tsc` y build limpios. Backend y frontend completos
-con matriz sucursal × día, filtro por sucursal, vista semanal, detalle en modal.
+arranque automático, **registrado en el portal como Dashboard Id 16** (`/d/16/`).
+99 tests, `tsc` y build limpios. Backend y frontend completos con matriz sucursal ×
+día, filtro por sucursal, vista semanal, detalle en modal.
 
 ```powershell
 Get-Service dashcontrolcaja.exe
@@ -17,29 +18,7 @@ cd C:\apps\dashboards\ControlCaja; node --test "tests/*.test.js"   # 99/99 esper
 
 ## Pendientes reales (en orden de impacto)
 
-### 1. Registrar el dashboard en el portal
-Paso manual en el navegador — no se puede hacer desde este entorno (sin browser).
-
-1. Ir a `http://10.0.0.118/` → Administración → Dashboards.
-2. Registrar `ControlCaja` con puerto **3014**.
-3. El portal asigna un ID; queda accesible en `http://10.0.0.118/d/<id>/`.
-4. Reemplazar `<id>` por el número real en los 3 lugares que hoy dicen
-   "pendiente de registrar":
-   - `dashboards/ControlCaja/CLAUDE.md` (sección "Servicio y acceso")
-   - `dashboards/CLAUDE.md` (fila de la tabla de dashboards)
-   - `portal-src/deploy/OPERATIONS-10.0.0.118.md` (sección de ControlCaja)
-
-### 2. Completar los nombres de sucursal
-`data/sucursales.json` tiene los 37 códigos pero **todos los nombres vacíos**.
-Sin nombre, la matriz muestra el código solo (funciona igual, pero es menos legible).
-Es edición manual del JSON — no requiere tocar código. El servicio lo lee una sola
-vez al arrancar, así que después de editarlo hace falta:
-
-```powershell
-Restart-Service dashcontrolcaja.exe
-```
-
-### 3. Verificación visual en el navegador
+### 1. Verificación visual en el navegador
 Este entorno no tiene browser, así que **nada de lo siguiente se vio en pantalla
 todavía**, solo se verificó por lectura de código y contra los endpoints reales:
 
@@ -55,7 +34,7 @@ todavía**, solo se verificó por lectura de código y contra los endpoints real
 
 Si algo de esto se ve mal, es la primera cosa para revisar.
 
-### 4. INDO todavía no tiene exportación
+### 2. INDO todavía no tiene exportación
 El usuario va a generar el archivo `SAP_INDO_REPORTE_Z` (o el nombre que le pongan)
 más adelante. Cuando exista, agregarlo es **una línea** en `server/empresas.js`
 (ver el comentario ahí — el registro `EMPRESAS` es el único lugar que hace falta
@@ -79,6 +58,12 @@ tocar; el resto del código ya es genérico por diseño).
   un motivo de descarte distinto, es el formato que cambió, no un bug del parser.
 - **Sin persistencia, sin uploads, sin manifest** — a propósito, a diferencia de
   EstadoResultado. La fuente de verdad es siempre el archivo de la red.
+- **33 de las 37 sucursales tienen nombre** en `data/sucursales.json`, resueltos
+  el 06/08/2026 contra `dbo.COMERCIO` (BeClever, 10.0.0.115 — la misma tabla que
+  ya usa ComisionesINDO). Las 4 restantes (**080, 081, 102, 111**) no están
+  registradas en esa tabla — no es un error de la consulta, esos códigos
+  simplemente no existen ahí. Si alguna vez se necesita el nombre, hay que
+  preguntarle a alguien de la operación, no reintentar la consulta.
 
 ## Deuda técnica conocida, no bloqueante
 

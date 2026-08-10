@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, Fragment, useRef } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightNav, Moon, Sun, Upload, Download } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightNav, Moon, Sun, Upload, Download, ArrowUpDown } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
@@ -63,6 +63,8 @@ function PLGroupSection({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  // Orden de las sub-filas de centro de costo: por importe (default) o por código
+  const [sortByCentro, setSortByCentro] = useState(false)
 
   function toggleRow(cuenta: string) {
     setExpandedRows(prev => {
@@ -96,6 +98,17 @@ function PLGroupSection({
               : <ChevronRight className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} shrink-0`} />
             }
             {label}
+            {!compact && (
+              <button
+                type="button"
+                title={sortByCentro ? 'Ordenando por centro de costo — click para ordenar por importe' : 'Ordenando por importe — click para ordenar por centro de costo'}
+                onClick={e => { e.stopPropagation(); setSortByCentro(v => !v) }}
+                className="ml-2 flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-normal normal-case tracking-normal text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+              >
+                <ArrowUpDown className="w-3 h-3" />
+                {sortByCentro ? 'Centro de costo' : 'Importe'}
+              </button>
+            )}
           </div>
         </td>
         <td className={`${hPad} text-right font-semibold text-slate-700 dark:text-slate-200 ${sz} whitespace-nowrap`}>
@@ -110,7 +123,7 @@ function PLGroupSection({
         const sucursales = Object.entries(row.bySucursal)
           .map(([suc, val]) => ({ sucursal: suc, displayVal: isIngreso ? -val : val }))
           .filter(s => s.displayVal !== 0)
-          .sort((a, b) => b.displayVal - a.displayVal)
+          .sort((a, b) => sortByCentro ? a.sucursal.localeCompare(b.sucursal) : b.displayVal - a.displayVal)
         // Solo mostrar expand en la vista principal (no compact = BranchPLView)
         const expandable = !compact && sucursales.length > 0
 

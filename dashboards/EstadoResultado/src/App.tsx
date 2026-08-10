@@ -283,10 +283,13 @@ function MatrixView({ matrix, periodoStr }: { matrix: MatrixPL; periodoStr: stri
   const { totales } = matrix
   const t = totales
 
-  // Sucursales como filas, ordenadas por ventas desc (como el Excel de contabilidad)
+  // Orden de las filas: por ventas desc (default, como el Excel de contabilidad) o por sucursal
+  const [sortBySucursal, setSortBySucursal] = useState(false)
   const filas = useMemo(
-    () => [...matrix.columnas].sort((a, b) => b.ventas - a.ventas),
-    [matrix]
+    () => [...matrix.columnas].sort((a, b) =>
+      sortBySucursal ? a.sucursal.localeCompare(b.sucursal) : b.ventas - a.ventas
+    ),
+    [matrix, sortBySucursal]
   )
   const gvRatios = filas.map(f => (f.ventas !== 0 ? f.directos / f.ventas : 0))
   const gvMin = Math.min(...gvRatios)
@@ -319,7 +322,15 @@ function MatrixView({ matrix, periodoStr }: { matrix: MatrixPL; periodoStr: stri
             <thead>
               <tr className="bg-slate-200 dark:bg-slate-700 border-b-2 border-slate-400 dark:border-slate-500">
                 <th className="px-3 py-2 text-left text-[0.68rem] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 capitalize whitespace-nowrap border-r-2 border-slate-300 dark:border-slate-600">
-                  {periodoStr ?? 'Sucursal'}
+                  <button
+                    type="button"
+                    title={sortBySucursal ? 'Ordenando por sucursal — click para ordenar por ventas' : 'Ordenando por ventas — click para ordenar por sucursal'}
+                    onClick={() => setSortBySucursal(v => !v)}
+                    className="flex items-center gap-1 normal-case tracking-normal hover:text-slate-900 dark:hover:text-white transition-colors"
+                  >
+                    <ArrowUpDown className="w-3 h-3" />
+                    {periodoStr ?? 'Sucursal'}
+                  </button>
                 </th>
                 <th className={th}>Ventas</th>
                 <th className={th}>%</th>

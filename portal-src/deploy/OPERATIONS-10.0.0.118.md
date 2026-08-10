@@ -21,8 +21,8 @@ C:\apps\
     ├── EstadoResultado\             Node/Express  → servicio "dashestadoresultado.exe",     puerto 3008
     ├── PassReset\                   Node/Express  → servicio "dashpassreset.exe",           puerto 3009
     ├── DashMeLi\                    Node/Express  → servicio "dashmeli.exe",                puerto 3010
-    ├── ControlAcceso\               Node/Express  → servicio "dashcontrolacceso.exe",       puerto 3012
-    └── APCWeb\                      ASP.NET Core 9 → servicio "dashapcweb",                  puerto 3013
+    ├── APCWeb\                      ASP.NET Core 9 → servicio "dashapcweb",                  puerto 3013
+    └── ControlCaja\                 Node/Express  → servicio "dashcontrolcaja.exe",          puerto 3014
 ```
 
 > `\\10.0.0.118\apps` es el recurso compartido que apunta a `C:\apps`. En el server SIEMPRE usar la ruta **local `C:\apps\...`** (los servicios no deben referenciar rutas UNC).
@@ -39,8 +39,8 @@ C:\apps\
 | `dashestadoresultado.exe` | Dash-EstadoResultado | EstadoResultado / **3008** | `server.js` |
 | `dashpassreset.exe` | Dash-PassReset | PassReset / **3009** | `server.cjs` |
 | `dashmeli.exe` | Dash-MeLi | DashMeLi / **3010** | `server.js` |
-| `dashcontrolacceso.exe` | Dash-ControlAcceso | ControlAcceso / **3012** | `server.cjs` |
 | `dashapcweb` | Dash-APCWeb | APCWeb / **3013** | `publish\APCWeb.exe` (ASP.NET Core, sin sufijo `.exe` en el Name: se creó con `sc.exe`, no con node-windows) |
+| `dashcontrolcaja.exe` | Dash-ControlCaja | ControlCaja / **3014** | `server.js` |
 
 ⚠️ **node-windows registra los servicios con sufijo `.exe`** en el Name real. `Get-Service Dash-*` **no** los encuentra. Usar:
 ```powershell
@@ -114,11 +114,22 @@ cd <ruta-del-agente>
 
 El botón **Actualizar** del tablero (y el chequeo diario de las 01:00) lee `\\10.0.0.115\Cegid`
 **directo de la red** (`SAP_NETWORK_PATH`, read-only); ya no hace falta copiar archivos al
-inbox a mano. Verificado el 28/07/2026: el servicio, con su cuenta normal, lee la UNC sin
-problemas (log: `TESI desde red — traidos: [...] preservados: []`, ídem PUEBLO). Si alguna vez
-aparece `EACCES`/`EPERM` en `daemon\dashestadoresultado.out.log`, es permisos del share — hay
-que darle al servicio una cuenta con acceso a `Cegid`. Mientras tanto "Subir files" sigue
-funcionando igual (no depende de la red).
+inbox a mano. Mientras tanto "Subir files" sigue funcionando igual (no depende de la red).
+
+**Cuenta del servicio (10/08/2026):** tras instalar updates de Windows y reiniciar el server, el
+servicio (que corría como `LocalSystem`) empezó a dar `EPERM` contra `\\10.0.0.115\Cegid` — este
+server no está en un dominio (`WORKGROUP`), así que `LocalSystem` no tiene ninguna identidad de
+red válida para autenticarse contra otro equipo; algo (probablemente el propio reinicio) le hizo
+perder el acceso que sí tenía antes. Fix: se cambió el "Log On As" del servicio de `LocalSystem` a
+**`serverapp\Administrador`** (`sc.exe config dashestadoresultado.exe obj= "serverapp\Administrador"
+password= "..."`), que ya tiene guardada la credencial hacia `10.0.0.115` (`cmdkey`). Requirió
+además otorgarle a esa cuenta el derecho **"Iniciar sesión como servicio"** (`secpol.msc` →
+Directivas locales → Asignación de derechos de usuario) — sin eso el servicio no arranca
+(`Service Control Manager` evento 7041, "no se otorgó el tipo de inicio de sesión solicitado").
+Verificado con `/api/refresh`: trae las tres empresas desde la red sin error. Si alguna vez
+reaparece `EACCES`/`EPERM` en `daemon\dashestadoresultado.err.log` ("el servicio corre como
+SYSTEM"), es que el servicio volvió a quedar en `LocalSystem` — revisar `StartName` con
+`Get-CimInstance Win32_Service -Filter "Name='dashestadoresultado.exe'"`.
 
 **Empresas (31/07/2026): TESI, PUEBLO e INDO.** INDO se sumó leyendo `SAP_INDO_RESULT.TXT` de
 la misma ruta de red, con el mismo circuito que las otras dos (refresh, descarga byte a byte,
@@ -152,17 +163,14 @@ este entorno por falta de la extensión de Chrome.
 
 ---
 
-## ControlAcceso — portería, ingreso/egreso de vehículos (jul 2026)
+## ControlAcceso — ELIMINADO (10/08/2026)
 
-Servicio `dashcontrolacceso.exe`, puerto **3012** (solo loopback), carpeta `C:\apps\dashboards\ControlAcceso`.
-Registrar en el portal (Administración → Dashboards, puerto 3012) para acceder vía `/d/{id}/`.
+Era el tablero de portería/ingreso-egreso de vehículos, puerto 3012. Se determinó que corresponde
+a otra empresa y se eliminó: código sacado del repo, servicio `dashcontrolacceso.exe` detenido
+(`Stop-Service`, queda registrado pero parado — no se desinstaló con `sc.exe delete`). El puerto
+3012 queda libre.
 
-- Reemplaza la planilla `R RH O8-0 INGRESO Y EGRESO DE VEHÍCULOS.xlsx` (propios y no propios).
-- **Login propio de la app** (además de la sesión del portal): tabla `tbl_CtrlAcceso_Usuarios` en `db_Cegid` @ 10.0.0.115, roles **PORTERO** (carga) y **ADMIN** (KPIs + ABM de vehículos/conductores/usuarios). Seed inicial `admin/admin` si la tabla está vacía — **cambiar la contraseña**.
-- Tablas `tbl_CtrlAcceso_*` se crean solas al arrancar el servicio (idempotente).
-- Gotcha: el SQL de 10.0.0.115 no soporta `LEAD` → los KPIs usan `CROSS APPLY` (detalle en el CLAUDE.md del dashboard).
-
-## ControlCaja — matriz de Diferencias de Caja (04/08/2026)
+## ControlCaja — matriz de Diferencias de Caja (04/08/2026, persistencia agregada 10/08/2026)
 
 Servicio `dashcontrolcaja.exe`, puerto **3014** (solo loopback), carpeta `C:\apps\dashboards\ControlCaja`.
 Registrado en el portal el 06/08/2026 (Dashboard Id **16**); URL vía proxy `/d/16/`.
@@ -171,12 +179,15 @@ Registrado en el portal el 06/08/2026 (Dashboard Id **16**); URL vía proxy `/d/
   `4.2.002.01.050 - Diferencias de Caja`), por empresa (TESI/PUEBLO) y por mes, con drill-down al
   asiento del día.
 - Lee `\\10.0.0.115\Cegid\SAP_REPORTE_Z.TXT` y `SAP_PU_REPORTE_Z.TXT` **directo de la red,
-  read-only**: a diferencia de EstadoResultado no hay descarga, upload, `data-store` ni manifest —
-  la fuente de verdad es siempre el archivo de la red, con caché en memoria invalidada por
-  `mtime`+`size`.
-- Instalado el 04/08/2026: `npm run build` limpio, servicio arrancado y verificado escuchando en
-  `127.0.0.1:3014` (log de arranque con las tres líneas esperadas, incluida
-  `Fuente SAP (red, solo lectura)`).
+  read-only**.
+- **Persistencia local agregada el 10/08/2026** (`server/reporte-store.js`, `data-store/*.json`):
+  cada período leído de la red se guarda agrupado por mes. Si la red no responde, el tablero cae a
+  lo último guardado (`fuente: "store"` en la respuesta de la API, con aviso en la UI) en vez de
+  romperse con 503 — pensado tanto para un corte de red como para cuando SAP deje la ventana
+  rodante de ~3 meses y pase a mandar un archivo mensual (un mes que salga del archivo nuevo no
+  desaparece del tablero). Carga inicial sembrada a mano con `scripts/seed-desde-red.mjs`.
+- **Cuenta del servicio (10/08/2026):** mismo problema y mismo fix que EstadoResultado — ver esa
+  sección. `dashcontrolcaja.exe` corre como `serverapp\Administrador`.
 
 ## Particularidades / problemas resueltos (importante)
 
@@ -188,7 +199,15 @@ Registrado en el portal el 06/08/2026 (Dashboard Id **16**); URL vía proxy `/d/
 6. **Red / iframe — proxy inverso (jul 2026)**: el navegador ya NO va directo a `http://10.0.0.118:PUERTO`. El portal actúa de **proxy inverso** (YARP `IHttpForwarder`, ver `Services/DashboardProxy.cs`): el iframe usa `/d/{id}/` y toda petición pasa por la sesión + permisos del portal antes de reenviarse a `127.0.0.1:{puerto}` (o al `Host` registrado). Las rutas absolutas de las apps (`/api/...`, `/assets/...`) se rutean por la cookie `DashboardPortal.ActiveDash` (fallback). Limitación conocida: no usar dos dashboards con requests simultáneas en pestañas distintas (la cookie apunta al último abierto).
 7. **Acceso directo por puerto CERRADO vía binding a loopback (08/07/2026)**: el Firewall de Windows está **deshabilitado** en este server (los 3 perfiles), así que el cierre NO es por firewall: cada dashboard escucha en `127.0.0.1` (`app.listen(PORT, HOST)` con env `HOST`, default `127.0.0.1`). Verificado: `10.0.0.118:3001..3011` rechazan conexión, salvo **3003** que sigue en `0.0.0.0` porque los agentes remotos (sucursal/PassReset) reportan a `http://10.0.0.118:3003` (`CENTRAL_URL`; los agentes solo hacen push, el server nunca les inicia conexión). Diagnóstico local: `http://localhost:PUERTO` sigue funcionando.
 8. **Comisiones INDO movido de 3005 a 3011 (08/07/2026)**: el conector `QvOdbcConnectorPackage` (QlikView Gateway) escucha en `127.0.0.1:3005` (restport) y capturaba el loopback. Se movió el dashboard al **3011** (env `PORT` en `ComisionesINDO\server\daemon\dashcomisionesindo.xml`) y se quitó el workaround `Host=10.0.0.118` del registro del portal. No reutilizar 3005.
-7. **Login del portal aceptaba cualquier contraseña** (jul 2026): el SP real `SP_VALIDAR_INICIO_SESION_APPS` devuelve SIEMPRE una fila con una única columna **sin nombre** (`'ok'` o `'Acceso denegado!'`). La autodetección por nombre de columna no encontraba indicador y `TreatAnyRowAsSuccess=true` daba por válido cualquier login de usuario existente. **Fix**: `CorporateAuthService.cs` ahora usa el valor de la columna única como indicador (compara contra `SuccessValues`, que incluye `"ok"`), y `TreatAnyRowAsSuccess` pasó a `false` en `appsettings.json` (fuente y `C:\apps\portal`).
+9. **Cookie `ActiveDash` colisiona entre pestañas/caché (detectado 10/08/2026 con APCWeb)**: si el
+   usuario tiene dos tableros abiertos en pestañas distintas, o el navegador reutiliza una copia
+   cacheada de `/d/{id}/` sin volver a pedirla al servidor, la cookie global
+   `DashboardPortal.ActiveDash` puede quedar apuntando a otro dashboard. Las llamadas absolutas
+   (`/api/...`) del tablero equivocado dan 404 directo del portal (`DashboardProxy.cs` línea
+   ~81-85: sin cookie válida, 404 sin ni consultar el backend). No hay fix aplicado — mitigar
+   pidiendo al usuario que no tenga varios tableros abiertos a la vez y que haga Ctrl+F5 si ve un
+   404 en `/api/...` desde la consola del navegador.
+10. **Login del portal aceptaba cualquier contraseña** (jul 2026): el SP real `SP_VALIDAR_INICIO_SESION_APPS` devuelve SIEMPRE una fila con una única columna **sin nombre** (`'ok'` o `'Acceso denegado!'`). La autodetección por nombre de columna no encontraba indicador y `TreatAnyRowAsSuccess=true` daba por válido cualquier login de usuario existente. **Fix**: `CorporateAuthService.cs` ahora usa el valor de la columna única como indicador (compara contra `SuccessValues`, que incluye `"ok"`), y `TreatAnyRowAsSuccess` pasó a `false` en `appsettings.json` (fuente y `C:\apps\portal`).
 
 ## Cómo agregar / reinstalar un dashboard
 

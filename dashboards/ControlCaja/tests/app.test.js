@@ -11,12 +11,16 @@ const LINEAS = [
 ].join('\n')
 
 // Cache falsa: los tests de API no deben depender de la UNC.
-function cacheFake({ falla = null } = {}) {
+function cacheFake({ falla = null, fuente = 'red' } = {}) {
   return {
     obtener: () => {
       if (falla) return { ok: false, code: falla, message: 'la red no responde' }
       const { registros, descartadas } = parsearReporte(LINEAS)
-      return { ok: true, registros, descartadas, archivo: { mtimeMs: 1717430000000, size: 123 }, parseos: 1 }
+      return {
+        ok: true, registros, descartadas: descartadas.length,
+        archivo: { mtimeMs: 1717430000000, size: 123 }, parseos: 1,
+        fuente, avisoRed: fuente === 'store' ? 'Sin permiso para leer la ruta de red' : null
+      }
     }
   }
 }
@@ -46,6 +50,23 @@ test('GET /api/periodos devuelve meses, frescura y descartadas', async () => {
   assert.deepEqual(j.periodos, ['2026-06', '2026-07'])
   assert.equal(j.archivo.mtimeMs, 1717430000000)
   assert.equal(j.descartadas, 0)
+  assert.equal(j.fuente, 'red')
+  assert.equal(j.avisoRed, null)
+})
+
+test('con la red caida y datos ya guardados, la API degrada a fuente store en vez de 503', async () => {
+  const app = crearApp({ cache: cacheFake({ fuente: 'store' }), nombres: {}, dirname: process.cwd() })
+  const s = app.listen(0)
+  await new Promise(r => s.once('listening', r))
+  try {
+    const r = await fetch(`http://127.0.0.1:${s.address().port}/api/periodos?empresa=TESI`)
+    assert.equal(r.status, 200)
+    const j = await r.json()
+    assert.equal(j.fuente, 'store')
+    assert.match(j.avisoRed, /permiso/)
+  } finally {
+    s.close()
+  }
 })
 
 test('GET /api/matriz devuelve la matriz del periodo con nombres', async () => {

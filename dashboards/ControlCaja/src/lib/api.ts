@@ -1,11 +1,17 @@
 export type Empresa = { clave: string; label: string }
 export type ArchivoInfo = { mtimeMs: number; size: number }
 
+/** 'red': se acaba de leer de la UNC. 'store': la UNC no respondio y esto es
+ *  lo ultimo que se guardo localmente (ver server/reporte-store.js). */
+export type Fuente = 'red' | 'store'
+
 export type Periodos = {
   empresa: string
   periodos: string[]
   archivo: ArchivoInfo
   descartadas: number
+  fuente: Fuente
+  avisoRed: string | null
 }
 
 export type SucursalFila = {
@@ -20,6 +26,8 @@ export type Matriz = {
   periodo: string
   archivo: ArchivoInfo
   descartadas: number
+  fuente: Fuente
+  avisoRed: string | null
   dias: string[]
   sucursales: SucursalFila[]
   totalesPorDia: Record<string, number>

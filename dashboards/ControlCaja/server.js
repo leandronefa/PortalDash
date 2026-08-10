@@ -11,7 +11,7 @@ const PORT = parseInt(process.env.PORT || '3014')
 // Ruta de red READ-ONLY donde SAP deja los reportes Z. Este dashboard solo lee.
 const SAP_NETWORK_PATH = process.env.SAP_NETWORK_PATH || '\\\\10.0.0.115\\Cegid'
 
-const cache = crearCache({ networkPath: SAP_NETWORK_PATH })
+const cache = crearCache({ networkPath: SAP_NETWORK_PATH, dataDir: path.join(__dirname, 'data-store') })
 const nombres = cargarNombresSucursal(path.join(__dirname, 'data', 'sucursales.json'))
 
 const app = crearApp({ cache, nombres, dirname: __dirname })

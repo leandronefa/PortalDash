@@ -20,6 +20,11 @@ export default function App() {
   // importa verlo, porque puede ser que se haya descartado todo el archivo).
   const [periodosArchivo, setPeriodosArchivo] = useState<ArchivoInfo | undefined>(undefined)
   const [periodosDescartadas, setPeriodosDescartadas] = useState(0)
+  // Si la UNC no respondio, el backend sirve lo ultimo guardado localmente
+  // (server/reporte-store.js) en vez de romper el tablero. `avisoRed` trae el
+  // motivo ya redactado para mostrarlo como aviso, no como error bloqueante.
+  const [fuente, setFuente] = useState<'red' | 'store'>('red')
+  const [avisoRed, setAvisoRed] = useState<string | null>(null)
   // A que empresa corresponden los periodos ya cargados. Sin este dato, cambiar
   // de empresa dispara el efecto de la matriz en el mismo render con el periodo
   // de la empresa ANTERIOR (el efecto de periodos solo arranca un fetch async y
@@ -115,6 +120,8 @@ export default function App() {
       setPeriodos(r.periodos)
       setPeriodosArchivo(r.archivo)
       setPeriodosDescartadas(r.descartadas)
+      setFuente(r.fuente)
+      setAvisoRed(r.avisoRed)
       // Si el periodo elegido sigue existiendo en la empresa nueva se conserva;
       // si no, se cae al mas reciente. Cambiar de empresa no deberia sacarte del
       // mes que estabas mirando cuando ese mes existe en las dos.
@@ -192,6 +199,20 @@ export default function App() {
         cargando={cargando} onRefrescar={refrescar}
         dark={dark} onDark={setDark}
       />
+
+      {/* Degradado, no error: el tablero funciona, solo que con lo ultimo que
+          se pudo leer de la red. Se muestra aunque no haya `error` porque la
+          UNC caida con datos ya guardados no entra en la rama de abajo (esa es
+          solo para cuando no hay NADA que mostrar). */}
+      {!error && fuente === 'store' && (
+        <div className="rounded border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950 p-3 mb-4 text-sm flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
+          <span>
+            Mostrando datos guardados{periodosArchivo?.mtimeMs != null ? ` del ${new Date(periodosArchivo.mtimeMs).toLocaleString('es-AR')}` : ''}
+            {avisoRed ? ` — no se pudo leer la red ahora (${avisoRed})` : ' — no se pudo leer la red ahora'}.
+          </span>
+        </div>
+      )}
 
       {error && (
         // El mensaje viene del backend ya redactado (ENOENT / permisos / red).

@@ -1,4 +1,5 @@
 node_modules/
 dist/
 daemon/
+data-store/
 .env

@@ -46,7 +46,9 @@ export function crearApp({ cache, nombres = {}, dirname }) {
       empresa: d.clave,
       periodos: periodosDisponibles(d.registros),
       archivo: d.archivo,
-      descartadas: d.descartadas.length
+      descartadas: d.descartadas,
+      fuente: d.fuente,
+      avisoRed: d.avisoRed ?? null
     })
   })
 
@@ -60,7 +62,9 @@ export function crearApp({ cache, nombres = {}, dirname }) {
     res.json({
       empresa: d.clave,
       archivo: d.archivo,
-      descartadas: d.descartadas.length,
+      descartadas: d.descartadas,
+      fuente: d.fuente,
+      avisoRed: d.avisoRed ?? null,
       ...construirMatriz(d.registros, periodo, nombres)
     })
   })

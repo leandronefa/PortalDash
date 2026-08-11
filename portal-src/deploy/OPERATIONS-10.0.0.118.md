@@ -157,18 +157,21 @@ de uploads manuales — pese al nombre, ya no es "la fuente").
 
 Tests: `node --test "tests/*.test.js"` desde `C:\apps\dashboards\EstadoResultado` (37 tests, el
 glob va entre comillas). El usuario validó en el navegador (03/08/2026) la vista de INDO y sus
-números contra el Excel de contabilidad. Sigue pendiente el resto del checklist visual (las 3
-descargas simultáneas, punto ámbar de mes ajustado, consola sin errores) — no se puede hacer en
-este entorno por falta de la extensión de Chrome.
+números contra el Excel de contabilidad. Checklist visual completado por el usuario (11/08/2026):
+las 3 descargas simultáneas, el punto ámbar de mes ajustado y consola sin errores, todo OK. Sin
+pendientes.
 
 ---
 
-## ControlAcceso — ELIMINADO (10/08/2026)
+## ControlAcceso — ELIMINADO (10/08/2026, baja completa 11/08/2026)
 
 Era el tablero de portería/ingreso-egreso de vehículos, puerto 3012. Se determinó que corresponde
-a otra empresa y se eliminó: código sacado del repo, servicio `dashcontrolacceso.exe` detenido
-(`Stop-Service`, queda registrado pero parado — no se desinstaló con `sc.exe delete`). El puerto
-3012 queda libre.
+a otra empresa y se eliminó: código sacado del repo, servicio `dashcontrolacceso.exe` detenido el
+10/08/2026 (`Stop-Service`, quedó registrado pero parado). El 11/08/2026 se completó la baja:
+`sc.exe delete dashcontrolacceso.exe` y borrado de la carpeta `C:\apps\dashboards\ControlAcceso`
+(incluida la subcarpeta `daemon\`). Verificado sin residuos: sin servicio, sin carpeta, puerto
+3012 libre (nadie escucha). Puerto y nombre de servicio quedan disponibles para reutilizar si
+hiciera falta un dashboard nuevo.
 
 ## ControlCaja — matriz de Diferencias de Caja (04/08/2026, persistencia agregada 10/08/2026)
 
@@ -199,14 +202,16 @@ Registrado en el portal el 06/08/2026 (Dashboard Id **16**); URL vía proxy `/d/
 6. **Red / iframe — proxy inverso (jul 2026)**: el navegador ya NO va directo a `http://10.0.0.118:PUERTO`. El portal actúa de **proxy inverso** (YARP `IHttpForwarder`, ver `Services/DashboardProxy.cs`): el iframe usa `/d/{id}/` y toda petición pasa por la sesión + permisos del portal antes de reenviarse a `127.0.0.1:{puerto}` (o al `Host` registrado). Las rutas absolutas de las apps (`/api/...`, `/assets/...`) se rutean por la cookie `DashboardPortal.ActiveDash` (fallback). Limitación conocida: no usar dos dashboards con requests simultáneas en pestañas distintas (la cookie apunta al último abierto).
 7. **Acceso directo por puerto CERRADO vía binding a loopback (08/07/2026)**: el Firewall de Windows está **deshabilitado** en este server (los 3 perfiles), así que el cierre NO es por firewall: cada dashboard escucha en `127.0.0.1` (`app.listen(PORT, HOST)` con env `HOST`, default `127.0.0.1`). Verificado: `10.0.0.118:3001..3011` rechazan conexión, salvo **3003** que sigue en `0.0.0.0` porque los agentes remotos (sucursal/PassReset) reportan a `http://10.0.0.118:3003` (`CENTRAL_URL`; los agentes solo hacen push, el server nunca les inicia conexión). Diagnóstico local: `http://localhost:PUERTO` sigue funcionando.
 8. **Comisiones INDO movido de 3005 a 3011 (08/07/2026)**: el conector `QvOdbcConnectorPackage` (QlikView Gateway) escucha en `127.0.0.1:3005` (restport) y capturaba el loopback. Se movió el dashboard al **3011** (env `PORT` en `ComisionesINDO\server\daemon\dashcomisionesindo.xml`) y se quitó el workaround `Host=10.0.0.118` del registro del portal. No reutilizar 3005.
-9. **Cookie `ActiveDash` colisiona entre pestañas/caché (detectado 10/08/2026 con APCWeb)**: si el
+9. **Cookie `ActiveDash` colisiona entre pestañas/caché (detectado 10/08/2026 con APCWeb, resuelto por proceso 11/08/2026)**: si el
    usuario tiene dos tableros abiertos en pestañas distintas, o el navegador reutiliza una copia
    cacheada de `/d/{id}/` sin volver a pedirla al servidor, la cookie global
    `DashboardPortal.ActiveDash` puede quedar apuntando a otro dashboard. Las llamadas absolutas
    (`/api/...`) del tablero equivocado dan 404 directo del portal (`DashboardProxy.cs` línea
-   ~81-85: sin cookie válida, 404 sin ni consultar el backend). No hay fix aplicado — mitigar
-   pidiendo al usuario que no tenga varios tableros abiertos a la vez y que haga Ctrl+F5 si ve un
-   404 en `/api/...` desde la consola del navegador.
+   ~81-85: sin cookie válida, 404 sin ni consultar el backend). **No se tocó código**: el usuario
+   cambió su forma de trabajar y ahora abre los tableros de a uno (no varias pestañas simultáneas),
+   lo que evita la colisión en la práctica. Si en el futuro reaparece, la causa sigue siendo la
+   misma (cookie global sin scope por pestaña) y ahí sí ameritaría un fix real en
+   `DashboardProxy.cs`.
 10. **Login del portal aceptaba cualquier contraseña** (jul 2026): el SP real `SP_VALIDAR_INICIO_SESION_APPS` devuelve SIEMPRE una fila con una única columna **sin nombre** (`'ok'` o `'Acceso denegado!'`). La autodetección por nombre de columna no encontraba indicador y `TreatAnyRowAsSuccess=true` daba por válido cualquier login de usuario existente. **Fix**: `CorporateAuthService.cs` ahora usa el valor de la columna única como indicador (compara contra `SuccessValues`, que incluye `"ok"`), y `TreatAnyRowAsSuccess` pasó a `false` en `appsettings.json` (fuente y `C:\apps\portal`).
 
 ## Cómo agregar / reinstalar un dashboard

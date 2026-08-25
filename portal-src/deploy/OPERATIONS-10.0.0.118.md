@@ -215,6 +215,7 @@ Registrado en el portal el 06/08/2026 (Dashboard Id **16**); URL vía proxy `/d/
    misma (cookie global sin scope por pestaña) y ahí sí ameritaría un fix real en
    `DashboardProxy.cs`.
 10. **Login del portal aceptaba cualquier contraseña** (jul 2026): el SP real `SP_VALIDAR_INICIO_SESION_APPS` devuelve SIEMPRE una fila con una única columna **sin nombre** (`'ok'` o `'Acceso denegado!'`). La autodetección por nombre de columna no encontraba indicador y `TreatAnyRowAsSuccess=true` daba por válido cualquier login de usuario existente. **Fix**: `CorporateAuthService.cs` ahora usa el valor de la columna única como indicador (compara contra `SuccessValues`, que incluye `"ok"`), y `TreatAnyRowAsSuccess` pasó a `false` en `appsettings.json` (fuente y `C:\apps\portal`).
+11. **Catálogo del portal abre cada dashboard en pestaña nueva, sin frame (25/08/2026)**: las cards de `Index.cshtml` apuntaban a `/View?id={id}` (página con `viewer-bar`/topbar + iframe). Se pidió aprovechar toda la pantalla sin ese topbar. Ahora cada card enlaza directo a `/d/{id}/` con `target="_blank"` — la permisología ya la valida `DashboardProxy.HandleEntry` (mismo chequeo que hacía `View.cshtml.cs`), así que es seguro saltear la página intermedia. El log de auditoría `"OpenDashboard"` se movió a `HandleEntry` (solo cuando `rest` está vacío, para no spamear por cada asset/api). `Pages/View.cshtml` quedó sin referencias desde el landing pero no se borró.
 
 ## Cómo agregar / reinstalar un dashboard
 

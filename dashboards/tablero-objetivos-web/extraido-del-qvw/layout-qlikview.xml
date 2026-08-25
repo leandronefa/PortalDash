@@ -1,0 +1,5329 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<DocumentSummary>
+ <GenerateLogfile>false</GenerateLogfile>
+ <Title></Title>
+ <Author></Author>
+ <Sheet>
+  <SheetId>Document\SH23</SheetId>
+  <Title>Objetivos Sucursal</Title>
+ </Sheet>
+ <SheetObject>
+  <ObjectId>Document\CH242</ObjectId>
+  <Caption>Cant Tkt 1</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH243</ObjectId>
+  <Caption>Vta. 1 (Un)</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH244</ObjectId>
+  <Caption>Alcance: 3.1 %</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH245</ObjectId>
+  <Caption>Uni x Cli</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH246</ObjectId>
+  <Caption>Margen</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH247</ObjectId>
+  <Caption>Ventas DE</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH248</ObjectId>
+  <Caption>Unid DE</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH249</ObjectId>
+  <Caption>Oper DE</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH250</ObjectId>
+  <Caption>Tkt Prom DE</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH251</ObjectId>
+  <Caption>Vta. 1 ($)</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH252</ObjectId>
+  <Caption>Vta. 1 (Un)</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH253</ObjectId>
+  <Caption>Cant Tkt 1</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH254</ObjectId>
+  <Caption>Uni x Cli</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH255</ObjectId>
+  <Caption>Margen Tot</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH256</ObjectId>
+  <Caption>Sucursales</Caption>
+  <Type>Straight Table</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH261</ObjectId>
+  <Caption>Supervisores</Caption>
+  <Type>Straight Table</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH264</ObjectId>
+  <Caption>Evolución Diaria</Caption>
+  <Type>Straight Table</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH269</ObjectId>
+  <Caption>Margen Op</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH270</ObjectId>
+  <Caption>Margen Op</Caption>
+  <Type>Combo Chart</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CH271</ObjectId>
+  <Caption>Datos</Caption>
+  <Type>Straight Table</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CS59</ObjectId>
+  <Caption>Selecciones actuales</Caption>
+  <Type>Current Selections Box</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\TX344</ObjectId>
+  <Caption></Caption>
+  <Type>Text Object</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\TX345</ObjectId>
+  <Caption></Caption>
+  <Type>Text Object</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\TX346</ObjectId>
+  <Caption></Caption>
+  <Type>Text Object</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\TX347</ObjectId>
+  <Caption></Caption>
+  <Type>Text Object</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\SL146</ObjectId>
+  <Caption>Desde</Caption>
+  <Type>Calendar</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\SL147</ObjectId>
+  <Caption>Hasta</Caption>
+  <Type>Calendar</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CT01</ObjectId>
+  <Caption></Caption>
+  <Type>Container</Type>
+ </SheetObject>
+ <SheetObject>
+  <ObjectId>Document\CT02</ObjectId>
+  <Caption></Caption>
+  <Type>Container</Type>
+ </SheetObject>
+ <Expression>
+  <ObjectId>CH242</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Alcance: &apos; &amp; chr(10) &amp; chr(13) &amp;
+Num(
+(
+    (
+        Sum(
+            Aggr(
+                If(
+                    Max(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+                    = Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha)),
+
+                    // Caso 1: todos los días hábiles cubiertos → valor directo
+                    (
+                        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2 and cantidad &gt; 0, Idventa))
+                        -
+                        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2 and cantidad &lt; 0, Idventa))
+                    ),
+
+                    // Caso 2: parcial → proyectar por días hábiles
+                    (
+                        (
+                            Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2 and cantidad &gt; 0, Idventa))
+                            -
+                            Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2 and cantidad &lt; 0, Idventa))
+                        )
+                        /
+                        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+                        *
+                        Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+                    )
+                )
+            , Sucursal)
+        )
+        /
+        Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_OPERACIONES))
+    )
+) - 1,
+&apos;#,##0.0%&apos;
+)
+
+/*
+=&apos;Alcance: &apos; &amp; chr(10) &amp; chr(13)&amp; 
+NUM(
+(
+  if(
+    max(if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES)) 
+    = Count(DISTINCT if(fecha&gt;=F1 and fecha&lt;=F2, fecha)),
+
+    // numerador directo
+    (count(DISTINCT if(fecha&gt;=F1 and fecha&lt;=F2 and cantidad&gt;0, Idventa)) 
+     - count(DISTINCT if(fecha&gt;=F1 and fecha&lt;=F2 and cantidad&lt;0, Idventa))),
+
+    // numerador proyectado
+    (
+      (count(DISTINCT if(fecha&gt;=F1 and fecha&lt;=F2 and cantidad&gt;0, Idventa)) 
+       - count(DISTINCT if(fecha&gt;=F1 and fecha&lt;=F2 and cantidad&lt;0, Idventa)))
+      /
+      Count(DISTINCT if(fecha&gt;=F1 and fecha&lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+      *
+      sum(if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))
+    )
+  )
+  / sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES))
+)-1
+, &apos;#,##0.0%&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH242</ObjectId>
+  <Definition>if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, fecha)) ,
+
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))),
+
+
+Sum(
+    Aggr(
+        (
+            (
+                Count(DISTINCT If(fecha&gt;=F1 and fecha&lt;=F2 and cantidad&gt;0, Idventa))
+                -
+                Count(DISTINCT If(fecha&gt;=F1 and fecha&lt;=F2 and cantidad&lt;0, Idventa))
+            )
+            /
+            Count(DISTINCT If(fecha&gt;=F1 and fecha&lt;=F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB=Year(F2) and MESHAB=Month(F2), DIAS_HABILES))
+    , Sucursal)
+)
+
+/*
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa)))
+/ Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )*/
+
+
+
+)</Definition>
+  <Label>=&apos;Proyectado: &apos; &amp; chr(10) &amp; chr(13)&amp; num( if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, fecha)) ,
+
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))),
+
+
+Sum(
+    Aggr(
+        (
+            (
+                Count(DISTINCT If(fecha&gt;=F1 and fecha&lt;=F2 and cantidad&gt;0, Idventa))
+                -
+                Count(DISTINCT If(fecha&gt;=F1 and fecha&lt;=F2 and cantidad&lt;0, Idventa))
+            )
+            /
+            Count(DISTINCT If(fecha&gt;=F1 and fecha&lt;=F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB=Year(F2) and MESHAB=Month(F2), DIAS_HABILES))
+    , Sucursal)
+)), &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH242</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )</Definition>
+  <Label>=&apos;Obj. Mes: &apos; &amp; chr(10) &amp; chr(13)&amp; num(sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) ) , &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH242</ObjectId>
+  <Definition>count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))</Definition>
+  <Label>=&apos;Real: &apos; &amp; chr(10) &amp; chr(13)&amp; num( count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa)), &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH242</ObjectId>
+  <Definition>Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_OPERACIONES))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+
+/*sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) ) /  sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) ) * Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+</Definition>
+  <Label>=&apos;Obj. Acum: &apos; &amp; chr(10) &amp; chr(13)&amp; num(Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_OPERACIONES))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+  , &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH242</ObjectId>
+  <Definition>0</Definition>
+  <Label>= &apos;Diferencia: &apos; &amp; chr(10) &amp; chr(13) &amp;
+
+num(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+
+-
+
+
+
+Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_OPERACIONES))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+, &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH243</ObjectId>
+  <Definition>
+0</Definition>
+  <Label>=&apos;Alcance: &apos; &amp; chr(10) &amp; 
+NUM(
+(
+  if(
+    max(if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))
+    = Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, fecha)),
+    sum(if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;, cantidad)),
+    sum(if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;, cantidad))
+    / Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha))
+    * sum(if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))
+  )
+  / sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS))
+)-1
+, &apos;#,##0.0%&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH243</ObjectId>
+  <Definition>if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, fecha)) ,
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ),
+
+Sum(
+    Aggr(
+        (
+            Sum(If(fecha&gt;=F1 and fecha&lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;, cantidad))
+            /
+            Count(DISTINCT If(fecha&gt;=F1 and fecha&lt;=F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB=Year(F2) and MESHAB=Month(F2), DIAS_HABILES))
+    , Sucursal)
+)
+
+
+/*sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ) / Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )*/
+
+)
+
+/*
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ) / Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+*/</Definition>
+  <Label>=&apos;Proyectado: &apos; &amp; chr(10) &amp; chr(13)&amp;
+
+num(
+
+if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, fecha)) ,
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ),
+
+Sum(
+    Aggr(
+        (
+            Sum(If(fecha&gt;=F1 and fecha&lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;, cantidad))
+            /
+            Count(DISTINCT If(fecha&gt;=F1 and fecha&lt;=F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB=Year(F2) and MESHAB=Month(F2), DIAS_HABILES))
+    , Sucursal)
+))
+
+, &apos;#,##0&apos;)
+
+
+
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH243</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )</Definition>
+  <Label>=&apos;Obj. Mes: &apos; &amp; chr(10) &amp; chr(13)&amp; num(
+
+
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+
+, &apos;#,##0&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH243</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )</Definition>
+  <Label>=&apos;Real: &apos;  &amp; chr(10) &amp; chr(13)&amp; num(
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ) , &apos;#,##0&apos;)
+
+
+
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH243</ObjectId>
+  <Definition>Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_UNIDADES_VTAS))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+</Definition>
+  <Label>=&apos;Obj. Acum: &apos;
+
+&amp; chr(10) &amp; chr(13)&amp; num( Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_UNIDADES_VTAS))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+, &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH243</ObjectId>
+  <Definition>0</Definition>
+  <Label>= &apos;Diferencia: &apos; &amp;chr(10)&amp;chr(13) &amp; num(
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+
+-
+
+Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_UNIDADES_VTAS))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+
+
+ , &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH244</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Alcance: &apos; &amp; chr(10) &amp; chr(13) &amp;
+Num(
+(
+    (
+        Sum(
+            Aggr(
+                If(
+                    Max(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+                    = Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha)),
+
+                    // Caso 1: todos los días hábiles cubiertos → usar total directo
+                    Sum(
+                        If(
+                            fecha &gt;= F1 and fecha &lt;= F2,
+                            importe  +
+                            If(IVA = &apos;SI&apos;, iva_importe, 0) +
+                            If(RF = &apos;SI&apos;, If(IVA = &apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+                        )
+                    ),
+
+                    // Caso 2: parcial → proyectar según días hábiles
+                    (
+                        Sum(
+                            If(
+                                fecha &gt;= F1 and fecha &lt;= F2,
+                                importe  +
+                                If(IVA = &apos;SI&apos;, iva_importe, 0) +
+                                If(RF = &apos;SI&apos;, If(IVA = &apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+                            )
+                        )
+                        /
+                        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+                        *
+                        Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+                    )
+                )
+            , Sucursal)
+        )
+        /
+        Sum(
+            If(
+                ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                If(IVA = &apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+            )
+        )
+    )
+    * 100
+) - 100,
+&apos;##,##0.0&apos;
+) &amp; &apos; %&apos;
+
+/*
+&apos;Alcance: &apos; &amp; chr(10) &amp; chr(13)&amp; NUM((
+if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, fecha)) ,
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+ RECARGO_ENVIO + IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ),
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+ RECARGO_ENVIO + IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+/ Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) ))
+/ sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;,OBJ_VTAS_CON_IVA,OBJ_VTAS_SIN_IVA)) ) *100)-100
+, &apos;##,##0.0&apos;) &amp; &apos; %&apos;</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH244</ObjectId>
+  <Definition>
+
+if(
+  max(if(ANIOHAB = YEAR(F2) AND MESHAB = MONTH(F2), DIAS_HABILES)) = Count(DISTINCT if(fecha &gt;= F1 and fecha &lt;= F2, fecha)),
+
+  sum(
+    if(fecha &gt;= F1 and fecha &lt;= F2,
+       importe + 
+       if(IVA = &apos;SI&apos;, iva_importe, 0) +
+       if(RF = &apos;SI&apos;, if(IVA = &apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+    )
+  ),
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    fecha &gt;= F1 and fecha &lt;= F2,
+                    importe + 
+                    If(IVA = &apos;SI&apos;, iva_importe, 0) +
+                    If(RF = &apos;SI&apos;, If(IVA = &apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+                )
+            )
+            /
+            Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+    , Sucursal)
+)
+
+
+ /* sum(
+    if(fecha &gt;= F1 and fecha &lt;= F2,
+       importe  +
+       if(IVA = &apos;SI&apos;, iva_importe, 0) +
+       if(RF = &apos;SI&apos;, if(IVA = &apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+    )
+  )
+  / Count(DISTINCT if(fecha &gt;= F1 and fecha &lt;= F2, Sucursal &amp; &apos;_&apos; &amp; fecha))
+  * sum(if(ANIOHAB = YEAR(F2) AND MESHAB = MONTH(F2), DIAS_HABILES))*/
+)
+/*
+if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, fecha)) ,
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin)
+,0)) ),
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+/ Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+)
+
+/*
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+/ Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+*/</Definition>
+  <Label>= &apos;Proyectado: &apos;  &amp; chr(10) &amp; chr(13) &amp; Num(
+if(
+  max(if(ANIOHAB = YEAR(F2) AND MESHAB = MONTH(F2), DIAS_HABILES)) = Count(DISTINCT if(fecha &gt;= F1 and fecha &lt;= F2, fecha)),
+
+  sum(
+    if(fecha &gt;= F1 and fecha &lt;= F2,
+       importe + 
+       if(IVA = &apos;SI&apos;, iva_importe, 0) +
+       if(RF = &apos;SI&apos;, if(IVA = &apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+    )
+  ),
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    fecha &gt;= F1 and fecha &lt;= F2,
+                    importe + 
+                    If(IVA = &apos;SI&apos;, iva_importe, 0) +
+                    If(RF = &apos;SI&apos;, If(IVA = &apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+                )
+            )
+            /
+            Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+    , Sucursal)
+)
+
+
+ /* sum(
+    if(fecha &gt;= F1 and fecha &lt;= F2,
+       importe  +
+       if(IVA = &apos;SI&apos;, iva_importe, 0) +
+       if(RF = &apos;SI&apos;, if(IVA = &apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+    )
+  )
+  / Count(DISTINCT if(fecha &gt;= F1 and fecha &lt;= F2, Sucursal &amp; &apos;_&apos; &amp; fecha))
+  * sum(if(ANIOHAB = YEAR(F2) AND MESHAB = MONTH(F2), DIAS_HABILES))*/
+)
+, &apos;$ ##,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH244</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;,OBJ_VTAS_CON_IVA,OBJ_VTAS_SIN_IVA)) )</Definition>
+  <Label>= &apos;Obj. Mes: &apos; &amp; chr(10) &amp; chr(13)&amp; NUM(sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;,OBJ_VTAS_CON_IVA,OBJ_VTAS_SIN_IVA)) ) 
+, &apos;$ ##,##0&apos;) &amp;  CHR(13) &amp; CHR(10) &amp; 
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH244</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+ if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )</Definition>
+  <Label>=&apos;Real: &apos; &amp; chr(10) &amp; chr(13)&amp;
+
+num(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ), &apos;$ ##,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH244</ObjectId>
+  <Definition>Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = &apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+
+</Definition>
+  <Label>=&apos;Obj. Acum: &apos; &amp; chr(10) &amp; chr(13)&amp;
+num(
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = &apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+ , &apos;$ ##,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH244</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Diferencia: &apos; &amp; chr(10) &amp; chr(13)&amp;
+num(
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+ if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+
+-
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = &apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+
+
+ 
+ 
+ , &apos;$ ##,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH245</ObjectId>
+  <Definition>0</Definition>
+  <Label>= &apos;Alcance: &apos; &amp;chr(10)&amp;chr(13)&amp; num(
+
+
+((
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+))
+
+/
+
+
+
+(
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+/
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )
+
+
+)-1
+
+
+
+ , &apos;#,##0.00%&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH245</ObjectId>
+  <Definition>(
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+)</Definition>
+  <Label>=&apos;Real: &apos; &amp; chr(10) &amp; chr(13) &amp; num(
+
+
+(
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+)
+
+
+,&apos;#,##0.00&apos;)
+
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH245</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+/
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES) )
+/ count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_UNIDADES_CLIENTES&lt;&gt;0,Sucursal))
+
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES) )
+/ count(DISTINCT if(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES)&lt;&gt;0,Sucursal))
+
+*/
+</Definition>
+  <Label>=&apos;Obj. Acum: &apos;&amp; chr(10) &amp; chr(13) &amp; num(
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+/
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )
+,&apos;#,##0.00&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH245</ObjectId>
+  <Definition>0
+</Definition>
+  <Label>=&apos;Diferencia: &apos; &amp; chr(10) &amp; chr(13)&amp;
+NUM(
+(
+(
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+)
+
+)
+-
+(sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+/
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) ))
+
+
+, &apos;#,##0.00&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH246</ObjectId>
+  <Definition>0
+
+
+</Definition>
+  <Label>=&apos;Alcance &apos; &amp; chr(10) &amp; chr(13) &amp; NUM(
+
+
+(
+
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+
+)
+
+/
+
+(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT&lt;&gt;0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+) 
+
+
+-1
+
+
+, &apos;##,##0.00%&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH246</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+</Definition>
+  <Label>=&apos;Real: &apos;  &amp; chr(10) &amp; chr(13) &amp; num(
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+
+,&apos;#,##0.00%&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH246</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ 
+count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT&lt;&gt;0,Sucursal))
+
+
+</Definition>
+  <Label>=&apos;Objetivo: &apos; &amp; chr(10) &amp; chr(13) &amp; num(
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ 
+count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT&lt;&gt;0,Sucursal))
+
+
+,&apos;#,##0.00%&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH246</ObjectId>
+  <Definition>(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT&lt;&gt;0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+</Definition>
+  <Label>=&apos;Obj. Acum: &apos; &amp; chr(10) &amp; chr(13) &amp; num(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT&lt;&gt;0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+
+,&apos;#,##0.00%&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH246</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Diferencia &apos; &amp; chr(10) &amp; chr(13) &amp; NUM(
+
+(
+(
+
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+
+)
+
+-
+(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT&lt;&gt;0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+) 
+
+
+)*100
+
+, &apos;##,##0.00&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH247</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Alcance: &apos; &amp; chr(10) &amp; chr(13) &amp; NUM(
+( 
+ 
+ 
+ (
+ 
+ sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+ 
+ )
+ 
+ /
+ 
+ (
+ 
+ if(Day(F2) = Day(MonthEnd(F2)), 
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+
+
+  sum(
+  if(
+    fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+    importe +RECARGO_ENVIO+IVA_RECARGO_ENVIO
+      + if(IVA=&apos;SI&apos;, iva_importe, 0)
+      + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin+iva_recfin, recfin), 0)
+  )
+)
+
+  
+  ,
+  // Fórmula para cualquier otro caso
+  
+  
+  sum ( if(fecha&gt;=F1-(52*7) and fecha &lt;=F2-(52*7), importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+)
+
+ 
+ )
+ 
+ 
+ 
+  - 1)
+, &apos;#,##0.00%&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH247</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )</Definition>
+  <Label>=&apos;Real: &apos;
+&amp; chr(10) &amp; chr(13)&amp; num(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) 
+, &apos;$ ##,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH247</ObjectId>
+  <Definition>=if(Day(F2) = Day(MonthEnd(F2)), 
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+
+
+  sum(
+  if(
+    fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+    importe 
+      + if(IVA=&apos;SI&apos;, iva_importe, 0)
+      + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin+iva_recfin, recfin), 0)
+  )
+)
+
+  
+  ,
+  // Fórmula para cualquier otro caso
+  
+  
+  sum ( if(fecha&gt;=F1-(52*7) and fecha &lt;=F2-(52*7), importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+)
+
+/*sum(
+  if(
+    fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+    importe 
+      + if(IVA=&apos;SI&apos;, iva_importe, 0)
+      + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin+iva_recfin, recfin), 0)
+  )
+)
+
+
+
+ MES ABIERTO
+sum ( if(fecha&gt;=F1-(52*7) and fecha &lt;=F2-(52*7), importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )</Definition>
+  <Label>=&apos;Real DE &apos; &amp; chr(10) &amp; chr(13)&amp; num( 
+
+
+if(Day(F2) = Day(MonthEnd(F2)), 
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+
+
+  sum(
+  if(
+    fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+    importe 
+      + if(IVA=&apos;SI&apos;, iva_importe, 0)
+      + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin+iva_recfin, recfin), 0)
+  )
+)
+
+  
+  ,
+  // Fórmula para cualquier otro caso
+  
+  
+  sum ( if(fecha&gt;=F1-(52*7) and fecha &lt;=F2-(52*7), importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+)
+
+
+, &apos;$ ##,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH247</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Diferencia: &apos; &amp; chr(10) &amp; chr(13) &amp; NUM(
+
+ 
+ 
+ (
+ 
+ sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+ 
+ )
+ 
+ -
+ 
+ (
+ 
+ 
+ 
+if(Day(F2) = Day(MonthEnd(F2)), 
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+
+
+  sum(
+  if(
+    fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+    importe +RECARGO_ENVIO+IVA_RECARGO_ENVIO
+      + if(IVA=&apos;SI&apos;, iva_importe, 0)
+      + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin+iva_recfin, recfin), 0)
+  )
+)
+
+  
+  ,
+  // Fórmula para cualquier otro caso
+  
+  
+  sum ( if(fecha&gt;=F1-(52*7) and fecha &lt;=F2-(52*7), importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+)
+
+ 
+ 
+ 
+ )
+ 
+ 
+ 
+
+, &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH248</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Alcance: &apos; &amp;chr(10) &amp;chr(13)&amp; NUM(
+(
+
+
+
+(sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ))
+
+/
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  sum(
+    if(
+      fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and Artículo &lt;&gt; &apos;ZZZZZZZZ&apos;,
+      cantidad
+    )
+  ),
+  // Fórmula para cualquier otro caso
+  sum(
+    if(
+      fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and Artículo &lt;&gt; &apos;ZZZZZZZZ&apos;,
+      cantidad
+    )
+  )
+)
+
+
+
+)
+  
+  
+  
+  
+) - 1
+, &apos;#,##0.0%&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH248</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )</Definition>
+  <Label>=&apos;Real: &apos; &amp; chr(10) &amp; chr(13)&amp; num(sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ) , &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH248</ObjectId>
+  <Definition>if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  sum(
+    if(
+      fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and Artículo &lt;&gt; &apos;ZZZZZZZZ&apos;,
+      cantidad
+    )
+  ),
+  // Fórmula para cualquier otro caso
+  sum(
+    if(
+      fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and Artículo &lt;&gt; &apos;ZZZZZZZZ&apos;,
+      cantidad
+    )
+  )
+)
+
+</Definition>
+  <Label>=&apos;Real DE: &apos; &amp; chr(10) &amp; chr(13)&amp; num(
+
+  if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  sum(
+    if(
+      fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and Artículo &lt;&gt; &apos;ZZZZZZZZ&apos;,
+      cantidad
+    )
+  ),
+  // Fórmula para cualquier otro caso
+  sum(
+    if(
+      fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and Artículo &lt;&gt; &apos;ZZZZZZZZ&apos;,
+      cantidad
+    )
+  )
+)
+
+ , &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH248</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Diferencia: &apos; &amp;chr(10) &amp;chr(13)&amp; NUM(
+(
+
+
+
+(sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ))
+
+-
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  sum(
+    if(
+      fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and Artículo &lt;&gt; &apos;ZZZZZZZZ&apos;,
+      cantidad
+    )
+  ),
+  // Fórmula para cualquier otro caso
+  sum(
+    if(
+      fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and Artículo &lt;&gt; &apos;ZZZZZZZZ&apos;,
+      cantidad
+    )
+  )
+)
+
+
+)
+  
+  
+  
+  
+) 
+, &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH249</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Alcance: &apos; &amp;chr(10) &amp; chr(13)&amp; NUM(
+
+
+(
+
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+
+)
+
+/
+
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+  -
+  count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa)),
+  
+  // Fórmula para cualquier otro caso
+  count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+  -
+  count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+)
+
+
+
+)-1
+
+
+
+
+
+
+
+
+, &apos;##,##0.00%&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH249</ObjectId>
+  <Definition>count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))</Definition>
+  <Label>=&apos;Real: &apos; &amp; chr(10) &amp; chr(13)&amp; num( count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa)), &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH249</ObjectId>
+  <Definition>if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+  -
+  count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa)),
+  
+  // Fórmula para cualquier otro caso
+  count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+  -
+  count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+)
+
+</Definition>
+  <Label>=&apos;Real DE: &apos; &amp; chr(10) &amp; chr(13)&amp; num( 
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+  -
+  count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa)),
+  
+  // Fórmula para cualquier otro caso
+  count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+  -
+  count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+)
+
+, &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH249</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Diferencia: &apos; &amp;chr(10) &amp; chr(13)&amp; NUM(
+
+
+(
+
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+
+)
+
+-
+
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+  -
+  count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa)),
+  
+  // Fórmula para cualquier otro caso
+  count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+  -
+  count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+)
+
+
+)
+
+
+
+
+
+
+
+
+, &apos;##,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH250</ObjectId>
+  <Definition>0
+</Definition>
+  <Label>=&apos;Alcance: &apos; &amp; chr(10) &amp; chr(13) &amp; NUM(
+
+(
+
+
+(
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))) 
+
+)
+
+/
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+
+  // Caso primer día F1 y último día F2 del mes
+  if(
+    (
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa))
+    ) &gt; 0,
+    sum(
+      if(
+        fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+        importe 
+          + if(IVA=&apos;SI&apos;, iva_importe, 0)
+          + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa))
+    )
+  ),
+
+  // Caso cualquier otro F1/F2
+  if(
+    (
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+    ) &gt; 0,
+    sum(
+      if(
+        fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7),
+        importe 
+          + if(IVA=&apos;SI&apos;, iva_importe, 0)
+          + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+    )
+  )
+)
+)
+
+
+
+)-1
+
+
+, &apos;##,##0.00%&apos;) 
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH250</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))) </Definition>
+  <Label>=&apos;Real: &apos; &amp; chr(10) &amp; chr(13)&amp; num(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa)))  , &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH250</ObjectId>
+  <Definition>if(
+  Day(F2) = Day(MonthEnd(F2)),
+
+  // Caso primer día F1 y último día F2 del mes
+  if(
+    (
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa))
+    ) &gt; 0,
+    sum(
+      if(
+        fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+        importe 
+          + if(IVA=&apos;SI&apos;, iva_importe, 0)
+          + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa))
+    )
+  ),
+
+  // Caso cualquier otro F1/F2
+  if(
+    (
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+    ) &gt; 0,
+    sum(
+      if(
+        fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7),
+        importe 
+          + if(IVA=&apos;SI&apos;, iva_importe, 0)
+          + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+    )
+  )
+)
+
+/*
+if(
+  (
+    count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+    -
+    count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+  ) &gt; 0,
+
+  sum(
+    if(
+      fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7),
+      importe + RECARGO_ENVIO + IVA_RECARGO_ENVIO
+        + if(IVA=&apos;SI&apos;, iva_importe, 0)
+        + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+    )
+  )
+  /
+  (
+    count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+    -
+    count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+  )
+)
+
+/*if(
+  (
+    count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+    -
+    count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+  ) &gt; 0,
+
+  // numerador
+  sum(
+    if(
+      fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+      importe +RECARGO_ENVIO+IVA_RECARGO_ENVIO
+        + if(IVA=&apos;SI&apos;, iva_importe, 0)
+        + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+    )
+  )
+  /
+  (
+    count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+    -
+    count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+  )
+)
+
+
+
+</Definition>
+  <Label>=&apos;Real DE: &apos; &amp; chr(10) &amp; chr(13)&amp; num(
+
+
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+
+  // Caso primer día F1 y último día F2 del mes
+  if(
+    (
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa))
+    ) &gt; 0,
+    sum(
+      if(
+        fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+        importe 
+          + if(IVA=&apos;SI&apos;, iva_importe, 0)
+          + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa))
+    )
+  ),
+
+  // Caso cualquier otro F1/F2
+  if(
+    (
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+    ) &gt; 0,
+    sum(
+      if(
+        fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7),
+        importe 
+          + if(IVA=&apos;SI&apos;, iva_importe, 0)
+          + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+    )
+  )
+)
+
+
+
+
+ , &apos;#,##0&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH250</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Diferencia: &apos; &amp; chr(10) &amp; chr(13) &amp; NUM(
+
+(
+
+
+(
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))) 
+
+)
+
+-
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+
+  // Caso primer día F1 y último día F2 del mes
+  if(
+    (
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa))
+    ) &gt; 0,
+    sum(
+      if(
+        fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1),
+        importe 
+          + if(IVA=&apos;SI&apos;, iva_importe, 0)
+          + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= AddYears(F1,-1) and fecha &lt;= AddYears(F2,-1) and cantidad &lt; 0, Idventa))
+    )
+  ),
+
+  // Caso cualquier otro F1/F2
+  if(
+    (
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+    ) &gt; 0,
+    sum(
+      if(
+        fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7),
+        importe 
+          + if(IVA=&apos;SI&apos;, iva_importe, 0)
+          + if(RF=&apos;SI&apos;, if(IVA=&apos;SI&apos;, recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &gt; 0, Idventa))
+      -
+      count(DISTINCT if(fecha &gt;= F1-(52*7) and fecha &lt;= F2-(52*7) and cantidad &lt; 0, Idventa))
+    )
+  )
+)
+
+
+
+)
+
+
+
+)
+
+
+, &apos;##,##0&apos;) 
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH251</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )
+/ Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )</Definition>
+  <Label>Proyectado</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH251</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;,OBJ_VTAS_CON_IVA,OBJ_VTAS_SIN_IVA)) )</Definition>
+  <Label>Objetivo</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH251</ObjectId>
+  <PseudoDef>Prov/Suc</PseudoDef>
+  <Title></Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH252</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) ) / Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )</Definition>
+  <Label>Proyectado</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH252</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )</Definition>
+  <Label>Objetivo</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH252</ObjectId>
+  <PseudoDef>Prov/Suc</PseudoDef>
+  <Title></Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH253</ObjectId>
+  <Definition>(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa)))
+/ Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )</Definition>
+  <Label>Proyectado</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH253</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )</Definition>
+  <Label>Objetivo</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH253</ObjectId>
+  <PseudoDef>Prov/Suc</PseudoDef>
+  <Title></Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH254</ObjectId>
+  <Definition>(
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+)</Definition>
+  <Label>Real</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH254</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES) )
+/ count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_UNIDADES_CLIENTES&lt;&gt;0,Sucursal))
+
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES) )
+/ count(DISTINCT if(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES)&lt;&gt;0,Sucursal))
+
+*/
+</Definition>
+  <Label>Objetivo</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH254</ObjectId>
+  <PseudoDef>Prov/Suc</PseudoDef>
+  <Title></Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH255</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+</Definition>
+  <Label>Real</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH255</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ 
+count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT&lt;&gt;0,Sucursal))
+
+
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ count(DISTINCT if(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT)&lt;&gt;0,Sucursal))
+
+*/</Definition>
+  <Label>Objetivo</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH255</ObjectId>
+  <PseudoDef>Prov/Suc</PseudoDef>
+  <Title></Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH256</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )</Definition>
+  <Label>Ventas</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH256</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )</Definition>
+  <Label>Uni</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH256</ObjectId>
+  <Definition>count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))</Definition>
+  <Label>Oper</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH256</ObjectId>
+  <Definition>(
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+)</Definition>
+  <Label>Uni x Cli</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH256</ObjectId>
+  <Definition>(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO -RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)) ) ) *100
+
+/*sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+ * 100
+
+//(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2,if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep)) ) * 100)-100</Definition>
+  <Label>Mrg Op%</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH256</ObjectId>
+  <Definition>sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )</Definition>
+  <Label>D Hab</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH256</ObjectId>
+  <Definition> Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+</Definition>
+  <Label>D Ven</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH256</ObjectId>
+  <PseudoDef>Sucursal</PseudoDef>
+  <Title></Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH261</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )</Definition>
+  <Label>Ventas</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH261</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )</Definition>
+  <Label>Uni</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH261</ObjectId>
+  <Definition>count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))</Definition>
+  <Label>Oper</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH261</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))) </Definition>
+  <Label>Tkt Promedio</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH261</ObjectId>
+  <Definition>(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, CUADRO_IMPORTE-CUADRO_DESCUENTO+CUADRO_RECARGO_ENVIO+CUADRO_IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,CUADRO_IVA,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,CUADRO_RECARGO_FINANCIERO+CUADRO_IVA_RECARGO_FINANCIERO,CUADRO_RECARGO_FINANCIERO),0)) ))
+/
+(sum ( if(fecha&gt;=F1 and fecha &lt;=F2,CUADRO_CANT) ))</Definition>
+  <Label>Unid Prom</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH261</ObjectId>
+  <Definition>(
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+)</Definition>
+  <Label>Uni x Cli</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH261</ObjectId>
+  <Definition>(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO -RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)) ) ) *100
+
+/*sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+ * 100
+
+//(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / sum ( if(fecha&gt;=F1 and fecha &lt;=F2,if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep)) ) * 100)-100</Definition>
+  <Label>Mrg Op%</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH261</ObjectId>
+  <PseudoDef>Encargado</PseudoDef>
+  <Title>Supervisor</Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH264</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+iva_importe+recfin+iva_recfin) )
+/*sum ( if(fecha&gt;=F1 and fecha &lt;=F2, CUADRO_IMPORTE-CUADRO_DESCUENTO+CUADRO_RECARGO_ENVIO+CUADRO_IVA_RECARGO_ENVIO +CUADRO_IVA+CUADRO_RECARGO_FINANCIERO+CUADRO_IVA_RECARGO_FINANCIERO ))</Definition>
+  <Label>Ventas</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH264</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2,CUADRO_CANT) )</Definition>
+  <Label>Unidades</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH264</ObjectId>
+  <Definition>sum(if(fecha&gt;=F1 and fecha &lt;=F2 ,CUADRO_OPERACIONES))</Definition>
+  <Label>Operaciones</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH264</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))) </Definition>
+  <Label>Tkt Promedio</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH264</ObjectId>
+  <Definition>(sum ( if(fecha&gt;=F1 and fecha &lt;=F2, CUADRO_IMPORTE-CUADRO_DESCUENTO+CUADRO_RECARGO_ENVIO+CUADRO_IVA_RECARGO_ENVIO+if(IVA=&apos;SI&apos;,CUADRO_IVA,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,CUADRO_RECARGO_FINANCIERO+CUADRO_IVA_RECARGO_FINANCIERO,CUADRO_RECARGO_FINANCIERO),0)) ))
+/
+(sum ( if(fecha&gt;=F1 and fecha &lt;=F2,CUADRO_CANT) ))</Definition>
+  <Label>Unid Prom</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH264</ObjectId>
+  <Definition>sum(if(fecha&gt;=F1 and fecha &lt;=F2 ,CUADRO_CANT)) / sum(if(fecha&gt;=F1 and fecha &lt;=F2 ,CUADRO_OPERACIONES))</Definition>
+  <Label>Uni x Cli</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH264</ObjectId>
+  <PseudoDef>fecha</PseudoDef>
+  <Title>Día</Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH269</ObjectId>
+  <Definition>0
+
+
+</Definition>
+  <Label>=&apos;Alcance &apos; &amp; chr(10) &amp; chr(13) &amp; NUM(
+
+
+(
+
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+
+)
+
+/
+
+(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE&lt;&gt;0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+) 
+
+
+-1
+
+
+, &apos;##,##0.00%&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH269</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO -RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+</Definition>
+  <Label>=&apos;Real: &apos;  &amp; chr(10) &amp; chr(13) &amp; num(
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+
+,&apos;#,##0.00%&apos;)
+</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH269</ObjectId>
+  <Definition>(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE&lt;&gt;0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+</Definition>
+  <Label>=&apos;Obj. Acum: &apos; &amp; chr(10) &amp; chr(13) &amp; num(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE&lt;&gt;0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+
+,&apos;#,##0.00%&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH269</ObjectId>
+  <Definition>0</Definition>
+  <Label>=&apos;Diferencia &apos; &amp; chr(10) &amp; chr(13) &amp; NUM(
+
+(
+(
+
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+
+)
+
+-
+(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE&lt;&gt;0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA=&apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+) 
+
+
+)*100
+
+, &apos;##,##0.00&apos;)</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH270</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_ENVIO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)-if(IVA=&apos;SI&apos;,precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+descuento-RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_ENVIO-IVA_RECARGO_FINANCIERO+if(IVA=&apos;SI&apos;,iva_importe,0)) ) 
+</Definition>
+  <Label>Real</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH270</ObjectId>
+  <Definition>sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE) )
+/ 
+count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE&lt;&gt;0,Sucursal))
+
+
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ count(DISTINCT if(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT)&lt;&gt;0,Sucursal))
+
+*/</Definition>
+  <Label>Objetivo</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH270</ObjectId>
+  <PseudoDef>Prov/Suc</PseudoDef>
+  <Title></Title>
+ </Dimension>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) )</Definition>
+  <Label>Ventas</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )</Definition>
+  <Label>Uni</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))</Definition>
+  <Label>Oper</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))) </Definition>
+  <Label>Tkt Prom</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )</Definition>
+  <Label>Unid Prom</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>(
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2 and Artículo&lt;&gt;&apos;ZZZZZZZZ&apos;,cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&gt;0,Idventa) ) 
+- count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2 and cantidad&lt;0,Idventa))
+)</Definition>
+  <Label>Uni x Cli</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) </Definition>
+  <Label>Prom Dia</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = &apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+
+
+
+
+/
+
+ 
+Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) </Definition>
+  <Label>Prom Obj</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>(
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+
+)
+
+-
+
+(
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = &apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+
+
+
+
+/
+
+ 
+Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+
+)</Definition>
+  <Label>Dif Dia Prom</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>((
+
+sum ( if(fecha&gt;=F1 and fecha &lt;=F2, importe+if(IVA=&apos;SI&apos;,iva_importe,0)+if(RF=&apos;SI&apos;,if(IVA=&apos;SI&apos;,recfin+iva_recfin,recfin),0)) ) / 
+Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+
+)
+
+-
+
+(
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = &apos;SI&apos;, OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha &gt;= F1 and fecha &lt;= F2, fecha))
+    , Sucursal)
+)
+
+
+
+
+/
+
+ 
+Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+
+))
+
+*
+
+(
+
+ Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+
+)</Definition>
+  <Label>Dif Acum</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition>sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )</Definition>
+  <Label>D Hab</Label>
+  <Comment></Comment>
+ </Expression>
+ <Expression>
+  <ObjectId>CH271</ObjectId>
+  <Definition> Count(DISTINCT if(fecha&gt;=F1 and fecha &lt;=F2, Sucursal &amp; &apos;_&apos; &amp; fecha)) 
+</Definition>
+  <Label>D Ven</Label>
+  <Comment></Comment>
+ </Expression>
+ <Dimension>
+  <ObjectId>CH271</ObjectId>
+  <PseudoDef>Sucursal</PseudoDef>
+  <Title></Title>
+ </Dimension>
+ <TableDescription>
+   <InternalNumber>0</InternalNumber>
+   <Name>USUARIOS</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>117</NoOfRows>
+   <NoOfFields>2</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>1</InternalNumber>
+   <Name>QENCARGADOS</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>42</NoOfRows>
+   <NoOfFields>2</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>2</InternalNumber>
+   <Name>QVENTAS</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>5913998</NoOfRows>
+   <NoOfFields>30</NoOfFields>
+   <NoOfKeyFields>2</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>3</InternalNumber>
+   <Name>QSUCURSAL</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>47</NoOfRows>
+   <NoOfFields>7</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>4</InternalNumber>
+   <Name>QFECHAS</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>2036</NoOfRows>
+   <NoOfFields>2</NoOfFields>
+   <NoOfKeyFields>0</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>5</InternalNumber>
+   <Name>QSUCURSAL_WEB</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>47</NoOfRows>
+   <NoOfFields>2</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>6</InternalNumber>
+   <Name>QULTIMA_VENTA</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>1</NoOfRows>
+   <NoOfFields>1</NoOfFields>
+   <NoOfKeyFields>0</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>7</InternalNumber>
+   <Name>QULTIMO_STOCK</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>1</NoOfRows>
+   <NoOfFields>1</NoOfFields>
+   <NoOfKeyFields>0</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>8</InternalNumber>
+   <Name>QOBJETIVOS</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>4278</NoOfRows>
+   <NoOfFields>11</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>9</InternalNumber>
+   <Name>QDIAS_HABILES</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>4441</NoOfRows>
+   <NoOfFields>5</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>10</InternalNumber>
+   <Name>QCUADRO</Name>
+   <IsSystem>false</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>52051</NoOfRows>
+   <NoOfFields>12</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>11</InternalNumber>
+   <Name>$$SysTable 11</Name>
+   <IsSystem>true</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>87</NoOfRows>
+   <NoOfFields>3</NoOfFields>
+   <NoOfKeyFields>2</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>12</InternalNumber>
+   <Name>$$SysTable 12</Name>
+   <IsSystem>true</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>11</NoOfRows>
+   <NoOfFields>3</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <TableDescription>
+   <InternalNumber>13</InternalNumber>
+   <Name>$$SysTable 13</Name>
+   <IsSystem>true</IsSystem>
+   <IsSemantic>false</IsSemantic>
+   <IsLoose>false</IsLoose>
+   <NoOfRows>74</NoOfRows>
+   <NoOfFields>2</NoOfFields>
+   <NoOfKeyFields>1</NoOfKeyFields>
+   <Comment></Comment>
+   <IsLinked>false</IsLinked>
+ </TableDescription>
+ <FieldDescription>
+   <InternalNumber>0</InternalNumber>
+   <Name>$Field</Name>
+   <SrcTables></SrcTables>
+   <IsSystem>true</IsSystem>
+   <IsHidden>true</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>74</Cardinal>
+   <TotalCount>87</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$key</String>
+     <String>$hidden</String>
+     <String>$system</String>
+     <String>$text</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>1</InternalNumber>
+   <Name>$Table</Name>
+   <SrcTables></SrcTables>
+   <IsSystem>true</IsSystem>
+   <IsHidden>true</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>11</Cardinal>
+   <TotalCount>87</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$key</String>
+     <String>$hidden</String>
+     <String>$system</String>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>2</InternalNumber>
+   <Name>$Rows</Name>
+   <SrcTables></SrcTables>
+   <IsSystem>true</IsSystem>
+   <IsHidden>true</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>9</Cardinal>
+   <TotalCount>11</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$hidden</String>
+     <String>$system</String>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>3</InternalNumber>
+   <Name>$Fields</Name>
+   <SrcTables></SrcTables>
+   <IsSystem>true</IsSystem>
+   <IsHidden>true</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>7</Cardinal>
+   <TotalCount>11</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$hidden</String>
+     <String>$system</String>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>4</InternalNumber>
+   <Name>$FieldNo</Name>
+   <SrcTables></SrcTables>
+   <IsSystem>true</IsSystem>
+   <IsHidden>true</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>36</Cardinal>
+   <TotalCount>87</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$hidden</String>
+     <String>$system</String>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>5</InternalNumber>
+   <Name>$Info</Name>
+   <SrcTables></SrcTables>
+   <IsSystem>true</IsSystem>
+   <IsHidden>true</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>1</Cardinal>
+   <TotalCount>74</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$hidden</String>
+     <String>$system</String>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>6</InternalNumber>
+   <Name>NOMUSUARIO</Name>
+   <SrcTables>
+     <String>USUARIOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>40</Cardinal>
+   <TotalCount>117</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>7</InternalNumber>
+   <Name>Codsuc</Name>
+   <SrcTables>
+     <String>USUARIOS</String>
+     <String>QENCARGADOS</String>
+     <String>QVENTAS</String>
+     <String>QSUCURSAL</String>
+     <String>QOBJETIVOS</String>
+     <String>QDIAS_HABILES</String>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>true</DistinctOnly>
+   <Cardinal>50</Cardinal>
+   <TotalCount>0</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$key</String>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>8</InternalNumber>
+   <Name>Encargado</Name>
+   <SrcTables>
+     <String>QENCARGADOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>6</Cardinal>
+   <TotalCount>42</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>9</InternalNumber>
+   <Name>Idventa</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>3513560</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>10</InternalNumber>
+   <Name>Empresa</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>true</DistinctOnly>
+   <Cardinal>2</Cardinal>
+   <TotalCount>0</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+     <String>$keypart</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>11</InternalNumber>
+   <Name>Anio</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>true</DistinctOnly>
+   <Cardinal>6</Cardinal>
+   <TotalCount>0</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$keypart</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>12</InternalNumber>
+   <Name>Mes</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>true</DistinctOnly>
+   <Cardinal>12</Cardinal>
+   <TotalCount>0</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$keypart</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>13</InternalNumber>
+   <Name>Dia</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>true</DistinctOnly>
+   <Cardinal>31</Cardinal>
+   <TotalCount>0</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$keypart</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>14</InternalNumber>
+   <Name>Fecha</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>true</DistinctOnly>
+   <Cardinal>1744</Cardinal>
+   <TotalCount>0</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$keypart</String>
+     <String>$timestamp</String>
+     <String>$date</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>15</InternalNumber>
+   <Name>fecha</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>true</DistinctOnly>
+   <Cardinal>1744</Cardinal>
+   <TotalCount>0</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$keypart</String>
+     <String>$timestamp</String>
+     <String>$date</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>16</InternalNumber>
+   <Name>Codsuc_WEB</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+     <String>QSUCURSAL_WEB</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>true</DistinctOnly>
+   <Cardinal>49</Cardinal>
+   <TotalCount>0</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$key</String>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>17</InternalNumber>
+   <Name>Artículo</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>35325</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags></Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>18</InternalNumber>
+   <Name>Descripción</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>26750</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>19</InternalNumber>
+   <Name>Artprove</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>33350</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags></Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>20</InternalNumber>
+   <Name>Color</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>4995</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags></Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>21</InternalNumber>
+   <Name>Talle</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>196</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>22</InternalNumber>
+   <Name>Proveedor</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>271</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>23</InternalNumber>
+   <Name>Departamento</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>24</InternalNumber>
+   <Name>Sección</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>3</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>25</InternalNumber>
+   <Name>Género</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>5</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>26</InternalNumber>
+   <Name>Familia</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>30</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>27</InternalNumber>
+   <Name>Línea</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>99</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>28</InternalNumber>
+   <Name>Marca</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>329</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags></Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>29</InternalNumber>
+   <Name>PrimeraMarca</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>30</InternalNumber>
+   <Name>Vendedor</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>740</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>31</InternalNumber>
+   <Name>Cliente</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>116084</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags></Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>32</InternalNumber>
+   <Name>cantidad</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>37</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>33</InternalNumber>
+   <Name>importe</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>432859</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>34</InternalNumber>
+   <Name>iva_importe</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>226121</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>35</InternalNumber>
+   <Name>descuento</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>9670</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>36</InternalNumber>
+   <Name>precio_rep</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>68663</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>37</InternalNumber>
+   <Name>iva_precio_rep</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>66217</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>38</InternalNumber>
+   <Name>recfin</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>1</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>39</InternalNumber>
+   <Name>iva_recfin</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>1</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>40</InternalNumber>
+   <Name>RECARGO_ENVIO</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>7710</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>41</InternalNumber>
+   <Name>IVA_RECARGO_ENVIO</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>7151</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>42</InternalNumber>
+   <Name>RECARGO_FINANCIERO</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>235347</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>43</InternalNumber>
+   <Name>IVA_RECARGO_FINANCIERO</Name>
+   <SrcTables>
+     <String>QVENTAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>79965</Cardinal>
+   <TotalCount>5913998</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>44</InternalNumber>
+   <Name>nomSucursal</Name>
+   <SrcTables>
+     <String>QSUCURSAL</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>47</Cardinal>
+   <TotalCount>47</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>45</InternalNumber>
+   <Name>Sucursal</Name>
+   <SrcTables>
+     <String>QSUCURSAL</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>47</Cardinal>
+   <TotalCount>47</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>46</InternalNumber>
+   <Name>EMPRESASUC</Name>
+   <SrcTables>
+     <String>QSUCURSAL</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2</Cardinal>
+   <TotalCount>47</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>47</InternalNumber>
+   <Name>CP</Name>
+   <SrcTables>
+     <String>QSUCURSAL</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>11</Cardinal>
+   <TotalCount>47</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>48</InternalNumber>
+   <Name>Provincia</Name>
+   <SrcTables>
+     <String>QSUCURSAL</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>8</Cardinal>
+   <TotalCount>47</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>49</InternalNumber>
+   <Name>Domicilio</Name>
+   <SrcTables>
+     <String>QSUCURSAL</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>34</Cardinal>
+   <TotalCount>47</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>50</InternalNumber>
+   <Name>Fechastock</Name>
+   <SrcTables>
+     <String>QFECHAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>283</Cardinal>
+   <TotalCount>2036</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$timestamp</String>
+     <String>$date</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>51</InternalNumber>
+   <Name>FECHAPARAM</Name>
+   <SrcTables>
+     <String>QFECHAS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2036</Cardinal>
+   <TotalCount>2036</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$timestamp</String>
+     <String>$date</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>52</InternalNumber>
+   <Name>Sucursal_WEB</Name>
+   <SrcTables>
+     <String>QSUCURSAL_WEB</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>47</Cardinal>
+   <TotalCount>47</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>false</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$text</String>
+     <String>$ascii</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>53</InternalNumber>
+   <Name>ULTIMA_VENTA</Name>
+   <SrcTables>
+     <String>QULTIMA_VENTA</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>1</Cardinal>
+   <TotalCount>1</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$timestamp</String>
+     <String>$date</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>54</InternalNumber>
+   <Name>ULTIMO_STOCK</Name>
+   <SrcTables>
+     <String>QULTIMO_STOCK</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>1</Cardinal>
+   <TotalCount>1</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+     <String>$timestamp</String>
+     <String>$date</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>55</InternalNumber>
+   <Name>IDOBJ</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>131</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>56</InternalNumber>
+   <Name>ANIOOBJ</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>12</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>57</InternalNumber>
+   <Name>MESOBJ</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>12</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>58</InternalNumber>
+   <Name>OBJ_VTAS_SIN_IVA</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2324</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>59</InternalNumber>
+   <Name>OBJ_VTAS_CON_IVA</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2309</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>60</InternalNumber>
+   <Name>OBJ_UNIDADES_VTAS</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2920</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>61</InternalNumber>
+   <Name>OBJ_OPERACIONES</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2399</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>62</InternalNumber>
+   <Name>OBJ_UNIDADES_CLIENTES</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>44</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>63</InternalNumber>
+   <Name>OBJ_MARGEN_TOT</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>67</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>64</InternalNumber>
+   <Name>OBJ_MARGEN_OPE</Name>
+   <SrcTables>
+     <String>QOBJETIVOS</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>61</Cardinal>
+   <TotalCount>4278</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>65</InternalNumber>
+   <Name>IDHAB</Name>
+   <SrcTables>
+     <String>QDIAS_HABILES</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>141</Cardinal>
+   <TotalCount>4441</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>66</InternalNumber>
+   <Name>ANIOHAB</Name>
+   <SrcTables>
+     <String>QDIAS_HABILES</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>13</Cardinal>
+   <TotalCount>4441</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>67</InternalNumber>
+   <Name>MESHAB</Name>
+   <SrcTables>
+     <String>QDIAS_HABILES</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>12</Cardinal>
+   <TotalCount>4441</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>68</InternalNumber>
+   <Name>DIAS_HABILES</Name>
+   <SrcTables>
+     <String>QDIAS_HABILES</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>23</Cardinal>
+   <TotalCount>4441</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>69</InternalNumber>
+   <Name>CUADRO_CANT</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>544</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>70</InternalNumber>
+   <Name>CUADRO_IMPORTE</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>51983</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>71</InternalNumber>
+   <Name>CUADRO_IVA</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>51965</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>72</InternalNumber>
+   <Name>CUADRO_DESCUENTO</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>25875</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>73</InternalNumber>
+   <Name>CUADRO_COSTOVEN</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>52005</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>74</InternalNumber>
+   <Name>CUADRO_IVACOSTOVEN</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>51981</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>75</InternalNumber>
+   <Name>CUADRO_RECARGO_ENVIO</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2412</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>76</InternalNumber>
+   <Name>CUADRO_IVA_RECARGO_ENVIO</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>2414</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>77</InternalNumber>
+   <Name>CUADRO_RECARGO_FINANCIERO</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>47193</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>78</InternalNumber>
+   <Name>CUADRO_IVA_RECARGO_FINANCIERO</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>46782</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+   </Tags>
+ </FieldDescription>
+ <FieldDescription>
+   <InternalNumber>79</InternalNumber>
+   <Name>CUADRO_OPERACIONES</Name>
+   <SrcTables>
+     <String>QCUADRO</String>
+   </SrcTables>
+   <IsSystem>false</IsSystem>
+   <IsHidden>false</IsHidden>
+   <IsSemantic>false</IsSemantic>
+   <DistinctOnly>false</DistinctOnly>
+   <Cardinal>348</Cardinal>
+   <TotalCount>52051</TotalCount>
+   <PossibleCount_OBSOLETE>-1</PossibleCount_OBSOLETE>
+   <HasInfo_OBSOLETE>false</HasInfo_OBSOLETE>
+   <IsLocked>false</IsLocked>
+   <AlwaysOneSelected>false</AlwaysOneSelected>
+   <AndMode>false</AndMode>
+   <IsNumeric>true</IsNumeric>
+   <Comment></Comment>
+   <Tags>
+     <String>$numeric</String>
+     <String>$integer</String>
+   </Tags>
+ </FieldDescription>
+ <GroupDescription>
+   <Name>Sección/Familia/Línea</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Sección</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Familia</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Línea</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Proveedor/Marca</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Proveedor</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Marca</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Empresa/Sucursal</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Empresa</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Codsuc</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Sec/Fam/Lin/Art</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Sección</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Familia</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Línea</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Artículo</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Gen/Lin/Fam/Art</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Género</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Línea</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Familia</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Artículo</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Emp/Suc</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Empresa</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>nomSucursal</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Sec/Fam</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Sección</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Familia</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Fec/Prov</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>UltFechaIng</Name>
+       <Type>NOT_PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Proveedor</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Prov/Suc</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Provincia</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>nomSucursal</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Dia_Mes</Name>
+   <IsCyclic>true</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Dia</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Mes</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <GroupDescription>
+   <Name>Suc/SucW</Name>
+   <IsCyclic>false</IsCyclic>
+   <FieldDefs>
+     <FieldDefEx>
+       <Name>Sucursal</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+     <FieldDefEx>
+       <Name>Sucursal_WEB</Name>
+       <Type>PRESENT</Type>
+     </FieldDefEx>
+   </FieldDefs>
+   <SortCriteria></SortCriteria>
+ </GroupDescription>
+ <VariableDescription>
+  <Name>ErrorMode</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>StripComments</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>OpenUrlTimeout</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>ScriptError</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>ScriptErrorCount</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>ScriptErrorList</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>ThousandSep</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>,</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>DecimalSep</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>.</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>MoneyThousandSep</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>,</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>MoneyDecimalSep</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>.</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>MoneyFormat</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>$ #.##0,00;$-#.##0,00</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>TimeFormat</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>hh:mm:ss TT</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>DateFormat</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>DD/MM/YYYY</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>TimestampFormat</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>DD/MM/YYYY hh:mm:ss[.fff] TT</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>FirstWeekDay</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>BrokenWeeks</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>ReferenceDay</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>4</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>FirstMonthOfYear</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>CollationLocale</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>es-ES</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>MonthNames</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>ene;feb;mar;abr;may;jun;jul;ago;sep;oct;nov;dic</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>LongMonthNames</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>enero;febrero;marzo;abril;mayo;junio;julio;agosto;septiembre;octubre;noviembre;diciembre</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>DayNames</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>lun;mar;mié;jue;vie;sáb;dom</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>LongDayNames</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>true</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>lunes;martes;miércoles;jueves;viernes;sábado;domingo</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>VRanking</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>F1</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>01/12/2025</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>F2</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>46020</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>F3</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>NULL</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>F4</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>NULL</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>TIPOVAL</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>IVA</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>SI</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>RF</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>&apos;NO&apos;</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>INFLACION</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>INFLACIONTXT</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>INFLACIONDIF</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>PORCENTUAL</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>80</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>VTAPESOS</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>UTILIDAD</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>MARGEN</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>STOCKUNI</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>STOCKPESOS</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>VTAUNI1</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>VTAUNI2</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>VTAPESOS1</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>VTAPESOS2</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>UTILIDAD1</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>UTILIDAD2</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>MARGEN1</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>MARGEN2</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>STOCKUNI1</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>STOCKUNI2</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>STOCKPESOS1</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>STOCKPESOS2</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>VTAUNI</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>SAT</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>PORCVTAUNI</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>PORCVTAPESOS</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>PORCUTILIDAD</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>RRHH</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue></RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>VALUASTOCK</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>COSTO</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>MODOSTOCK</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>FISICO</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>TPROM1</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>1</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>TPROM2</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>0</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>ULTIMOS</Name>
+  <IsConfig>false</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>Ultima Venta 29/12/2025 - Stock al 29/12/2025</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>CD</Name>
+  <IsConfig>true</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>D:</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>QvPath</Name>
+  <IsConfig>true</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>C:\Program Files\QlikView\Distribution Service</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>QvRoot</Name>
+  <IsConfig>true</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>C:</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>QvWorkPath</Name>
+  <IsConfig>true</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>C:\QLIKVIEW\SUCURSALES\VISUALIZACION\QVW</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>QvWorkRoot</Name>
+  <IsConfig>true</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>C:</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>WinPath</Name>
+  <IsConfig>true</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>C:\Windows</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+ <VariableDescription>
+  <Name>WinRoot</Name>
+  <IsConfig>true</IsConfig>
+  <IsReserved>false</IsReserved>
+  <ShownValue></ShownValue>
+  <RawValue>C:</RawValue>
+  <Comment></Comment>
+ </VariableDescription>
+</DocumentSummary>

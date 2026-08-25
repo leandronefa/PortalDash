@@ -42,7 +42,7 @@ Desde jul 2026 el portal es **proxy inverso** (YARP): los usuarios entran por `h
 | `dashestadoresultado.exe` | 3008 | `C:\apps\dashboards\EstadoResultado` |
 | `dashpassreset.exe` | 3009 | `C:\apps\dashboards\PassReset` |
 | `dashmeli.exe` | 3010 | `C:\apps\dashboards\DashMeLi` |
-| `dashcontrolacceso.exe` | 3012 | `C:\apps\dashboards\ControlAcceso` |
+| `dashtableroobjetivos.exe` | 3012 | `C:\apps\dashboards\tablero-objetivos-web\server` |
 | `dashapcweb` | 3013 | `C:\apps\dashboards\APCWeb` |
 | `dashcontrolcaja.exe` | 3014 | `C:\apps\dashboards\ControlCaja` |
 

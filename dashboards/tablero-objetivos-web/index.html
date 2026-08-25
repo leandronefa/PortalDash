@@ -1,0 +1,1951 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*{margin:0}img,svg{display:block;max-width:100%}</style>
+</head>
+<body>
+<title>Objetivos Sucursal</title>
+
+<style>
+/* ─────────────────────────────  tokens  ───────────────────────────── */
+:root{
+  --qv-page:#E4E8EC; --qv-panel:#FFFFFF; --qv-head:#EEF1F5; --qv-head-2:#E3E8ED;
+  --qv-border:#B7C0C9; --qv-border-soft:#D3D9DF;
+  --ink:#16202A; --ink-2:#485765; --ink-3:#7C8996;
+  --purple:#6F74AC; --purple-ink:#FFFFFF;
+  --accent:#2E6486; --accent-soft:#DCE8F0;
+  --teal:#2F7D6C; --orange:#E08A2E; --yellow:#D9CC3B; --green2:#3F8F3B;
+  --sem-good:#26723F; --sem-good-ink:#F3FBF5;
+  --sem-warn:#F0C23A; --sem-warn-ink:#3A2E00;
+  --sem-bad:#BC352C;  --sem-bad-ink:#FBEDEC;
+  --shadow:0 1px 2px rgba(15,23,31,.08), 0 4px 14px -8px rgba(15,23,31,.25);
+  --radius:3px;
+
+  --font-ui:"Segoe UI",Tahoma,Arial,sans-serif;
+  --font-mono:Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --qv-page:#12171C; --qv-panel:#1B222A; --qv-head:#222B34; --qv-head-2:#1D252D;
+    --qv-border:#3A4552; --qv-border-soft:#2B343D;
+    --ink:#E7EEF4; --ink-2:#A7B4C0; --ink-3:#78868F;
+    --purple:#7276AE; --purple-ink:#0E1116;
+    --accent:#79B3D6; --accent-soft:#173042;
+    --teal:#3F9C87; --orange:#E5A253; --yellow:#D9CC55; --green2:#5AA854;
+    --sem-good:#2E8F53; --sem-good-ink:#0B1F12;
+    --sem-warn:#D8AE3E; --sem-warn-ink:#231C05;
+    --sem-bad:#B24A41;  --sem-bad-ink:#210B09;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 4px 14px -8px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --qv-page:#12171C; --qv-panel:#1B222A; --qv-head:#222B34; --qv-head-2:#1D252D;
+  --qv-border:#3A4552; --qv-border-soft:#2B343D;
+  --ink:#E7EEF4; --ink-2:#A7B4C0; --ink-3:#78868F;
+  --purple:#7276AE; --purple-ink:#0E1116;
+  --accent:#79B3D6; --accent-soft:#173042;
+  --teal:#3F9C87; --orange:#E5A253; --yellow:#D9CC55; --green2:#5AA854;
+  --sem-good:#2E8F53; --sem-good-ink:#0B1F12;
+  --sem-warn:#D8AE3E; --sem-warn-ink:#231C05;
+  --sem-bad:#B24A41;  --sem-bad-ink:#210B09;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 4px 14px -8px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--qv-page); color:var(--ink);
+  font-family:var(--font-ui); font-size:12.5px; line-height:1.4;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0}
+
+/* ─────────────────────────────  tabs de hoja  ─────────────────────── */
+.qv-tabbar{
+  display:flex; gap:2px; background:var(--qv-page);
+  padding:8px 10px 0; border-bottom:1px solid var(--qv-border);
+}
+.qv-tab{
+  font-family:var(--font-ui); font-size:12.5px; font-weight:600; color:var(--ink-2);
+  background:var(--qv-head-2); border:1px solid var(--qv-border); border-bottom:0;
+  border-radius:4px 4px 0 0; padding:7px 16px; cursor:default;
+}
+.qv-tab.active{background:var(--qv-panel); color:var(--ink); box-shadow:0 -1px 0 var(--accent) inset}
+.qv-tab[disabled]{opacity:.6; cursor:not-allowed}
+
+/* ─────────────────────────────  fila superior  ────────────────────── */
+/* Período + Selecciones actuales, apiladas y fijas a la izquierda: no
+   scrollean con la página (sticky respecto del tabbar, que sí es parte del
+   flujo normal). El resto (qv-content) se corre a la derecha en la misma
+   fila flex — el sidebar de KPIs adentro sigue exactamente como estaba. */
+.qv-shell{display:flex; align-items:flex-start; gap:0}
+.qv-topbar{
+  display:flex; flex-direction:column; gap:10px; flex:0 0 340px; width:340px;
+  align-self:flex-start; position:sticky; top:0; height:100vh; overflow-y:auto;
+  padding:10px; background:var(--qv-page); border-right:1px solid var(--qv-border);
+}
+.qv-content{flex:1; min-width:0; display:flex; flex-direction:column}
+
+.panel{
+  background:var(--qv-panel); border:1px solid var(--qv-border); border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.panel-head{
+  display:flex; align-items:center; gap:7px;
+  background:linear-gradient(var(--qv-head),var(--qv-head-2));
+  border-bottom:1px solid var(--qv-border);
+  padding:5px 8px; font-size:12px; font-weight:700; color:var(--ink);
+}
+.panel-head .ico{
+  width:9px; height:9px; border-radius:2px; background:var(--accent); flex:0 0 auto;
+}
+.panel-head .winctl{margin-left:auto; display:flex; gap:5px; opacity:.55}
+.panel-head .winctl i{width:9px; height:9px; border:1px solid var(--ink-3); border-radius:1px; display:block}
+.panel-head.purple{background:var(--purple); color:var(--purple-ink); border-color:var(--purple)}
+.panel-head.purple .ico{background:var(--purple-ink)}
+.panel-body{padding:9px 10px}
+
+.qv-period{flex:0 0 auto; width:100%; display:flex; flex-direction:column}
+.qv-period .panel-body{display:flex; flex-direction:column; gap:8px}
+.periodo-lbl{font-size:11px; font-weight:700; color:var(--ink-2)}
+.qv-fields{display:flex; gap:8px}
+.qv-fields label{display:flex; flex-direction:column; gap:3px; flex:1; min-width:0}
+.qv-fields span{font-size:10.5px; font-weight:700; color:var(--ink-2)}
+input[type=date], select{
+  font-family:var(--font-ui); font-size:12px; color:var(--ink);
+  background:var(--qv-panel); border:1px solid var(--qv-border);
+  border-radius:2px; padding:4px 6px; min-height:26px; width:100%;
+}
+
+/* Se estira para ocupar el resto de la columna fija (que mide 100vh) — así
+   llega lo más abajo posible, cerca de donde quedaría el pie de la página. */
+.qv-selections{flex:1 1 auto; min-height:0; width:100%; display:flex; flex-direction:column}
+.qv-selections .panel-body{flex:1; min-height:0; padding:8px 10px; overflow-y:auto; display:flex; flex-direction:column; gap:10px}
+
+/* ── Sucursal por drag & drop (panel Período) ────────────────────────── */
+.dnd-suc{border-top:2px solid var(--purple); padding-top:7px}
+.dnd-titulo{font-size:10.5px; font-weight:700; color:var(--ink-2); margin-bottom:5px}
+.dnd-hint{font-weight:500; color:var(--ink-3); text-transform:none; letter-spacing:0}
+.dnd-cols{display:flex; gap:6px}
+.dnd-col{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px}
+.dnd-col-titulo{font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-3)}
+.dnd-list{
+  height:260px; overflow-y:auto; background:var(--qv-head); border:1px solid var(--qv-border);
+  border-radius:2px; padding:3px;
+}
+.dnd-list.dragover{outline:2px dashed var(--accent); outline-offset:-2px}
+.dnd-item{
+  font-size:11px; color:var(--ink); background:var(--qv-panel); border:1px solid var(--qv-border-soft);
+  border-radius:2px; padding:3px 6px; margin-bottom:2px; cursor:grab; user-select:none;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.dnd-item:hover{border-color:var(--accent)}
+.dnd-item.deshabilitado{opacity:.35; cursor:not-allowed}
+.dnd-item.arrastrando{opacity:.4}
+
+/* ── multiselect (Sucursal / Supervisor / Día) ───────────────────────── */
+.msel-bar{display:flex; flex-wrap:wrap; gap:8px}
+.msel{position:relative}
+.msel-btn{
+  display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:11.5px; font-weight:600;
+  color:var(--ink-2); background:var(--qv-head); border:1px solid var(--qv-border); border-radius:3px;
+  padding:5px 9px; cursor:pointer; max-width:340px; text-align:left;
+}
+.msel-btn .car{font-size:9px; opacity:.7}
+.msel.activo .msel-btn{background:var(--accent); color:#fff; border-color:var(--accent)}
+.msel-pop{
+  display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:40; min-width:210px;
+  max-width:280px; background:var(--qv-panel); border:1px solid var(--qv-border); border-radius:4px;
+  box-shadow:var(--shadow);
+}
+.msel.open .msel-pop{display:block}
+.msel-actions{display:flex; gap:6px; padding:7px 8px; border-bottom:1px solid var(--qv-border)}
+.msel-actions button{
+  font:inherit; font-size:10.5px; font-weight:600; color:var(--accent); background:none; border:0; cursor:pointer;
+  padding:2px 4px;
+}
+.msel-actions button:hover{text-decoration:underline}
+.msel-list{max-height:230px; overflow-y:auto; padding:5px}
+.msel-item{display:flex; align-items:center; gap:7px; padding:4px 6px; font-size:12px; color:var(--ink);
+  border-radius:3px; cursor:pointer; user-select:none}
+.msel-item:hover{background:var(--qv-head)}
+.msel-item input{margin:0}
+.msel-item.deshabilitado{opacity:.4; cursor:not-allowed}
+.msel-item.deshabilitado:hover{background:none}
+
+/* ── marcadores (bookmarks: sólo Sucursal/Empresa, sin fechas) ──────────── */
+.marcadores-pop{min-width:230px}
+.marcadores-lista{padding:5px}
+.marcador-vacio{padding:8px 6px; font-size:11.5px; color:var(--ink-3)}
+.marcador-item{display:flex; align-items:center; gap:4px}
+.marcador-aplicar{
+  flex:1; text-align:left; font:inherit; font-size:12px; color:var(--ink); background:none; border:0;
+  border-radius:3px; padding:5px 6px; cursor:pointer;
+}
+.marcador-aplicar:hover{background:var(--qv-head)}
+.marcador-quitar{
+  font:inherit; font-size:12px; line-height:1; color:var(--ink-3); background:none; border:0;
+  border-radius:3px; padding:5px 6px; cursor:pointer;
+}
+.marcador-quitar:hover{color:var(--sem-warn-ink); background:var(--sem-warn)}
+.marcadores-actions{border-top:1px solid var(--qv-border); padding:5px}
+.marcadores-actions button{
+  width:100%; font:inherit; font-size:11.5px; font-weight:600; color:var(--accent); background:none;
+  border:0; padding:6px; cursor:pointer; text-align:left;
+}
+.marcadores-actions button:hover{text-decoration:underline}
+
+.qv-stamp{
+  font-size:11px; color:var(--ink-2); line-height:1.5; white-space:nowrap;
+}
+.qv-stamp b{color:var(--ink)}
+
+/* opciones (IVA / recargo / presets) — no está en el .qvw original a la vista,
+   pero el motor los necesita: se integran como una franja angosta debajo. */
+.qv-opts{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px 20px;
+  padding:8px 12px; background:var(--qv-head); border-bottom:1px solid var(--qv-border);
+}
+.nota-fija{font-size:11.5px; font-weight:600; color:var(--ink-2)}
+.presets{display:flex; gap:6px; margin-left:auto}
+.presets button{
+  font-family:var(--font-ui); font-size:11px; font-weight:600; color:var(--ink-2);
+  background:var(--qv-panel); border:1px solid var(--qv-border); border-radius:2px;
+  padding:5px 9px; cursor:pointer;
+}
+.presets button:hover{border-color:var(--accent); color:var(--accent)}
+input[type=date]:focus-visible, select:focus-visible, button:focus-visible,
+th[role=button]:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+
+/* ─────────────────────────  selecciones actuales  ─────────────────── */
+.chip{
+  display:inline-flex; align-items:baseline; gap:5px;
+  background:var(--accent-soft); border:1px solid transparent;
+  border-radius:2px; padding:3px 8px; font-size:11px; color:var(--accent); margin:2px 4px 2px 0;
+}
+.chip b{font-family:var(--font-mono); font-weight:600; font-size:11px; color:var(--ink-2)}
+.chip.alerta{background:var(--sem-warn); color:var(--sem-warn-ink)}
+.chip[hidden]{display:none}   /* .chip{display:inline-flex} pisaba el [hidden] por defecto del navegador */
+.chip.alerta b{color:var(--sem-warn-ink)}
+
+/* Listado completo de filtros activos, por sección (Empresa/Supervisor/
+   Sucursal/Fechas), cada valor con su propia X para sacarlo de a uno. */
+.sel-list{display:flex; flex-direction:column; gap:10px; padding-top:9px; border-top:1px solid var(--qv-border-soft)}
+.sel-sec-titulo{font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-3); margin-bottom:4px}
+.sel-sec-items{display:flex; flex-wrap:wrap; gap:5px}
+.sel-chip{
+  display:inline-flex; align-items:center; gap:2px;
+  background:var(--accent-soft); color:var(--accent);
+  border-radius:2px; padding:3px 3px 3px 8px; font-size:11px; line-height:1.3;
+}
+.sel-x{
+  font:inherit; font-size:12px; line-height:1; color:inherit; background:none; border:0; cursor:pointer;
+  padding:2px 5px; border-radius:2px; opacity:.7;
+}
+.sel-x:hover{opacity:1; background:var(--sem-warn); color:var(--sem-warn-ink)}
+.sel-vacio{font-size:11px; color:var(--ink-3); font-style:italic}
+
+/* ─────────────────────────────  cuerpo  ────────────────────────────── */
+.qv-body{display:flex; gap:10px; align-items:flex-start; padding:10px 10px 26px}
+
+/* Selector de métrica (Ventas/Unidades/.../Tkt prom.): barra horizontal fija
+   arriba de todo el contenido — antes era una columna vertical al costado. */
+.qv-sidebar{
+  display:flex; flex-wrap:wrap; gap:6px;
+  position:sticky; top:0; z-index:10;
+  padding:8px 10px; background:var(--qv-page); border-bottom:1px solid var(--qv-border);
+}
+.sbtn{
+  display:flex; align-items:center; gap:7px; text-align:left; font:inherit;
+  font-size:11.5px; font-weight:600; color:var(--ink-2);
+  background:var(--qv-head); border:1px solid var(--qv-border); border-radius:2px;
+  padding:6px 8px; cursor:pointer;
+}
+.sbtn .ico{width:8px; height:8px; border-radius:1px; background:var(--ink-3); flex:0 0 auto}
+.sbtn:hover{background:var(--qv-head-2)}
+.sbtn[aria-pressed=true]{
+  background:var(--accent); color:#fff; border-color:var(--accent);
+}
+.sbtn[aria-pressed=true] .ico{background:#fff}
+.sbtn.sep{margin-top:6px}
+
+.qv-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:10px}
+
+/* gráfico principal: cumplimiento del mes (4 barras) */
+.chartde-body{display:flex; gap:16px; align-items:stretch; flex-wrap:wrap}
+.chartde-tab{
+  display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+  background:var(--qv-head); border:1px solid var(--qv-border); border-radius:2px;
+  padding:5px 10px; font-size:11.5px; font-weight:700; color:var(--ink-2);
+  /* Siempre en su propia línea, ancho completo: si no, el texto largo del
+     tag de Día Equivalente ("Ventas · 52 semanas atrás...") empuja el
+     gráfico+leyenda a envolver en una línea aparte y desalinea ese panel
+     respecto del de Ventas (que con "Ventas" a secas nunca envuelve).      */
+  flex:1 1 100%;
+}
+.chartde-tab .ico{width:8px; height:8px; border-radius:1px; background:var(--ink-3)}
+.chartde-plot{flex:1; min-width:280px}
+.chartde-legend{flex:0 0 200px; display:flex; flex-direction:column; gap:9px; padding-top:4px}
+.chartde-legend .alc{font-size:11.5px; color:var(--ink-2); display:flex; align-items:center; gap:6px}
+.chartde-legend .alc b{font-size:13px; color:var(--ink)}
+.chartde-legend .alc i{width:9px; height:9px; border:1.5px solid var(--ink); flex:0 0 auto}
+.leg-row{display:flex; align-items:flex-start; gap:7px; font-size:11.5px; color:var(--ink-2)}
+.leg-row i{width:12px; height:12px; border-radius:2px; margin-top:2px; flex:0 0 auto}
+.leg-row div b{display:block; font-family:var(--font-mono); font-size:13px; color:var(--ink); font-weight:600}
+
+svg text{font-family:var(--font-mono); fill:var(--ink-3)}
+svg .lbl{font-family:var(--font-ui); font-size:10.5px; fill:var(--ink-2)}
+svg .grid{stroke:var(--qv-border-soft); stroke-width:1}
+svg .axis{stroke:var(--qv-border); stroke-width:1}
+svg .goalmark{fill:var(--ink); stroke:var(--qv-panel); stroke-width:1}
+svg g.col:hover rect{opacity:.8}
+
+/* fila 2: evolución diaria + gráfico por dimensión */
+.qv-row1{display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start}
+.qv-row2{display:grid; grid-template-columns:1.55fr 1fr; gap:10px; align-items:start}
+/* sin esto, una grilla CSS crece para acomodar contenido ancho (como el
+   gráfico con scroll horizontal) en vez de dejar que el scroll interno lo
+   absorba — clásico gotcha de CSS Grid con min-width:auto por defecto */
+.qv-row1 > section, .qv-row2 > section, .qv-row3 > section{min-width:0}
+.dim-tabs{display:flex; flex-wrap:wrap; gap:2px; padding:6px 6px 0; background:var(--qv-panel); border-bottom:1px solid var(--qv-border)}
+/* el gráfico por dimensión dibuja un ancho fijo (una franja por categoría) y
+   depende de scroll horizontal — sin esto, el reset global `svg{max-width:100%}`
+   lo achica entero y las etiquetas de sucursal quedan ilegibles */
+.chart-scroll{overflow-x:auto}
+.chart-scroll svg{max-width:none}
+.dim-tab{
+  display:inline-flex; align-items:center; gap:5px; font:inherit; font-size:11px; font-weight:600;
+  color:var(--ink-2); background:var(--qv-head); border:1px solid var(--qv-border); border-bottom:0;
+  border-radius:2px 2px 0 0; padding:5px 10px; cursor:pointer;
+}
+.dim-tab .ico{width:7px; height:7px; border-radius:1px; background:var(--ink-3)}
+.dim-tab[aria-selected=true]{background:var(--qv-panel); color:var(--accent); box-shadow:0 -1px 0 var(--accent) inset}
+.dim-foot{display:flex; align-items:center; gap:14px; padding:8px 10px 4px; flex-wrap:wrap}
+.dim-foot .leg{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--ink-2)}
+.dim-foot .sw{width:11px; height:11px; border-radius:2px}
+.dim-foot .diamond{width:9px; height:9px; background:var(--ink); transform:rotate(45deg); border-radius:1px}
+.dim-foot .axis-cap{margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--ink-2)}
+.dim-foot .axis-cap .ico{width:9px;height:9px;background:var(--accent);border-radius:1px}
+
+/* fila 3: sucursales + supervisores */
+.qv-row3{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+
+/* ─────────────────────────────  tablas  ───────────────────────────── */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:11.5px}
+th,td{padding:4px 8px; text-align:right; white-space:nowrap}
+th:first-child, td:first-child{text-align:left; position:sticky; left:0}
+thead th{
+  font-size:10.5px; font-weight:700; color:var(--ink-2); background:var(--qv-head);
+  border-bottom:1px solid var(--qv-border); cursor:pointer; user-select:none;
+}
+thead th:first-child{background:var(--qv-head)}
+thead th:hover{color:var(--accent)}
+thead th .arrow{opacity:.7; margin-left:3px; font-size:9px; color:var(--accent)}
+tbody td{border-bottom:1px solid var(--qv-border-soft); font-family:var(--font-mono); font-variant-numeric:tabular-nums; color:var(--ink-2); background:var(--qv-panel)}
+tbody td:first-child{font-family:var(--font-ui); color:var(--ink); font-weight:600}
+tbody tr:hover td{filter:brightness(.97)}
+table.seleccionable tbody tr{cursor:pointer}
+table.seleccionable tbody tr.fila-sel td{box-shadow:inset 0 0 0 999px rgba(47,124,140,.22)}
+tfoot td{
+  border-top:2px solid var(--qv-border); font-family:var(--font-mono); font-weight:700;
+  color:var(--ink); background:var(--qv-head); font-variant-numeric:tabular-nums;
+}
+tfoot td:first-child{font-family:var(--font-ui); background:var(--qv-head)}
+td.sem-good{background:var(--sem-good); color:var(--sem-good-ink); font-weight:600}
+td.sem-warn{background:var(--sem-warn); color:var(--sem-warn-ink); font-weight:600}
+td.sem-bad{background:var(--sem-bad); color:var(--sem-bad-ink); font-weight:600}
+
+/* ─────────────────────────────  pie / avisos  ──────────────────────── */
+.qv-foot{
+  margin:0 10px 20px; padding:9px 12px; font-size:11px; color:var(--ink-3);
+  display:flex; flex-wrap:wrap; gap:6px 24px; background:var(--qv-panel);
+  border:1px solid var(--qv-border); border-radius:var(--radius);
+}
+.qv-foot b{color:var(--ink-2); font-weight:600}
+.notice{
+  margin:0 10px 16px; display:flex; gap:10px; align-items:stretch;
+  background:var(--qv-panel); border:1px solid var(--qv-border); border-radius:var(--radius);
+  padding:0; font-size:11.5px; color:var(--ink-2); line-height:1.6; overflow:hidden;
+}
+.notice:empty{display:none}
+.notice::before{content:""; width:3px; flex:0 0 3px; background:var(--sem-warn)}
+.notice > div{padding:10px 13px 10px 3px; max-width:88ch}
+.notice b{font-weight:700; color:#8a6a10}
+.notice.es-error::before{background:var(--sem-bad)}
+.notice.es-error b{color:var(--sem-bad)}
+.notice code{font-family:var(--font-mono); font-size:11px}
+
+body::after{
+  content:""; position:fixed; top:0; left:0; height:2px; width:0;
+  background:var(--accent); z-index:60; opacity:0; pointer-events:none;
+}
+body[data-cargando]::after{ width:100%; opacity:1; animation:barra 1.1s cubic-bezier(.4,0,.2,1) infinite; }
+@keyframes barra{
+  0%{clip-path:inset(0 100% 0 0)} 55%{clip-path:inset(0 0 0 0)} 100%{clip-path:inset(0 0 0 100%)}
+}
+body[data-cargando] .qv-body{opacity:.6; transition:opacity .15s ease}
+
+@media (max-width:980px){
+  .qv-row1, .qv-row2, .qv-row3{grid-template-columns:1fr}
+  .qv-body{flex-direction:column}
+  .qv-sidebar{flex-direction:row; flex-wrap:wrap; width:100%}
+  .sbtn{flex:1 1 30%}
+}
+@media (max-width:900px){
+  /* pantallas angostas: la columna fija de Período/Selecciones no entra
+     junto al contenido — vuelve al flujo normal, arriba de todo. */
+  .qv-shell{flex-direction:column}
+  .qv-topbar{position:static; width:100%; max-height:none; flex-direction:row; flex-wrap:wrap; border-right:0; border-bottom:1px solid var(--qv-border)}
+  .qv-period, .qv-selections{width:auto; flex:1 1 260px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important}}
+</style>
+
+<div class="qv-tabbar" role="tablist" aria-label="Hojas del tablero">
+  <button class="qv-tab active" type="button">Objetivos Sucursal</button>
+</div>
+
+<div class="qv-shell">
+<div class="qv-topbar">
+  <div class="qv-period panel">
+    <div class="panel-head"><span class="ico"></span>Período</div>
+    <div class="panel-body">
+      <div class="periodo-lbl">Período 1:</div>
+      <div class="qv-fields">
+        <label><span>Desde</span><input type="date" id="f1"></label>
+        <label><span>Hasta</span><input type="date" id="f2"></label>
+      </div>
+      <div class="dnd-suc">
+        <div class="dnd-titulo">Sucursal <span class="dnd-hint">(arrastrar)</span></div>
+        <div class="dnd-cols">
+          <div class="dnd-col">
+            <div class="dnd-col-titulo">Disponibles</div>
+            <div class="dnd-list" id="dndDisponibles"></div>
+          </div>
+          <div class="dnd-col">
+            <div class="dnd-col-titulo">Elegidas</div>
+            <div class="dnd-list" id="dndElegidas"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="qv-selections panel">
+    <div class="panel-head purple"><span class="ico"></span>Selecciones actuales</div>
+    <div class="panel-body">
+      <div class="msel-bar" id="mselBar"></div>
+      <div class="sel-list" id="selList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="qv-content">
+<div class="qv-opts">
+  <span class="nota-fija">Ventas: con IVA incluido (los recargos y descuentos ya vienen incluidos en el importe de origen)</span>
+  <div class="qv-stamp" id="stamp"></div>
+  <div class="msel marcadores" id="marcadores">
+    <button type="button" class="msel-btn" id="marcadoresBtn">Marcadores <span class="car">▾</span></button>
+    <div class="msel-pop marcadores-pop">
+      <div class="msel-list marcadores-lista" id="marcadoresLista"></div>
+      <div class="marcadores-actions">
+        <button type="button" id="marcadorAgregar">+ Agregar marcador actual</button>
+      </div>
+    </div>
+  </div>
+  <div class="presets">
+    <button type="button" data-preset="mes">Mes en curso</button>
+    <button type="button" data-preset="mesant">Mes anterior</button>
+    <button type="button" data-preset="ytd">Año a la fecha</button>
+  </div>
+</div>
+
+<nav class="qv-sidebar" id="kpis"></nav>
+
+<div class="qv-body">
+
+  <div class="qv-main">
+
+    <div class="qv-row1">
+      <section class="panel">
+        <div class="panel-head"><span class="ico"></span><span id="chart-princ-head">Ventas — cumplimiento del mes</span>
+          <span class="winctl"><i></i><i></i></span>
+        </div>
+        <div class="panel-body chartde-body">
+          <div class="chartde-tab"><span class="ico"></span><span id="chart-princ-tag">Ventas</span></div>
+          <div class="chartde-plot" id="chartPrincipal"></div>
+          <div class="chartde-legend" id="legendPrincipal"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span class="ico"></span><span id="chart-deq-head">Ventas — Día Equivalente</span>
+          <span class="winctl"><i></i><i></i></span>
+        </div>
+        <div class="panel-body chartde-body">
+          <div class="chartde-tab"><span class="ico"></span><span id="chart-deq-tag">Ventas</span></div>
+          <div class="chartde-plot" id="chartDiaEq"></div>
+          <div class="chartde-legend" id="legendDiaEq"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="qv-row2">
+      <section class="panel">
+        <div class="panel-head"><span class="ico"></span>Evolución Diaria
+          <span class="winctl"><i></i><i></i></span>
+        </div>
+        <div class="tablewrap" id="tablewrap-dia"></div>
+      </section>
+
+      <section class="panel">
+        <div class="dim-tabs" role="tablist" id="dimTabs"></div>
+        <div class="panel-body chart-scroll" id="chart"></div>
+        <div class="dim-foot">
+          <span class="leg"><span class="sw" style="background:var(--sem-warn)"></span>Proyectado</span>
+          <span class="leg"><span class="diamond"></span>Objetivo</span>
+          <span class="axis-cap"><span class="ico"></span>
+            <select id="dim">
+              <option value="Provincia">Provincia</option>
+              <option value="Sucursal">Sucursal</option>
+              <option value="Encargado">Supervisor</option>
+            </select>
+          </span>
+        </div>
+      </section>
+    </div>
+
+    <div class="qv-row3">
+      <section class="panel">
+        <div class="panel-head"><span class="ico"></span>Sucursales
+          <span class="winctl"><i></i><i></i></span>
+        </div>
+        <div class="tablewrap" id="tablewrap-suc"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span class="ico"></span>Supervisores
+          <span class="winctl"><i></i><i></i></span>
+        </div>
+        <div class="tablewrap" id="tablewrap-sup"></div>
+      </section>
+    </div>
+
+    <div class="notice" id="notice"></div>
+
+    <div class="qv-foot">
+      <div>Origen: <b>TABLERO OBJETIVO SUCURSALES.qvw</b> · hoja <b>Objetivos Sucursal</b> (SH23)</div>
+      <div>Modelo: <b id="foot-bocas">—</b> sucursales · <b>QVENTAS / QOBJETIVOS / QDIAS_HABILES</b></div>
+      <div>Fórmulas: <b>91</b> expresiones QlikView portadas a JavaScript</div>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   1 · ORIGEN DE DATOS
+   El tablero arranca preguntando por la API. Si `api/modelo` responde,
+   trabaja contra SQL Server; si no hay backend —archivo suelto, Artifact
+   publicado— genera un juego de demostración con la misma forma.
+   El motor de cálculo del bloque 2 no distingue entre los dos casos.
+   Contrato y despliegue: DEPLOY.md
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* fecha local → ISO, sin el corrimiento de huso que introduce toISOString() */
+const iso = d => d.getFullYear() + "-" +
+                 String(d.getMonth()+1).padStart(2,"0") + "-" +
+                 String(d.getDate()).padStart(2,"0");
+
+let SUCURSALES   = [];   // QSUCURSAL + QENCARGADOS
+let VENTAS       = [];   // QVENTAS agregada por sucursal × día
+let OBJETIVOS    = {};   // QOBJETIVOS,    clave `${cod}|${AAAAMM}`
+let DIAS_HABILES = {};   // QDIAS_HABILES, clave `${cod}|${AAAAMM}` (por sucursal)
+let SUC_BY_COD   = {};
+let HOY          = new Date(2025,11,29);   // variable ULTIMOS del .qvw
+let ULTIMOS      = {ultimaVenta:"2025-12-29", ultimoStock:"2025-12-29",
+                    recarga:"04/01/2026 08:27"};
+
+const API = {
+  activa: false,
+  mesesCargados: new Set(),   // AAAAMM ya traídos
+  enVuelo: new Map(),         // evita pedir dos veces el mismo mes
+  error: null
+};
+
+/** Meses AAAAMM que toca un rango, inclusive. */
+function mesesEntre(desde, hasta){
+  const out=[];
+  let y=+desde.slice(0,4), m=+desde.slice(5,7);
+  const fin = +hasta.slice(0,4)*100 + +hasta.slice(5,7);
+  while(y*100+m <= fin){ out.push(y*100+m); if(++m>12){ m=1; y++; } }
+  return out;
+}
+
+async function pedir(ruta){
+  const r = await fetch(ruta, {headers:{Accept:"application/json"}});
+  if(!r.ok) throw new Error(`${ruta} → HTTP ${r.status}`);
+  return r.json();
+}
+
+/** Trae sucursales, objetivos y días hábiles. Decide si hay backend. */
+async function cargarModelo(){
+  const m = await pedir("api/modelo");
+  SUCURSALES   = m.sucursales;
+  OBJETIVOS    = m.objetivos;
+  DIAS_HABILES = m.diasHabiles;
+  SUC_BY_COD   = Object.fromEntries(SUCURSALES.map(s=>[s.cod,s]));
+  if(m.ultimos){
+    ULTIMOS = {...ULTIMOS, ...m.ultimos};
+    if(m.ultimos.ultimaVenta) HOY = new Date(m.ultimos.ultimaVenta+"T00:00:00");
+  }
+  state.f2 = iso(HOY);
+  state.f1 = iso(new Date(HOY.getFullYear(), HOY.getMonth(), 1));
+  API.activa = true;
+}
+
+/** Carga por mes los tramos de QVENTAS que falten para cubrir [desde,hasta]. */
+async function asegurarVentas(desde, hasta){
+  const faltan = mesesEntre(desde,hasta).filter(k=>!API.mesesCargados.has(k));
+  if(!faltan.length) return;
+  const lotes = await Promise.all(faltan.map(k=>{
+    if(API.enVuelo.has(k)) return API.enVuelo.get(k);
+    const y=Math.floor(k/100), m=k%100;
+    const d1 = `${y}-${String(m).padStart(2,"0")}-01`;
+    const d2 = iso(new Date(y, m, 0));           // último día del mes
+    const p = pedir(`api/ventas?desde=${d1}&hasta=${d2}`)
+      .then(r=>{ API.mesesCargados.add(k); API.enVuelo.delete(k); return r.filas || []; })
+      .catch(e=>{ API.enVuelo.delete(k); throw e; });
+    API.enVuelo.set(k, p);
+    return p;
+  }));
+  for(const filas of lotes) VENTAS.push(...filas);
+}
+
+/* ─────────────────────── juego de demostración ─────────────────────
+   Se usa sólo cuando no hay API. Misma forma que devuelve el backend. */
+
+/* provincia, cantidad de bocas, prefijo — los prefijos tienen que ser únicos:
+   "San Juan" y "San Luis" comparten la primera palabra */
+const PROVINCIAS = [
+  ["San Juan",7,"SJU"], ["Mendoza",8,"MZA"], ["San Luis",4,"SLU"], ["Córdoba",9,"CBA"],
+  ["La Rioja",3,"LAR"], ["Catamarca",3,"CAT"], ["Santa Fe",8,"SFE"], ["Buenos Aires",5,"BUE"]
+];
+const SUPERVISORES = ["C. Castro","F. Oropel","M. Aguilar","M. Arraez","J. Peralta","L. Bustos"];
+
+/* PRNG determinista — el tablero se ve igual en cada carga */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+function generarDemo(){
+const rnd = mulberry32(20260104);
+
+SUCURSALES = (()=>{
+  const out=[]; let n=0;
+  for(const [prov,cant,pref] of PROVINCIAS){
+    for(let i=1;i<=cant;i++){
+      out.push({
+        cod: 100+n,
+        nombre: `${pref} ${String(i).padStart(2,"0")}`,
+        provincia: prov,
+        encargado: SUPERVISORES[n % SUPERVISORES.length],
+        empresa: n % 2 === 0 ? "TESI" : "PUEBLO",
+        escala: 0.55 + rnd()*1.35          // tamaño relativo de la boca
+      });
+      n++;
+    }
+  }
+  return out;
+})();
+
+const DESDE_GEN = new Date(2024,0,1);
+
+/* QDIAS_HABILES — días hábiles por sucursal y mes (misma clave `cod|AAAAMM`
+   que arma el backend real: en producción varían fuerte de una boca a otra). */
+for(let y=2024;y<=2025;y++) for(let m=0;m<12;m++){
+  let h=0, last=new Date(y,m+1,0).getDate();
+  for(let d=1;d<=last;d++){ const w=new Date(y,m,d).getDay(); if(w!==0) h++; }
+  const clave = `${y}${String(m+1).padStart(2,"0")}`;
+  for(const s of SUCURSALES) DIAS_HABILES[`${s.cod}|${clave}`]=h;
+}
+
+/* QVENTAS agregada por sucursal × día. Un registro por boca y jornada:
+   guarda importes netos, IVA, costo, unidades y operaciones (+/-). */
+for(const s of SUCURSALES){
+  const estac = 0.85 + rnd()*0.3;
+  for(let d=new Date(DESDE_GEN); d<=HOY; d.setDate(d.getDate()+1)){
+    const dow = d.getDay();
+    if(dow===0) continue;                                   // domingos cerrado = definición de día hábil
+    const mes = d.getMonth();
+    const factorMes = [0.92,0.86,0.95,0.98,1.0,1.04,1.12,1.02,0.99,1.05,1.1,1.42][mes];
+    const factorDow = [0.6,0.88,0.9,0.94,1.0,1.16,1.34][dow];
+    const anio = d.getFullYear()===2025 ? 1.31 : 1.0;      // crecimiento nominal interanual
+    const ruido = 0.78 + rnd()*0.46;
+    const base = 92000 * s.escala * estac * factorMes * factorDow * anio * ruido;
+
+    const oper_pos = Math.max(1, Math.round(base/23500 * (0.9+rnd()*0.2)));
+    const oper_neg = rnd()<0.30 ? 1 : 0;                    // devoluciones
+    const uxc      = 1.55 + rnd()*0.75;
+    const unidades = Math.round(oper_pos*uxc);
+
+    const importe   = Math.round(base);                     // neto sin IVA
+    const iva       = Math.round(importe*0.21);
+    const descuento = Math.round(importe*(0.02+rnd()*0.06));
+    const rec_env   = Math.round(importe*(rnd()<0.35?0.008+rnd()*0.012:0));
+    const rec_fin   = Math.round(importe*(0.015+rnd()*0.035));
+    const margenObj = 0.505 + rnd()*0.085;                  // margen bruto real de la jornada
+    const costo     = Math.round(importe*(1-margenObj));
+
+    VENTAS.push({
+      cod:s.cod, f:iso(d),
+      importe, iva_importe:iva,
+      descuento,
+      rec_envio:rec_env,     iva_rec_envio:Math.round(rec_env*0.21),
+      rec_fin:rec_fin,       iva_rec_fin:Math.round(rec_fin*0.21),
+      recfin_var:rec_fin,    iva_recfin_var:Math.round(rec_fin*0.21),
+      costo,                 iva_costo:Math.round(costo*0.21),
+      cantidad:unidades, oper_pos, oper_neg
+    });
+  }
+}
+
+/* QOBJETIVOS — objetivo mensual por sucursal, calibrado sobre el real
+   del año anterior para que los alcances caigan en un rango creíble. */
+{
+  const acc = {};
+  for(const v of VENTAS){
+    const k = v.cod+"|"+v.f.slice(0,7).replace("-","");
+    (acc[k] ||= {net:0,iva:0,uni:0,op:0}) ;
+    acc[k].net += v.importe; acc[k].iva += v.iva_importe;
+    acc[k].uni += v.cantidad; acc[k].op += v.oper_pos - v.oper_neg;
+  }
+  for(const k in acc){
+    // cada familia de objetivo se fija por separado, como en la planilla real
+    const a = acc[k], ajuste = 0.94 + rnd()*0.16;
+    const ajUni = ajuste * (0.97 + rnd()*0.06);
+    const ajOp  = ajuste * (0.96 + rnd()*0.08);
+    OBJETIVOS[k] = {
+      OBJ_VTAS_SIN_IVA:      a.net*ajuste,
+      OBJ_VTAS_CON_IVA:      (a.net+a.iva)*ajuste,
+      OBJ_UNIDADES_VTAS:     a.uni*ajUni,
+      OBJ_OPERACIONES:       a.op*ajOp,
+      OBJ_UNIDADES_CLIENTES: 1.72 + rnd()*0.28,
+      OBJ_MARGEN_TOT:        52.0 + rnd()*4.5,
+      OBJ_MARGEN_OPE:        50.5 + rnd()*4.0
+    };
+  }
+}
+
+SUC_BY_COD = Object.fromEntries(SUCURSALES.map(s=>[s.cod,s]));
+}   /* fin generarDemo() */
+
+/* ═══════════════════════════════════════════════════════════════════
+   2 · MOTOR DE CÁLCULO
+   Port directo de las expresiones QlikView. Cada bloque cita la
+   fórmula original que reproduce.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const state = {
+  f1: "2025-12-01",          // variable F1
+  f2: "2025-12-29",          // variable F2
+  dim: "Provincia",
+  metric: "ventas",
+  filtroSucursales: new Set(),    // cods; vacío = todas
+  filtroSupervisores: new Set(),  // nombres de encargado; vacío = todos
+  filtroEmpresas: new Set(),      // "PUEBLO"/"TESI"; vacío = todas
+  filtroFechas: new Set(),        // fechas puntuales "AAAA-MM-DD" elegidas en Evolución Diaria; vacío = todas
+  sort: {suc:{c:0,d:1}, sup:{c:0,d:1}, dia:{c:0,d:1}}
+};
+
+/** Una sucursal entra en el alcance si pasa los filtros de Sucursal,
+ *  Supervisor y Empresa elegidos arriba. Se usa tanto para el período
+ *  principal como para el de Día Equivalente, así los dos quedan siempre
+ *  comparables.                                                             */
+const encargadosDe = s => s.encargado.split(" / ");   // "GastonG / TCANET" → dos nombres
+const sucursalPermitida = (s, opts={}) =>
+  (opts.ignorarSucursales || state.filtroSucursales.size===0 || state.filtroSucursales.has(s.cod)) &&
+  (state.filtroSupervisores.size===0 || encargadosDe(s).some(n=>state.filtroSupervisores.has(n))) &&
+  (state.filtroEmpresas.size===0     || state.filtroEmpresas.has(s.empresa));
+
+/* Ventas = importe + IVA, siempre, sin conmutadores (así lo pidió el negocio).
+   rec_fin/rec_envio NO se suman acá: en el origen (f_vta_cabecera) ya vienen
+   adentro de "importe" — sumarlos de nuevo duplica el cargo (se verificó con
+   dos casos reales: sumarlos daba $955.790/$705.342 en vez de los $555.794/
+   $735.341 correctos). Esos dos campos sólo se usan más abajo, en la base del
+   margen, para poder restarlos ahí.                                          */
+const fVentas = (r) => r.importe + r.iva_importe;
+
+/* Mrg Op% = (Base - Costo) / Base * 100, con
+   Base = importe + descuento - rec_envio - iva_rec_envio - rec_fin - iva_rec_fin + iva_importe
+   Costo = precio_rep + iva_precio_rep
+   A diferencia de Ventas, acá SÍ hay que restar el recargo financiero
+   (rec_fin = Recargo_operacion): es la diferencia real entre Mrg Oper% (margen
+   sin el recargo, "limpio") y Mrg Total% (con recargo adentro, más abajo).    */
+const fMargenBase = (r) =>
+  r.importe + r.descuento - r.rec_envio - r.iva_rec_envio - r.rec_fin - r.iva_rec_fin + r.iva_importe;
+const fCosto = (r) => r.costo + r.iva_costo;
+
+/* Mrg Real% = (Base − Costo) / Base * 100 — misma Base de Mrg Oper% pero SIN
+   sumar el descuento de vuelta (la única diferencia entre las dos fórmulas).
+   Costo es el mismo fCosto de siempre.                                       */
+const fMargenBaseReal = (r) =>
+  r.importe - r.rec_envio - r.iva_rec_envio - r.rec_fin - r.iva_rec_fin + r.iva_importe;
+
+/** Agrega VENTAS en [f1,f2] devolviendo acumulados por sucursal. */
+function agregar(f1, f2, opts={}){
+  const porSuc = new Map();
+  // `opts.filtroFechas` permite pasar un set de fechas puntuales distinto del
+  // de state (p.ej. el mismo filtro pero corrido un año/364 días para Día
+  // Equivalente) — por defecto se usa el filtro tal cual está en pantalla.
+  const fechas = opts.filtroFechas || state.filtroFechas;
+  for(const r of VENTAS){
+    if(r.f < f1 || r.f > f2) continue;
+    if(fechas.size && !fechas.has(r.f)) continue;
+    const s = SUC_BY_COD[r.cod];
+    if(!s || !sucursalPermitida(s, opts)) continue;
+    let a = porSuc.get(r.cod);
+    if(!a){
+      a = {cod:r.cod, ventas:0, uni:0, oper:0, mbase:0, mcosto:0, tbase:0, tcosto:0, rbase:0, dias:new Set()};
+      porSuc.set(r.cod, a);
+    }
+    a.ventas += fVentas(r);
+    a.uni    += r.cantidad;
+    a.oper   += r.oper_pos - r.oper_neg;      // count(distinct +) - count(distinct -)
+    a.mbase  += fMargenBase(r);
+    a.mcosto += fCosto(r);
+    a.tbase  += r.importe + r.iva_importe;
+    a.tcosto += fCosto(r);
+    a.rbase  += fMargenBaseReal(r);           // el costo de Mrg Real% es el mismo que el de Mrg Oper% (mcosto)
+    a.dias.add(r.f);
+  }
+  for(const a of porSuc.values()) a.diasN = a.dias.size;
+  return porSuc;
+}
+
+/** Objetivos y días hábiles del mes de F2 — if(ANIOOBJ=Year(F2) and MESOBJ=Month(F2), …)
+ *  Los días hábiles varían por sucursal (no hay un valor único de red): cada
+ *  boca lleva el suyo, y `dhab` de retorno es sólo una referencia (el máximo
+ *  entre las bocas con objetivo) para chips/encabezados que necesitan un solo
+ *  número — el prorrateo real de cada fila usa siempre su propio f.dhab.    */
+function objetivosDe(f2, opts={}){
+  const [Y,M] = f2.split("-").map(Number);
+  const sufijo = "|"+Y+String(M).padStart(2,"0");
+  const out = new Map();
+  let dhabRef = 0;
+  for(const s of SUCURSALES){
+    if(!sucursalPermitida(s, opts)) continue;
+    const o = OBJETIVOS[s.cod+sufijo];
+    const dhab = DIAS_HABILES[s.cod+sufijo] || 0;
+    if(o) out.set(s.cod, {...o, dhab});
+    if(dhab > dhabRef) dhabRef = dhab;
+  }
+  return {porSuc: out, dhab: dhabRef};
+}
+
+const METRICAS = {
+  ventas:   {nombre:"Ventas",           corto:"Ventas",     unidad:"$",  fmt:"money", obj:o=>o.OBJ_VTAS_CON_IVA, real:a=>a.ventas,  ratio:false},
+  unidades: {nombre:"Unidades",         corto:"Unidades",   unidad:"un", fmt:"int",   obj:o=>o.OBJ_UNIDADES_VTAS, real:a=>a.uni,   ratio:false},
+  oper:     {nombre:"Operaciones",      corto:"Operaciones",unidad:"op", fmt:"int",   obj:o=>o.OBJ_OPERACIONES,   real:a=>a.oper,  ratio:false},
+  ticket:   {nombre:"Ticket promedio",  corto:"Tkt prom.",  unidad:"$",  fmt:"money", ratio:true,
+             objR:(o)=> o.OBJ_VTAS_CON_IVA/o.OBJ_OPERACIONES,
+             num:a=>a.ventas, den:a=>a.oper},
+  uxc:      {nombre:"Uni x Cli",corto:"Uni x Cli",unidad:"un",fmt:"dec2",  ratio:true,
+             objR:(o)=>o.OBJ_UNIDADES_CLIENTES, num:a=>a.uni, den:a=>a.oper},
+  margenTot:{nombre:"Mrg Total %",     corto:"Mrg Total %", unidad:"%",  fmt:"pct1",  ratio:true, esPct:true,
+             objR:(o)=>o.OBJ_MARGEN_TOT, num:a=>a.tbase-a.tcosto, den:a=>a.tbase,
+             pesoObj:(o)=>o.OBJ_VTAS_CON_IVA},
+  margenOp: {nombre:"Mrg Oper %", corto:"Mrg Oper %", unidad:"%",  fmt:"pct1",  ratio:true, esPct:true,
+             objR:(o)=>o.OBJ_MARGEN_OPE, num:a=>a.mbase-a.mcosto, den:a=>a.mbase,
+             pesoObj:(o)=>o.OBJ_VTAS_CON_IVA},
+  // Mrg Real% = misma Base de Mrg Oper% pero sin sumar el descuento de vuelta.
+  // El .qvw no tiene un objetivo propio para "Real": reusa OBJ_MARGEN_OPE
+  // (confirmado por el usuario — la fórmula del acumulado es idéntica a la de Mrg Oper%).
+  margenReal:{nombre:"Mrg Real %", corto:"Mrg Real %", unidad:"%", fmt:"pct1", ratio:true, esPct:true,
+             objR:(o)=>o.OBJ_MARGEN_OPE, num:a=>a.rbase-a.mcosto, den:a=>a.rbase,
+             pesoObj:(o)=>o.OBJ_VTAS_CON_IVA}
+};
+const ORDEN_SIDEBAR = ["ventas","unidades","oper","uxc","margenTot","margenReal","margenOp","ticket"];
+
+/**
+ * Núcleo del tablero. Reproduce, para cada métrica:
+ *   Real        → suma directa del período
+ *   Obj. Mes    → sum(if(ANIOOBJ=Year(F2) and MESOBJ=Month(F2), OBJ_…))
+ *   Obj. Acum   → sum(aggr( ObjMes/DiasHabiles * Count(distinct fecha), Sucursal))
+ *   Proyectado  → si DiasHabiles = días transcurridos → Real
+ *                 si no → sum(aggr( Real/díasSuc * DiasHabiles, Sucursal))
+ *   Alcance     → Proyectado / Obj.Mes − 1
+ *   Diferencia  → Real − Obj. Acum
+ */
+function calcular(opts={}){
+  const {f1,f2} = state;
+  const agg  = agregar(f1,f2,opts);
+  const {porSuc:objs, dhab} = objetivosDe(f2,opts);
+
+  // Count(DISTINCT if(fecha>=F1 and fecha<=F2, fecha)) — a nivel documento
+  const diasGlobales = new Set();
+  for(const a of agg.values()) for(const d of a.dias) diasGlobales.add(d);
+  const diasN   = diasGlobales.size;
+  const mesLleno = dhab > 0 && dhab === diasN;      // condición de la expresión 2
+
+  // D Ven = Count(DISTINCT Sucursal & '_' & fecha)
+  let dVen = 0; for(const a of agg.values()) dVen += a.diasN;
+
+  const filas = [];
+  for(const [cod,a] of agg){
+    const s = SUC_BY_COD[cod];
+    if(!s) continue;    // venta de un código sin maestro (ej. canal virtual no filtrado) — se ignora
+    const o = objs.get(cod);
+    const f = {
+      cod, sucursal:s.nombre, provincia:s.provincia, encargado:s.encargado,
+      dias:a.diasN, dhab: o ? o.dhab : dhab, m:{}
+    };
+    for(const key in METRICAS){
+      const M = METRICAS[key];
+      let real, objMes;
+      if(M.ratio){
+        const den = M.den(a);
+        real   = den ? M.num(a)/den * (M.esPct?100:1) : 0;
+        objMes = o ? M.objR(o) : 0;
+      }else{
+        real   = M.real(a);
+        objMes = o ? M.obj(o) : 0;
+      }
+      // Obj. Acum: prorrateo del objetivo por días hábiles transcurridos
+      const objAcum = M.ratio ? objMes
+                     : (f.dhab ? objMes / f.dhab * a.diasN : 0);
+      // Proyectado a fin de mes
+      const proy = M.ratio ? real
+                 : (mesLleno ? real : (a.diasN ? real / a.diasN * f.dhab : 0));
+      f.m[key] = {real, objMes, objAcum, proy, dif: real - objAcum};
+    }
+    filas.push(f);
+  }
+
+  // ── Totales. Los ratios se recomponen desde los acumulados, nunca se promedian.
+  const T = {};
+  const sum = fn => filas.reduce((t,f)=>t+fn(f),0);
+  const totAgg = {ventas:0,uni:0,oper:0,mbase:0,mcosto:0,tbase:0,tcosto:0,rbase:0};
+  for(const a of agg.values()) for(const k in totAgg) totAgg[k]+=a[k];
+
+  for(const key in METRICAS){
+    const M = METRICAS[key];
+    let real, objMes, objAcum, proy;
+    if(M.ratio){
+      const den = M.den(totAgg);
+      real = den ? M.num(totAgg)/den * (M.esPct?100:1) : 0;
+      // Objetivo de un ratio: ponderado por sucursal. Para Mrg Oper%/Mrg Total%
+      // el .qvw pesa por el objetivo de ventas de esa boca (pesoObj), no por su
+      // venta real (M.den) — fórmula confirmada por el usuario. Las sucursales
+      // con objR=0 (dato roto en origen) se excluyen del numerador pero su peso
+      // sigue en el denominador — así lo hace el aggr()/count(<>0) de Qlik.
+      let wn=0, wd=0;
+      for(const f of filas){
+        const a = agg.get(f.cod), o = objs.get(f.cod);
+        if(!o) continue;
+        const w = (M.pesoObj ? M.pesoObj(o) : M.den(a)) || 0;
+        wd += w;
+        const val = M.objR(o);
+        if(val) wn += val*w;
+      }
+      objMes = wd ? wn/wd : 0;
+      objAcum = objMes;
+      proy = real;
+    }else{
+      real    = sum(f=>f.m[key].real);
+      objMes  = sum(f=>f.m[key].objMes);
+      objAcum = sum(f=>f.m[key].objAcum);
+      proy    = mesLleno ? real : sum(f=>f.m[key].proy);
+    }
+    T[key] = {real, objMes, objAcum, proy, dif: real-objAcum,
+              alcance: objMes ? proy/objMes - 1 : 0};
+  }
+
+  return {filas, total:T, diasN, dhab, dVen, mesLleno, agg, objs, totAgg};
+}
+
+/** Tramo comparable del año anterior — Día Equivalente.
+ *  Mes cerrado → mes completo contra el mismo mes completo del año pasado
+ *  (AddYears(F1,-1) … AddYears(F2,-1)). Mes abierto → 52 semanas atrás
+ *  (F1-364 … F2-364), para comparar contra el mismo tramo de "semana retail"
+ *  en vez de la misma fecha calendario.                                     */
+function rangoDE(){
+  const f2d = new Date(state.f2+"T00:00:00");
+  const finDeMes = f2d.getDate() === new Date(f2d.getFullYear(), f2d.getMonth()+1, 0).getDate();
+  const shift = d => {
+    const x = new Date(d+"T00:00:00");
+    if(finDeMes) x.setFullYear(x.getFullYear()-1); else x.setDate(x.getDate()-364);
+    return iso(x);
+  };
+  return {desde: shift(state.f1), hasta: shift(state.f2), shift,
+          modo: finDeMes ? "mes completo, año anterior" : "52 semanas atrás (semana retail)"};
+}
+
+function calcularDE(){
+  const R = rangoDE();
+  // El filtro de fechas puntuales (Evolución Diaria) está en fechas del
+  // período actual — para que aplique acá hay que correrlo el mismo tramo
+  // que el resto del rango DE, si no ninguna fecha matchea nunca y da $0.
+  const fechasDE = new Set([...state.filtroFechas].map(R.shift));
+  const agg = agregar(R.desde, R.hasta, {filtroFechas: fechasDE});
+  const tot = {ventas:0,uni:0,oper:0,mbase:0,mcosto:0,tbase:0,tcosto:0,rbase:0};
+  for(const a of agg.values()) for(const k in tot) tot[k]+=a[k];
+  return {tot, modo:R.modo, desde:R.desde, hasta:R.hasta};
+}
+
+/** Real/Objetivo de un grupo arbitrario de filas (una sucursal, o todas las de
+ *  un supervisor). Los ratios se recomponen desde los acumulados del grupo,
+ *  igual que a nivel documento — nunca se promedian entre bocas. */
+function metricaGrupo(key, filasGrupo, R){
+  const M = METRICAS[key];
+  const aggG = {ventas:0,uni:0,oper:0,mbase:0,mcosto:0,tbase:0,tcosto:0,rbase:0};
+  for(const f of filasGrupo){ const a=R.agg.get(f.cod); for(const k in aggG) aggG[k]+=a[k]; }
+  if(M.ratio){
+    const den = M.den(aggG);
+    const real = den ? M.num(aggG)/den * (M.esPct?100:1) : 0;
+    // mismo criterio de ponderación que a nivel red — ver la nota en calcular()
+    let wn=0, wd=0;
+    for(const f of filasGrupo){
+      const a = R.agg.get(f.cod), o = R.objs.get(f.cod);
+      if(!o) continue;
+      const w = (M.pesoObj ? M.pesoObj(o) : M.den(a)) || 0;
+      wd += w;
+      const val = M.objR(o);
+      if(val) wn += val*w;
+    }
+    return {real, objAcum: wd ? wn/wd : 0};
+  }
+  return {
+    real:    filasGrupo.reduce((t,f)=>t+f.m[key].real,0),
+    objAcum: filasGrupo.reduce((t,f)=>t+f.m[key].objAcum,0)
+  };
+}
+
+/** Objetivo diario de una métrica: prorrateo del mensual para las absolutas,
+ *  el mismo ratio mensual para las que ya son ratio. */
+function objDiaFor(key, R){
+  const M = METRICAS[key], t = R.total[key];
+  return M.ratio ? t.objMes : (R.dhab ? t.objMes / R.dhab : 0);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   3 · FORMATO
+   ═══════════════════════════════════════════════════════════════════ */
+const nf  = new Intl.NumberFormat("es-AR");
+const nf1 = new Intl.NumberFormat("es-AR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2 = new Intl.NumberFormat("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function fmt(v, kind){
+  if(!isFinite(v)) return "—";
+  const sg = v<0 ? "−" : "";          // el menos va antes del símbolo, no después
+  switch(kind){
+    case "money": return sg + "$" + nf.format(Math.abs(Math.round(v)));
+    case "moneyK":{
+      const a=Math.abs(v);
+      if(a>=1e9) return sg+"$"+nf1.format(a/1e9)+" MM";
+      if(a>=1e6) return sg+"$"+nf1.format(a/1e6)+" M";
+      if(a>=1e3) return sg+"$"+nf.format(Math.round(a/1e3))+" k";
+      return sg+"$"+nf.format(Math.round(a));
+    }
+    case "int":   return nf.format(Math.round(v));
+    case "dec2":  return nf2.format(v);
+    case "pct1":  return nf2.format(v)+"%";     // "pct1" es sólo el nombre histórico del tag; el negocio pidió 2 decimales en todos los % de margen
+    case "sign":  return (v>=0?"+":"−") + nf.format(Math.abs(Math.round(v)));
+    case "pctsign": return (v>=0?"+":"−") + nf2.format(Math.abs(v*100)) + "%";
+  }
+  return String(v);
+}
+const claseAlcance = a => a >= -0.005 ? "good" : a >= -0.05 ? "warn" : "bad";
+/* La brecha de una métrica en puntos porcentuales (Mrg Oper%, Mrg Total%) se
+   lee con dos decimales, nunca redondeada a entero como una diferencia en
+   pesos — sin sufijo "pp", sólo el número (pedido del usuario).            */
+const fmtDif = (v, M) => M.esPct
+  ? (v>=0?"+":"−") + nf2.format(Math.abs(v))
+  : fmt(v, "sign");
+const semClase = (real, objAcum, esPct) => {
+  if(!objAcum && !esPct) return "";
+  const ratio = objAcum ? real/objAcum - 1 : (real>=0 ? 0 : -1);
+  return "sem-" + claseAlcance(ratio);
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   4 · RENDER
+   ═══════════════════════════════════════════════════════════════════ */
+const $ = s => document.querySelector(s);
+
+/** Sidebar de métricas — lista de botones al estilo QlikView. */
+function renderSidebar(){
+  const html = ORDEN_SIDEBAR.map(key=>{
+    const M = METRICAS[key];
+    return `<button class="sbtn" type="button" data-metric="${key}" aria-pressed="${state.metric===key}">
+      <span class="ico"></span>${M.corto}
+    </button>`;
+  }).join("");
+  $("#kpis").innerHTML = html;
+  $("#kpis").querySelectorAll(".sbtn").forEach(b=>{
+    b.addEventListener("click",()=>{ state.metric=b.dataset.metric; render(); });
+  });
+}
+
+/** Gráfico principal: cumplimiento del mes en 4 barras — Proyectado, Obj. Mes,
+ *  Real y Obj. Acum — con Alcance y Diferencia en la leyenda lateral. Son los
+ *  mismos totales que ya calcula calcular(), sin cuenta aparte. */
+function renderChartPrincipal(R){
+  const M = METRICAS[state.metric];
+  const T = R.total[state.metric];
+  const valFmt = M.fmt;
+  // Cualquier ratio (márgenes, Ticket Promedio, Uni x Cli) tiene Proyectado
+  // siempre igual a Real y Obj. Mes siempre igual a Obj. Acum. (no hay
+  // prorrateo de un ratio) — mostrar las 4 barras repetiría el mismo número
+  // dos veces. Sólo Real/Obj. Acum. Ventas/Unidades/Operaciones sí prorratean.
+  const barras = M.ratio ? [
+    {nombre:"Real",       val:T.real,    color:"var(--yellow)"},
+    {nombre:"Obj. Acum.", val:T.objAcum, color:"var(--green2)"}
+  ] : [
+    {nombre:"Proyectado", val:T.proy,    color:"var(--teal)"},
+    {nombre:"Obj. Mes",   val:T.objMes,  color:"var(--orange)"},
+    {nombre:"Real",       val:T.real,    color:"var(--yellow)"},
+    {nombre:"Obj. Acum.", val:T.objAcum, color:"var(--green2)"}
+  ];
+
+  const max = Math.max(...barras.map(b=>b.val), 1) * 1.12;
+  const W = 400, H = 300, padL = 66, padR = 10, padT = 10, padB = 26;
+  const iw = W-padL-padR, ih = H-padT-padB;
+  const y = v => padT + ih - (v/max)*ih;
+  const bw = Math.min(58, iw/barras.length*0.62);
+  const paso = iw/barras.length;
+
+  const ticks = 5; let g = "";
+  for(let i=0;i<=ticks;i++){
+    const v = max/ticks*i, yy = y(v);
+    g += `<line class="grid" x1="${padL}" x2="${W-padR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}"/>`
+      +  `<text x="${padL-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="9.5">${fmt(v, valFmt)}</text>`;
+  }
+
+  let bars = "";
+  barras.forEach((b,i)=>{
+    const cx = padL + paso*(i+0.5), h = Math.max(1,(b.val/max)*ih), yy = y(b.val);
+    bars += `<g class="col"><title>${b.nombre}: ${fmt(b.val,valFmt)}</title>
+      <rect x="${(cx-bw/2).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${b.color}" rx="1"/>
+    </g>`;
+  });
+
+  $("#chartPrincipal").innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="${M.nombre}: ${barras.map(b=>b.nombre).join(', ')}">
+      ${g}${bars}
+      <line class="axis" x1="${padL}" x2="${W-padR}" y1="${padT+ih}" y2="${padT+ih}"/>
+    </svg>`;
+
+  $("#legendPrincipal").innerHTML = `
+    <div class="alc"><i></i>Alcance: <b>${fmt(T.alcance,"pctsign")}</b></div>
+    ${barras.map(b=>`<div class="leg-row"><i style="background:${b.color}"></i><div>${b.nombre}<b>${fmt(b.val,valFmt)}</b></div></div>`).join("")}
+    <div class="alc"><i></i>Diferencia: <b>${fmtDif(T.dif,M)}</b></div>
+  `;
+  $("#chart-princ-head").textContent = `${M.nombre} — cumplimiento del mes`;
+  $("#chart-princ-tag").textContent = M.corto;
+}
+
+/** Panel Día Equivalente: Real del período vs. Real del mismo tramo del año
+ *  pasado (52 semanas atrás si el mes está abierto, mes completo si está
+ *  cerrado — ver rangoDE()). Dos barras + Alcance/Diferencia en la leyenda. */
+function renderChartDiaEq(R){
+  const M = METRICAS[state.metric];
+  const DE = calcularDE();
+  const valFmt = M.fmt;
+  let real, realDE;
+  if(M.ratio){
+    const den = M.den(DE.tot);
+    real   = R.total[state.metric].real;
+    realDE = den ? M.num(DE.tot)/den * (M.esPct?100:1) : 0;
+  }else{
+    const campo = state.metric==="ventas" ? "ventas" : state.metric==="unidades" ? "uni" : "oper";
+    real   = R.total[state.metric].real;
+    realDE = DE.tot[campo] ?? 0;
+  }
+  const alcance = realDE ? real/realDE - 1 : 0;
+  const dif = real - realDE;
+
+  const max = Math.max(real, realDE, 1) * 1.12;
+  const W = 300, H = 300, padL = 60, padR = 10, padT = 10, padB = 26;
+  const iw = W-padL-padR, ih = H-padT-padB;
+  const y = v => padT + ih - (v/max)*ih;
+  const bw = 78, gap = 40;
+  const x0 = padL + (iw - (bw*2+gap))/2;
+
+  const ticks = 5; let g = "";
+  for(let i=0;i<=ticks;i++){
+    const v = max/ticks*i, yy = y(v);
+    g += `<line class="grid" x1="${padL}" x2="${W-padR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}"/>`
+      +  `<text x="${padL-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="9.5">${fmt(v, M.fmt==="money"?"moneyK":M.fmt==="int"?"int":M.fmt)}</text>`;
+  }
+
+  const barra = (val,cx,color,nombre)=>{
+    const h = Math.max(1,(val/max)*ih), yy = y(val);
+    return `<g class="col"><title>${nombre}: ${fmt(val,valFmt)}</title>
+      <rect x="${(cx-bw/2).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" fill="${color}" rx="1"/>
+    </g>`;
+  };
+
+  $("#chartDiaEq").innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="${M.nombre}: real contra día equivalente">
+      ${g}
+      ${barra(real, x0+bw/2, "var(--teal)", "Real")}
+      ${barra(realDE, x0+bw*1.5+gap, "var(--orange)", "Real DE")}
+      <line class="axis" x1="${padL}" x2="${W-padR}" y1="${padT+ih}" y2="${padT+ih}"/>
+    </svg>`;
+
+  $("#legendDiaEq").innerHTML = `
+    <div class="alc"><i></i>Alcance: <b>${fmt(alcance,"pctsign")}</b></div>
+    <div class="leg-row"><i style="background:var(--teal)"></i><div>Real<b>${fmt(real,valFmt)}</b></div></div>
+    <div class="leg-row"><i style="background:var(--orange)"></i><div>Real DE<b>${fmt(realDE,valFmt)}</b></div></div>
+    <div class="alc"><i></i>Diferencia: <b>${fmtDif(dif,M)}</b></div>
+  `;
+  $("#chart-deq-head").textContent = `${M.nombre} — Día Equivalente`;
+  $("#chart-deq-tag").textContent = `${M.corto} · ${DE.modo}`;
+}
+
+/** Combo chart inferior: barra = proyectado, marcador = objetivo del mes,
+ *  agrupado por la dimensión elegida (Provincia / Sucursal / Supervisor). */
+function renderChart(R){
+  const M = METRICAS[state.metric];
+  const clave  = f => state.dim==="Sucursal" ? f.cod : state.dim==="Provincia" ? f.provincia : f.encargado;
+  const rotulo = f => state.dim==="Sucursal" ? f.sucursal : state.dim==="Provincia" ? f.provincia : f.encargado;
+
+  const grupos = new Map();
+  for(const f of R.filas){
+    const g = clave(f);
+    (grupos.get(g) || grupos.set(g, {nombre:rotulo(f), filas:[]}).get(g)).filas.push(f);
+  }
+  const datos = [...grupos.values()].map(o=>{
+    const filasG = o.filas;
+    const g = metricaGrupo(state.metric, filasG, R);
+    const proy     = M.ratio ? g.real : filasG.reduce((t,f)=>t+f.m[state.metric].proy,0);
+    const objetivo = M.ratio ? g.objAcum : filasG.reduce((t,f)=>t+f.m[state.metric].objMes,0);
+    return {nombre:o.nombre, proy, objetivo};
+  }).sort((a,b)=>b.proy-a.proy);
+
+  const W = Math.max(600, datos.length*Math.max(40, Math.min(90, 900/datos.length)) + 70);
+  const H = 300, padL = 66, padR = 14, padT = 12, padB = 60;
+  const iw = W-padL-padR, ih = H-padT-padB;
+  const max = Math.max(...datos.map(d=>Math.max(d.proy,d.objetivo)), 1) * 1.1;
+  const x = i => padL + (i+0.5)*(iw/datos.length);
+  const y = v => padT + ih - (v/max)*ih;
+  const bw = Math.max(16, Math.min(56, (iw/datos.length)*0.62));
+
+  const ticks = 5; let g = "";
+  for(let i=0;i<=ticks;i++){
+    const v = max/ticks*i, yy = y(v);
+    g += `<line class="grid" x1="${padL}" x2="${W-padR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}"/>`
+      +  `<text x="${padL-9}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="9.5">${fmt(v, M.fmt==="money"?"moneyK":M.fmt==="int"?"int":M.fmt)}</text>`;
+  }
+
+  let bars = "";
+  datos.forEach((d,i)=>{
+    const cx = x(i), h = Math.max(1,(d.proy/max)*ih), yy = y(d.proy);
+    const alc = d.objetivo ? d.proy/d.objetivo - 1 : 0;
+    const cls = claseAlcance(alc);
+    const color = cls==="good" ? "var(--sem-good)" : cls==="warn" ? "var(--sem-warn)" : "var(--sem-bad)";
+    const gy = y(d.objetivo);
+    bars += `<g class="col"><title>${d.nombre} — proyectado ${fmt(d.proy,M.fmt)} · objetivo ${fmt(d.objetivo,M.fmt)}</title>`
+      + `<rect x="${(cx-bw/2).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${color}" rx="1"/>`
+      + `<rect class="goalmark" x="${(cx-4).toFixed(1)}" y="${(gy-4).toFixed(1)}" width="8" height="8" transform="rotate(45 ${cx.toFixed(1)} ${gy.toFixed(1)})"/>`
+      + `<text class="lbl" transform="translate(${cx.toFixed(1)},${(padT+ih+16).toFixed(1)}) rotate(${datos.length>7?34:0})" text-anchor="${datos.length>7?"start":"middle"}">${d.nombre}</text>`
+      + `</g>`;
+  });
+
+  $("#chart").innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${M.nombre} proyectado contra objetivo por ${state.dim}">
+      ${g}${bars}
+      <line class="axis" x1="${padL}" x2="${W-padR}" y1="${padT+ih}" y2="${padT+ih}"/>
+    </svg>`;
+}
+
+function renderDimTabs(){
+  const claves = ["ventas","unidades","oper","uxc","margenTot","margenReal","margenOp"];
+  $("#dimTabs").innerHTML = claves.map(key=>{
+    const M = METRICAS[key];
+    return `<button class="dim-tab" type="button" role="tab" data-metric="${key}" aria-selected="${state.metric===key}">
+      <span class="ico"></span>${M.corto}
+    </button>`;
+  }).join("") + `<button class="dim-tab" type="button" disabled title="No portado a la versión web"><span class="ico"></span>Datos</button>`;
+  $("#dimTabs").querySelectorAll(".dim-tab[data-metric]").forEach(b=>{
+    b.addEventListener("click",()=>{ state.metric=b.dataset.metric; render(); });
+  });
+  $("#dim").value = state.dim;
+}
+
+/* — tablas — */
+/** `opts.onSeleccionar(ids, modo)` habilita selección de filas al estilo
+ *  QlikView (clic = reemplaza, Ctrl+clic = suma/saca, clic y arrastre = rango)
+ *  — cada `fila` necesita su `id` además de `cells`. `opts.esSeleccionada(id)`
+ *  resalta las filas que ya están en el filtro actual.                      */
+function tabla(cols, filas, totales, tabKey, opts={}){
+  const s = state.sort[tabKey];
+  const orden = [...filas].sort((a,b)=>{
+    const va=a.cells[s.c].v, vb=b.cells[s.c].v;
+    if(typeof va==="string") return s.d*va.localeCompare(vb,"es");
+    return s.d*(va-vb);
+  });
+  const head = cols.map((c,i)=>
+    `<th role="button" tabindex="0" data-c="${i}">${c}${s.c===i?`<span class="arrow">${s.d>0?"▲":"▼"}</span>`:""}</th>`).join("");
+  const body = orden.map(f=>{
+    const conId = f.id!==undefined;
+    const sel = conId && opts.esSeleccionada && opts.esSeleccionada(f.id);
+    return `<tr${conId?` data-id="${f.id}"`:""}${sel?' class="fila-sel"':""}>${f.cells.map(c=>`<td class="${c.cls||""}">${c.h}</td>`).join("")}</tr>`;
+  }).join("");
+  const foot = totales ? `<tfoot><tr>${totales.map(c=>`<td>${c}</td>`).join("")}</tr></tfoot>` : "";
+  const tablaTpl = document.createElement("template");
+  tablaTpl.innerHTML = `<table${opts.onSeleccionar?' class="seleccionable"':""}><thead><tr>${head}</tr></thead><tbody>${body}</tbody>${foot}</table>`;
+  const el = tablaTpl.content.firstElementChild;
+  el.querySelectorAll("thead th").forEach(th=>{
+    const go = ()=>{
+      const c = +th.dataset.c, st = state.sort[tabKey];
+      if(st.c===c) st.d = -st.d; else { st.c=c; st.d = c===0 ? 1 : -1; }
+      render();
+    };
+    th.addEventListener("click", go);
+    th.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); }});
+  });
+  if(opts.onSeleccionar) habilitarSeleccionFilas(el, opts.onSeleccionar);
+  return el;
+}
+
+/** Selección de filas estilo QlikView: clic = reemplaza la selección por esa
+ *  fila; Ctrl/Cmd+clic = suma o saca esa fila de la selección; clic y
+ *  arrastre = selecciona el rango completo (Ctrl+arrastre lo suma al resto).
+ *  `arrastreFilaActivo`/`arrastrePendiente` son globales (no por tabla) porque
+ *  el mouseup que termina el arrastre puede llegar después de que la tabla ya
+ *  se re-renderizó. El arrastre recién se arma con un `mousemove` real
+ *  posterior al `mousedown` (no en el mousedown mismo): al seleccionar una
+ *  fila, la tabla se re-renderiza y el "Selecciones actuales" puede cambiar de
+ *  alto (nombres largos) y correr el layout — el navegador dispara entonces un
+ *  `mouseenter` sintético sobre la fila que quedó bajo el cursor quieto, sin
+ *  mousemove real de por medio; si el arrastre ya estaba armado, eso extendía
+ *  la selección a un rango no pedido por el usuario. */
+let arrastreFilaActivo = false, arrastrePendiente = false, arrastreFilaInicio = -1;
+document.addEventListener("mousemove", ()=>{ if(arrastrePendiente) arrastreFilaActivo = true; });
+document.addEventListener("mouseup", ()=>{ arrastreFilaActivo = false; arrastrePendiente = false; });
+function habilitarSeleccionFilas(tablaEl, onSeleccionar){
+  const filas = [...tablaEl.querySelectorAll("tbody tr[data-id]")];
+  filas.forEach((tr,i)=>{
+    tr.addEventListener("mousedown", e=>{
+      if(e.button!==0) return;
+      arrastrePendiente = true; arrastreFilaInicio = i;
+      onSeleccionar([tr.dataset.id], (e.ctrlKey||e.metaKey) ? "toggle" : "reemplazar");
+      e.preventDefault();
+    });
+    tr.addEventListener("mouseenter", e=>{
+      if(!arrastreFilaActivo) return;
+      const desde = Math.min(arrastreFilaInicio,i), hasta = Math.max(arrastreFilaInicio,i);
+      const ids = filas.slice(desde,hasta+1).map(f=>f.dataset.id);
+      onSeleccionar(ids, (e.ctrlKey||e.metaKey) ? "agregar-rango" : "reemplazar");
+    });
+  });
+}
+
+/** Aplica un resultado de habilitarSeleccionFilas a un Set de filtro. */
+function aplicarSeleccionFilas(set, ids, modo, parse=(x=>x)){
+  const valores = ids.map(parse);
+  if(modo==="reemplazar"){ set.clear(); valores.forEach(v=>set.add(v)); }
+  else if(modo==="toggle"){ const v=valores[0]; if(set.has(v)) set.delete(v); else set.add(v); }
+  else { valores.forEach(v=>set.add(v)); }   // "agregar-rango"
+}
+
+/** Confirmación automática de la selección en Evolución Diaria/Sucursales:
+ *  al elegir filas ahí mismo se ven todas resaltadas (para poder seguir
+ *  sumando/sacando), y recién a los 3s de quietud se "aplica" de verdad,
+ *  ocultando el resto — cada nueva selección reinicia la espera. Volver a
+ *  vaciar la selección (Ctrl+clic sobre la última fila visible) hace
+ *  reaparecer todas de nuevo.
+ *  OJO con la asimetría: `sucMostrarTodas` (Sucursal) por defecto es FALSE
+ *  (mostrar filtrado) porque ese filtro tiene varias puertas de entrada además
+ *  de la tabla — marcadores, drag&drop, multiselect — y si el default fuera
+ *  "mostrar todas" quedaría así para siempre salvo que el usuario clickeara
+ *  una fila en ESTA tabla puntual. `colapsoDia` (Fechas) es al revés porque
+ *  ese filtro sólo se toca desde esta misma tabla, nunca desde afuera.       */
+const RETRASO_COLAPSO_MS = 3000;
+let sucMostrarTodas = false, colapsoDia = false;
+let timerColapsoSuc = null, timerColapsoDia = null;
+function programarColapso(tabla){
+  if(tabla==="suc"){
+    sucMostrarTodas = true;
+    clearTimeout(timerColapsoSuc);
+    timerColapsoSuc = setTimeout(()=>{ sucMostrarTodas = false; renderTablaSucursales(); }, RETRASO_COLAPSO_MS);
+  }else{
+    colapsoDia = false;
+    clearTimeout(timerColapsoDia);
+    timerColapsoDia = setTimeout(()=>{ colapsoDia = true; render(); }, RETRASO_COLAPSO_MS);
+  }
+}
+
+/** Las fechas puntuales de `filtroFechas` son del período que se estaba
+ *  mirando cuando se eligieron — si el período cambia (Desde/Hasta a mano o
+ *  los botones Mes en curso/Mes anterior/Año a la fecha), esas fechas ya no
+ *  existen en el nuevo rango y agregar() termina sin filas (0 en todo). Los
+ *  cambios de período son mandatorios: pisan y limpian ese filtro solo,
+ *  dejando Sucursal/Supervisor/Empresa como estaban.                        */
+function limpiarFiltroFechas(){
+  state.filtroFechas.clear();
+  clearTimeout(timerColapsoDia);
+  colapsoDia = false;
+}
+
+function renderTablaDiaria(R){
+  const dias = new Map();
+  for(const r of VENTAS){
+    if(r.f < state.f1 || r.f > state.f2) continue;
+    // Sin filtrar por filtroFechas acá salvo que ya se haya "confirmado" la
+    // selección (colapsoDia, a los 3s de quietud) — antes de eso el usuario
+    // todavía puede sumar/sacar fechas y necesita verlas todas.
+    if(colapsoDia && state.filtroFechas.size && !state.filtroFechas.has(r.f)) continue;
+    const s = SUC_BY_COD[r.cod];
+    if(!s || !sucursalPermitida(s)) continue;
+    let d = dias.get(r.f);
+    if(!d){ d={f:r.f,ventas:0,uni:0,oper:0,mbase:0,mcosto:0,tbase:0,tcosto:0,rbase:0}; dias.set(r.f,d); }
+    d.ventas += fVentas(r); d.uni += r.cantidad;
+    d.oper += r.oper_pos - r.oper_neg;
+    d.mbase += fMargenBase(r); d.mcosto += fCosto(r);
+    d.tbase += r.importe + r.iva_importe; d.tcosto += fCosto(r);
+    d.rbase += fMargenBaseReal(r);
+  }
+  const arr = [...dias.values()].sort((a,b)=>a.f.localeCompare(b.f));
+
+  const objDia = {};
+  for(const key of ["ventas","unidades","oper","ticket","uxc","margenOp","margenTot","margenReal"]) objDia[key] = objDiaFor(key,R);
+
+  const filas = arr.map(d=>{
+    const tkt = d.oper ? d.ventas/d.oper : 0;
+    const uxc = d.oper ? d.uni/d.oper : 0;
+    const mrgOp   = d.mbase ? (d.mbase-d.mcosto)/d.mbase*100 : 0;
+    const mrgTot  = d.tbase ? (d.tbase-d.tcosto)/d.tbase*100 : 0;
+    const mrgReal = d.rbase ? (d.rbase-d.mcosto)/d.rbase*100 : 0;
+    const fe  = new Date(d.f+"T00:00:00");
+    const nom = fe.toLocaleDateString("es-AR",{weekday:"short"}).replace(".","");
+    const sem = (v,key,esPct)=> semClase(v, objDia[key], esPct);
+    return {id:d.f, cells:[
+      {v:d.f, h:`${d.f.split("-").reverse().join("/")} <span style="color:var(--ink-3)">${nom}</span>`},
+      {v:d.ventas, h:fmt(d.ventas,"money"), cls:sem(d.ventas,"ventas")},
+      {v:d.uni,    h:nf.format(d.uni),      cls:sem(d.uni,"unidades")},
+      {v:d.oper,   h:nf.format(d.oper),     cls:sem(d.oper,"oper")},
+      {v:tkt,      h:fmt(tkt,"money"),      cls:sem(tkt,"ticket")},
+      {v:uxc,      h:nf2.format(uxc),       cls:sem(uxc,"uxc")},
+      {v:mrgOp,    h:nf2.format(mrgOp)+"%",   cls:sem(mrgOp,"margenOp",true)},
+      {v:mrgReal,  h:nf2.format(mrgReal)+"%", cls:sem(mrgReal,"margenReal",true)},
+      {v:mrgTot,   h:nf2.format(mrgTot)+"%",  cls:sem(mrgTot,"margenTot",true)}
+    ]};
+  });
+  const tV=arr.reduce((t,d)=>t+d.ventas,0), tU=arr.reduce((t,d)=>t+d.uni,0),
+        tO=arr.reduce((t,d)=>t+d.oper,0),
+        tBo=arr.reduce((t,d)=>t+d.mbase,0), tCo=arr.reduce((t,d)=>t+d.mcosto,0),
+        tBt=arr.reduce((t,d)=>t+d.tbase,0), tCt=arr.reduce((t,d)=>t+d.tcosto,0),
+        tBr=arr.reduce((t,d)=>t+d.rbase,0);
+  const el = tabla(
+    ["Día","Ventas","Unidades","Operaciones","Tkt Promedio","Uni x Cli","Mrg Oper","Mrg Real","Mrg Total"],
+    filas,
+    ["Total", fmt(tV,"money"), nf.format(tU), nf.format(tO),
+     fmt(tO?tV/tO:0,"money"), nf2.format(tO?tU/tO:0),
+     nf2.format(tBo?(tBo-tCo)/tBo*100:0)+"%",
+     nf2.format(tBr?(tBr-tCo)/tBr*100:0)+"%",
+     nf2.format(tBt?(tBt-tCt)/tBt*100:0)+"%"],
+    "dia",
+    {
+      esSeleccionada: f => state.filtroFechas.has(f),
+      onSeleccionar: (ids, modo) => {
+        aplicarSeleccionFilas(state.filtroFechas, ids, modo);
+        // Reordenar antes de render(): si colapsoDia había quedado en true de
+        // una selección anterior, un render() previo a esto confirmaría el
+        // filtro de una sin esperar los 3s.
+        programarColapso("dia");
+        render();
+      }
+    }
+  );
+  $("#tablewrap-dia").replaceChildren(el);
+}
+
+function renderTablaSucursales(){
+  // Por defecto respeta filtroSucursales igual que el resto del tablero (así
+  // un marcador, el drag&drop o el multiselect de Sucursal se ven reflejados
+  // acá también). Sólo se ignora durante los 3s posteriores a un clic EN esta
+  // misma tabla (`sucMostrarTodas`), para poder seguir sumando/sacando filas
+  // sin que desaparezcan antes de terminar de elegir.
+  const R = calcular(sucMostrarTodas ? {ignorarSucursales:true} : {});
+  const filas = R.filas.map(f=>{
+    const v = f.m.ventas, u = f.m.unidades, o = f.m.oper, x = f.m.uxc,
+          mo = f.m.margenOp, mr = f.m.margenReal;
+    return {id:f.cod, cells:[
+      {v:f.sucursal, h:f.sucursal},
+      {v:v.real, h:fmt(v.real,"money"), cls:semClase(v.real,v.objAcum)},
+      {v:u.real, h:nf.format(u.real),   cls:semClase(u.real,u.objAcum)},
+      {v:o.real, h:nf.format(o.real),   cls:semClase(o.real,o.objAcum)},
+      {v:x.real, h:nf2.format(x.real),  cls:semClase(x.real,x.objAcum)},
+      {v:mo.real,h:nf2.format(mo.real)+"%", cls:semClase(mo.real,mo.objAcum,true)},
+      {v:mr.real,h:nf2.format(mr.real)+"%", cls:semClase(mr.real,mr.objAcum,true)},
+      {v:f.dhab, h:`${f.dhab}`},
+      {v:f.dias, h:`${f.dias}`}
+    ]};
+  });
+  const T=R.total, tg=R.totAgg;
+  const el = tabla(
+    ["Sucursal","Ventas","Uni","Oper","Uni x Cli","Mrg Op%","Mrg Real%","D Hab","D Ven"],
+    filas,
+    ["Total", fmt(T.ventas.real,"money"), nf.format(tg.uni), nf.format(tg.oper),
+     nf2.format(T.uxc.real), nf2.format(T.margenOp.real)+"%", nf2.format(T.margenReal.real)+"%",
+     R.dhab ? `${R.dhab}` : "—", nf.format(R.dVen)],
+    "suc",
+    {
+      esSeleccionada: cod => state.filtroSucursales.has(Number(cod)),
+      onSeleccionar: (ids, modo) => {
+        aplicarSeleccionFilas(state.filtroSucursales, ids, modo, Number);
+        // Mismo orden que en Evolución Diaria: primero armar sucMostrarTodas.
+        programarColapso("suc");
+        sincronizarFiltros();
+      }
+    }
+  );
+  $("#tablewrap-suc").replaceChildren(el);
+  $("#foot-bocas").textContent = R.filas.length;
+}
+
+function renderTablaSupervisores(R){
+  const grupos = new Map();
+  for(const f of R.filas){
+    if(!grupos.has(f.encargado)) grupos.set(f.encargado, []);
+    grupos.get(f.encargado).push(f);
+  }
+  const filas = [...grupos.entries()].map(([nombre,filasG])=>{
+    const v = metricaGrupo("ventas",filasG,R), u = metricaGrupo("unidades",filasG,R),
+          o = metricaGrupo("oper",filasG,R),   t = metricaGrupo("ticket",filasG,R),
+          x = metricaGrupo("uxc",filasG,R),   mo = metricaGrupo("margenOp",filasG,R),
+          mr = metricaGrupo("margenReal",filasG,R);
+    return {cells:[
+      {v:nombre, h:nombre},
+      {v:v.real, h:fmt(v.real,"money"), cls:semClase(v.real,v.objAcum)},
+      {v:u.real, h:nf.format(u.real),   cls:semClase(u.real,u.objAcum)},
+      {v:o.real, h:nf.format(o.real),   cls:semClase(o.real,o.objAcum)},
+      {v:t.real, h:fmt(t.real,"money"), cls:semClase(t.real,t.objAcum)},
+      {v:x.real, h:nf2.format(x.real),  cls:semClase(x.real,x.objAcum)},
+      {v:mo.real,h:nf2.format(mo.real)+"%", cls:semClase(mo.real,mo.objAcum,true)},
+      {v:mr.real,h:nf2.format(mr.real)+"%", cls:semClase(mr.real,mr.objAcum,true)}
+    ]};
+  });
+  const T=R.total, tg=R.totAgg;
+  const el = tabla(
+    ["Supervisor","Ventas","Uni","Oper","Tkt Promedio","Uni x Cli","Mrg Op%","Mrg Real%"],
+    filas,
+    ["Total", fmt(T.ventas.real,"money"), nf.format(tg.uni), nf.format(tg.oper),
+     fmt(T.ticket.real,"money"), nf2.format(T.uxc.real), nf2.format(T.margenOp.real)+"%",
+     nf2.format(T.margenReal.real)+"%"],
+    "sup"
+  );
+  $("#tablewrap-sup").replaceChildren(el);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   5 · ORQUESTACIÓN
+   ═══════════════════════════════════════════════════════════════════ */
+function render(){
+  const R = calcular();
+  renderSelList();
+  renderSidebar();
+  renderChartPrincipal(R);
+  renderChartDiaEq(R);
+  renderDimTabs();
+  renderChart(R);
+  renderTablaDiaria(R);
+  renderTablaSucursales();
+  renderTablaSupervisores(R);
+}
+
+/** Punto único de actualización: asegura los datos del período y redibuja. */
+let refrescoEnCurso = null;
+async function refrescar(){
+  if(!API.activa){ render(); return; }
+  document.body.dataset.cargando = "1";
+  const tarea = (async ()=>{
+    const de = rangoDE();
+    await Promise.all([
+      asegurarVentas(state.f1, state.f2),
+      asegurarVentas(de.desde, de.hasta)
+    ]);
+  })();
+  refrescoEnCurso = tarea;
+  try{
+    await tarea;
+    if(refrescoEnCurso !== tarea) return;      // llegó un cambio más nuevo
+    API.error = null;
+    render();
+  }catch(e){
+    API.error = e;
+    mostrarError(e);
+  }finally{
+    if(refrescoEnCurso === tarea) delete document.body.dataset.cargando;
+  }
+}
+
+function mostrarError(e){
+  $("#notice").innerHTML =
+    `<div><b>No se pudieron traer los datos.</b> ${String(e.message || e)}.
+     Revisá que el servicio esté arriba y que la conexión a SQL Server responda;
+     el detalle queda en el log del servidor. Lo que ves en pantalla es el último
+     período que sí cargó.</div>`;
+  $("#notice").classList.add("es-error");
+}
+
+/** Un multiselect tipo listbox de QlikView: botón + popover con checkboxes.
+ *  `set` es el Set de state que se muta en el lugar; vacío = "sin filtrar". */
+/** Un multiselect tipo listbox de QlikView. `opts.disponible(valor)` decide si
+ *  una opción sigue siendo elegible dado el resto de los filtros — la que deja
+ *  de estarlo se destilda sola y aparece gris, como el modelo asociativo de
+ *  QlikView (nunca deja armar una combinación que da cero datos en silencio).
+ *  `opts.onChange` corre en vez de `render()` directo cuando hay que
+ *  refrescar la disponibilidad de OTRO multiselect relacionado.            */
+function crearMultiselect(set, etiqueta, opciones, opts={}){
+  const { disponible, onChange } = opts;
+  const wrap = document.createElement("div");
+  wrap.className = "msel";
+  wrap.innerHTML = `
+    <button type="button" class="msel-btn"></button>
+    <div class="msel-pop">
+      <div class="msel-actions">
+        <button type="button" data-a="todas">Todas</button>
+        <button type="button" data-a="ninguna">Ninguna</button>
+      </div>
+      <div class="msel-list">
+        ${opciones.map(o=>`<label class="msel-item"><input type="checkbox">${o.label}</label>`).join("")}
+      </div>
+    </div>`;
+  const btn = wrap.querySelector(".msel-btn");
+  const items = [...wrap.querySelectorAll(".msel-item")];
+  const checks = items.map(it=>it.querySelector("input"));
+
+  function actualizar(){
+    const n = set.size;
+    wrap.classList.toggle("activo", n>0);
+    checks.forEach((chk,i)=>{ chk.checked = set.has(opciones[i].value); });
+    // Mostrar los nombres elegidos, no la cantidad — "BUE 01, BUE 02", no "2".
+    const elegidas = opciones.filter(o=>set.has(o.value)).map(o=>o.label);
+    let texto;
+    if(n===0) texto = etiqueta;
+    else if(n<=4) texto = `${etiqueta}: ${elegidas.join(", ")}`;
+    else texto = `${etiqueta}: ${elegidas.slice(0,3).join(", ")} y ${n-3} más`;
+    btn.innerHTML = `${texto} <span class="car">▾</span>`;
+    btn.title = n>0 ? elegidas.join(", ") : "";
+  }
+  /** Recalcula qué opciones siguen eligibles y destilda las que ya no lo son. */
+  function refrescar(){
+    items.forEach((item,i)=>{
+      const ok = !disponible || disponible(opciones[i].value);
+      item.classList.toggle("deshabilitado", !ok);
+      checks[i].disabled = !ok;
+      if(!ok && set.has(opciones[i].value)) set.delete(opciones[i].value);
+    });
+    actualizar();
+  }
+  const avisar = () => onChange ? onChange() : render();
+  checks.forEach((chk,i)=>{
+    chk.addEventListener("change",()=>{
+      if(chk.checked) set.add(opciones[i].value); else set.delete(opciones[i].value);
+      actualizar(); avisar();
+    });
+  });
+  btn.addEventListener("click", e=>{
+    e.stopPropagation();
+    document.querySelectorAll(".msel.open").forEach(m=>{ if(m!==wrap) m.classList.remove("open"); });
+    wrap.classList.toggle("open");
+  });
+  wrap.querySelector('[data-a="todas"]').addEventListener("click",()=>{
+    items.forEach((item,i)=>{ if(!item.classList.contains("deshabilitado")) set.add(opciones[i].value); });
+    actualizar(); avisar();
+  });
+  wrap.querySelector('[data-a="ninguna"]').addEventListener("click",()=>{
+    set.clear(); actualizar(); avisar();
+  });
+  wrap.refrescar = refrescar;
+  refrescar();
+  return wrap;
+}
+
+/** ¿La sucursal `s` es compatible con estos filtros? (cualquiera vacío = no
+ *  restringe). Es la pieza común que arma la disponibilidad relacional de
+ *  Sucursal/Supervisor/Empresa: cada multiselect pregunta "¿existe alguna
+ *  sucursal con este valor que además cumpla lo que ya está elegido en los
+ *  otros dos?" en vez de mirar sólo su propio filtro.                       */
+function sucursalCumple(s, {sucursales, supervisores, empresas}){
+  if(sucursales   && sucursales.size   && !sucursales.has(s.cod)) return false;
+  if(supervisores && supervisores.size && !encargadosDe(s).some(n=>supervisores.has(n))) return false;
+  if(empresas     && empresas.size     && !empresas.has(s.empresa)) return false;
+  return true;
+}
+
+// Sucursal ↔ Supervisor ↔ Empresa: modelo relacional — elegir en uno recorta
+// las opciones de los otros dos (y del drag&drop de Sucursal), en vez de
+// dejar armar una combinación imposible que da cero datos en silencio.
+const sucursalDisponible = cod => {
+  const s = SUC_BY_COD[cod];
+  return s ? sucursalCumple(s, {supervisores:state.filtroSupervisores, empresas:state.filtroEmpresas}) : true;
+};
+const supervisorDisponible = nombre =>
+  SUCURSALES.some(s => encargadosDe(s).includes(nombre) &&
+    sucursalCumple(s, {sucursales:state.filtroSucursales, empresas:state.filtroEmpresas}));
+const empresaDisponible = empresa =>
+  SUCURSALES.some(s => s.empresa===empresa &&
+    sucursalCumple(s, {sucursales:state.filtroSucursales, supervisores:state.filtroSupervisores}));
+
+/** Todo lo que hay que refrescar cuando cambia CUALQUIER filtro relacional
+ *  (Sucursal, Supervisor, Empresa, sea por el multiselect o por el drag&drop):
+ *  cada UI se registra acá con su propio `refrescar()` en vez de que cada una
+ *  se entere a mano de las demás.                                           */
+const REFRESCADORES_FILTRO = [];
+function sincronizarFiltros(){
+  REFRESCADORES_FILTRO.forEach(fn=>fn());
+  render();
+}
+
+function initMultiselects(){
+  const col = new Intl.Collator("es").compare;
+  const opcSucursales = [...SUCURSALES].sort((a,b)=>col(a.nombre,b.nombre)).map(s=>({value:s.cod, label:s.nombre}));
+
+  const nombresSup = new Set();
+  for(const s of SUCURSALES) encargadosDe(s).forEach(n=>nombresSup.add(n));
+  const opcSupervisores = [...nombresSup].sort(col).map(n=>({value:n, label:n}));
+
+  const opcEmpresas = [...new Set(SUCURSALES.map(s=>s.empresa))].sort(col).map(e=>({value:e, label:e}));
+
+  const mselSuc = crearMultiselect(state.filtroSucursales, "Sucursal", opcSucursales,
+    {disponible: sucursalDisponible, onChange: sincronizarFiltros});
+  const mselSup = crearMultiselect(state.filtroSupervisores, "Supervisor", opcSupervisores,
+    {disponible: supervisorDisponible, onChange: sincronizarFiltros});
+  const mselEmp = crearMultiselect(state.filtroEmpresas, "Empresa", opcEmpresas,
+    {disponible: empresaDisponible, onChange: sincronizarFiltros});
+
+  REFRESCADORES_FILTRO.push(mselSuc.refrescar, mselSup.refrescar, mselEmp.refrescar);
+
+  // Mismo orden que las secciones de abajo (#selList): Empresa, Supervisor, Sucursal.
+  const bar = $("#mselBar");
+  bar.appendChild(mselEmp);
+  bar.appendChild(mselSup);
+  bar.appendChild(mselSuc);
+
+  document.addEventListener("click", e=>{
+    document.querySelectorAll(".msel.open").forEach(m=>{ if(!m.contains(e.target)) m.classList.remove("open"); });
+  });
+
+  $("#selList").addEventListener("click", e=>{
+    const btn = e.target.closest(".sel-x");
+    if(!btn) return;
+    const {sec, v} = btn.dataset;
+    if(sec==="emp") state.filtroEmpresas.delete(v);
+    else if(sec==="sup") state.filtroSupervisores.delete(v);
+    else if(sec==="suc") state.filtroSucursales.delete(Number(v));
+    else if(sec==="fecha"){ state.filtroFechas.delete(v); clearTimeout(timerColapsoDia); colapsoDia = false; }
+    sincronizarFiltros();
+  });
+}
+
+/** Listado completo de "Selecciones actuales", separado por sección
+ *  (Empresa/Supervisor/Sucursal/Fechas) — cada valor elegido con su propia X
+ *  para sacarlo de a uno, sin tener que abrir el multiselect ni deseleccionar
+ *  fila por fila en las tablas. Se llama desde `render()` (no desde
+ *  sincronizarFiltros): filtroFechas cambia por la tabla Evolución Diaria,
+ *  no por los multiselects relacionales de Sucursal/Supervisor/Empresa.     */
+function renderSelList(){
+  const cont = $("#selList");
+  if(!cont) return;
+  const col = new Intl.Collator("es").compare;
+  const fmtFecha = f => f.split("-").slice(1).reverse().join("/");
+  const secciones = [
+    {sec:"emp",   titulo:"Empresa",    valores:[...state.filtroEmpresas],
+      etiqueta:v=>v, orden:(a,b)=>col(a,b)},
+    {sec:"sup",   titulo:"Supervisor", valores:[...state.filtroSupervisores],
+      etiqueta:v=>v, orden:(a,b)=>col(a,b)},
+    {sec:"suc",   titulo:"Sucursal",   valores:[...state.filtroSucursales],
+      etiqueta:v=>SUC_BY_COD[v]?.nombre || v, orden:(a,b)=>col(SUC_BY_COD[a]?.nombre||"", SUC_BY_COD[b]?.nombre||"")},
+    {sec:"fecha", titulo:"Fechas",     valores:[...state.filtroFechas],
+      etiqueta:fmtFecha, orden:(a,b)=>a.localeCompare(b)}
+  ];
+  cont.innerHTML = secciones.map(s=>{
+    const valores = [...s.valores].sort(s.orden);
+    const items = valores.length ? valores.map(v=>
+      `<span class="sel-chip">${s.etiqueta(v)}<button type="button" class="sel-x" data-sec="${s.sec}" data-v="${String(v)}" title="Quitar">✕</button></span>`
+    ).join("") : `<span class="sel-vacio">Todas</span>`;
+    return `<div class="sel-sec"><div class="sel-sec-titulo">${s.titulo}</div><div class="sel-sec-items">${items}</div></div>`;
+  }).join("");
+}
+
+/** Filtro de Sucursal por arrastrar y soltar, en el panel Período — mismo
+ *  `state.filtroSucursales` que el multiselect de "Selecciones actuales":
+ *  son dos formas de tocar el mismo filtro, no dos filtros distintos.       */
+function crearDnDSucursales(){
+  const contDisp = $("#dndDisponibles"), contSel = $("#dndElegidas");
+  const col = new Intl.Collator("es").compare;
+  const opciones = [...SUCURSALES].sort((a,b)=>col(a.nombre,b.nombre)).map(s=>({value:s.cod, label:s.nombre}));
+
+  const item = o => {
+    const deshabilitada = !sucursalDisponible(o.value);
+    return `<div class="dnd-item${deshabilitada?" deshabilitado":""}" draggable="${!deshabilitada}" data-cod="${o.value}">${o.label}</div>`;
+  };
+
+  function cablear(cont, esElegidas){
+    cont.querySelectorAll(".dnd-item[draggable=true]").forEach(el=>{
+      el.addEventListener("dragstart", e=>{
+        e.dataTransfer.setData("text/plain", el.dataset.cod);
+        el.classList.add("arrastrando");
+      });
+      el.addEventListener("dragend", ()=> el.classList.remove("arrastrando"));
+      el.addEventListener("dblclick", ()=> mover(Number(el.dataset.cod), !esElegidas));
+    });
+  }
+
+  function mover(cod, aElegidas){
+    if(aElegidas) state.filtroSucursales.add(cod); else state.filtroSucursales.delete(cod);
+    sincronizarFiltros();
+  }
+
+  function refrescar(){
+    const elegidas    = opciones.filter(o=>state.filtroSucursales.has(o.value));
+    const disponibles = opciones.filter(o=>!state.filtroSucursales.has(o.value));
+    contDisp.innerHTML = disponibles.map(item).join("");
+    contSel.innerHTML  = elegidas.map(item).join("");
+    cablear(contDisp, false);
+    cablear(contSel, true);
+  }
+
+  [[contDisp,false],[contSel,true]].forEach(([cont,esElegidas])=>{
+    cont.addEventListener("dragover", e=>{ e.preventDefault(); cont.classList.add("dragover"); });
+    cont.addEventListener("dragleave", ()=> cont.classList.remove("dragover"));
+    cont.addEventListener("drop", e=>{
+      e.preventDefault(); cont.classList.remove("dragover");
+      const cod = Number(e.dataTransfer.getData("text/plain"));
+      mover(cod, esElegidas);
+    });
+  });
+
+  refrescar();
+  return {refrescar};
+}
+
+/** Marcadores (bookmarks): guardan sólo Sucursal y Empresa — a propósito no
+ *  incluyen fechas/Período ni Supervisor/Día, para poder aplicar la misma
+ *  "vista" de sucursales sobre cualquier período que se esté mirando en el
+ *  momento. Persisten en localStorage (por navegador, no por servidor).      */
+const MARCADORES_KEY = "tableroObjetivos.marcadores";
+function cargarMarcadores(){
+  try{ return JSON.parse(localStorage.getItem(MARCADORES_KEY)) || []; }
+  catch{ return []; }
+}
+function guardarMarcadores(lista){
+  localStorage.setItem(MARCADORES_KEY, JSON.stringify(lista));
+}
+
+function crearMarcadores(){
+  const wrap = $("#marcadores"), btn = $("#marcadoresBtn"), lista = $("#marcadoresLista");
+
+  function pintar(){
+    const marcadores = cargarMarcadores();
+    lista.innerHTML = marcadores.length ? marcadores.map((m,i)=>`
+      <div class="marcador-item">
+        <button type="button" class="marcador-aplicar" data-i="${i}">${m.nombre}</button>
+        <button type="button" class="marcador-quitar" data-i="${i}" title="Quitar marcador">✕</button>
+      </div>`).join("") : `<div class="marcador-vacio">Sin marcadores guardados</div>`;
+  }
+
+  btn.addEventListener("click", e=>{
+    e.stopPropagation();
+    document.querySelectorAll(".msel.open").forEach(m=>{ if(m!==wrap) m.classList.remove("open"); });
+    wrap.classList.toggle("open");
+  });
+
+  lista.addEventListener("click", e=>{
+    const bAplicar = e.target.closest(".marcador-aplicar");
+    const bQuitar  = e.target.closest(".marcador-quitar");
+    if(bAplicar){
+      const m = cargarMarcadores()[Number(bAplicar.dataset.i)];
+      if(m){
+        // Mutar los Set existentes, no reasignarlos: los multiselects y el
+        // drag&drop de Sucursal ya tienen una referencia al Set original.
+        state.filtroSucursales.clear();
+        m.sucursales.forEach(c=>state.filtroSucursales.add(c));
+        state.filtroEmpresas.clear();
+        m.empresas.forEach(e=>state.filtroEmpresas.add(e));
+        sincronizarFiltros();
+      }
+      wrap.classList.remove("open");
+    }else if(bQuitar){
+      const marcadores = cargarMarcadores();
+      marcadores.splice(Number(bQuitar.dataset.i), 1);
+      guardarMarcadores(marcadores);
+      pintar();
+    }
+  });
+
+  $("#marcadorAgregar").addEventListener("click", ()=>{
+    const nombre = (window.prompt("Nombre del marcador:") || "").trim();
+    if(!nombre) return;
+    const marcadores = cargarMarcadores();
+    marcadores.push({
+      nombre,
+      sucursales: [...state.filtroSucursales],
+      empresas: [...state.filtroEmpresas]
+    });
+    guardarMarcadores(marcadores);
+    pintar();
+  });
+
+  pintar();
+}
+
+function initControles(){
+  const f1=$("#f1"), f2=$("#f2");
+  f1.value=state.f1; f2.value=state.f2;
+  f1.min=f2.min="2024-01-01"; f1.max=f2.max=iso(HOY);
+  f1.addEventListener("change",()=>{ state.f1=f1.value||state.f1; if(state.f1>state.f2){state.f2=state.f1; f2.value=state.f2;} limpiarFiltroFechas(); refrescar(); });
+  f2.addEventListener("change",()=>{ state.f2=f2.value||state.f2; if(state.f2<state.f1){state.f1=state.f2; f1.value=state.f1;} limpiarFiltroFechas(); refrescar(); });
+
+  // dimensión se resuelve sobre los datos ya cargados: no va al servidor
+  $("#dim").addEventListener("change",e=>{ state.dim=e.target.value; render(); });
+
+  initMultiselects();   // Sucursal / Supervisor / Empresa / Día — filtran sobre lo ya cargado
+  REFRESCADORES_FILTRO.push(crearDnDSucursales().refrescar);
+  crearMarcadores();
+
+  $(".presets").addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    const hoy=new Date(HOY); let d1,d2;
+    if(b.dataset.preset==="mes"){ d1=new Date(hoy.getFullYear(),hoy.getMonth(),1); d2=hoy; }
+    else if(b.dataset.preset==="mesant"){ d1=new Date(hoy.getFullYear(),hoy.getMonth()-1,1); d2=new Date(hoy.getFullYear(),hoy.getMonth(),0); }
+    else { d1=new Date(hoy.getFullYear(),0,1); d2=hoy; }
+    state.f1=iso(d1); state.f2=iso(d2); f1.value=state.f1; f2.value=state.f2;
+    limpiarFiltroFechas();
+    refrescar();
+  });
+
+  const fe = d => d ? d.split("-").reverse().join("/") : "—";
+  $("#stamp").innerHTML =
+    `Última venta <b>${fe(ULTIMOS.ultimaVenta)}</b> · Stock al <b>${fe(ULTIMOS.ultimoStock)}</b>` +
+    `<br>${API.activa ? "Datos en vivo · SQL Server" : "Recarga del modelo"} <b>${ULTIMOS.recarga}</b>`;
+
+  $("#notice").innerHTML = API.activa
+    ? ``
+    : `<div><b>Datos de demostración.</b> No hay backend respondiendo en <code>api/modelo</code>,
+       así que las cifras se generan localmente. La estructura, las fórmulas y la jerarquía son
+       las del .qvw original. Para conectar SQL Server, seguí <code>DEPLOY.md</code>.</div>`;
+}
+
+async function iniciar(){
+  try{
+    await cargarModelo();
+  }catch(e){
+    generarDemo();                    // sin backend: juego de demostración
+  }
+  initControles();
+  await refrescar();
+}
+
+iniciar();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,102 @@
+
+
+//Cargo la tabla GrillaVentasComparativas
+GrillaVentasComparativas:
+LOAD DISTINCT
+    AñoMes,
+    Empresa,
+    id_trimestre_anio,
+    cod_sucursal as Sucursal,
+    desc_sucursal2,
+    id_semestre_anio,
+    id_mes_anio as Mes,
+    nombre_mes as NombreMes,
+    id_anio as Año,
+    vta_neta,
+    unidades_vta,
+    margen_pesos,
+    ventas_sin_iva,
+    cant_operaciones,
+    ticketPromIVA,
+    unidadCliente,
+    ts,
+    ventas_ano_anterior,
+    unidades_vta_anterior,
+    margen_pesos_anterior,
+    cant_operaciones_anterior,
+    ticketPromIVA_anterior,
+    unidadCliente_anterior,
+    cumplimiento2,
+    obj_vtas_sin_iva,
+    obj_operaciones,
+    obj_unidades_vtas,
+    obj_unidades_clientes,
+    obj_ticket_promedio,
+    desc_grupo_sucursal as Supervisor;
+
+SQL SELECT
+    AñoMes,
+    Empresa,
+    id_trimestre_anio,
+    cod_sucursal,
+    desc_sucursal2,
+    id_semestre_anio,
+    id_mes_anio,
+    nombre_mes,
+    id_anio,
+    vta_neta,
+    unidades_vta,
+    margen_pesos,
+    ventas_sin_iva,
+    cant_operaciones,
+    ticketPromIVA,
+    unidadCliente,
+    ts,
+    ventas_ano_anterior,
+    unidades_vta_anterior,
+    margen_pesos_anterior,
+    cant_operaciones_anterior,
+    ticketPromIVA_anterior,
+    unidadCliente_anterior,
+    cumplimiento2,
+    obj_vtas_sin_iva,
+    obj_operaciones,
+    obj_unidades_vtas,
+    obj_unidades_clientes,
+    obj_ticket_promedio,
+    desc_grupo_sucursal
+FROM TABLEROS.dbo.GrillaVentasComparativas;
+
+
+//La guardo en QVD
+STORE GrillaVentasComparativas INTO [C:\QLIKVIEW\VENTASCOMPARATIVAS\DATA\QVD\GrillaVentasComparativas.qvd] (qvd);
+
+
+
+
+
+Sucursales:
+
+LOAD
+    If(IsNum(Sucursal),
+        Right('00' & Num#(Sucursal), 2),
+        Sucursal
+    ) as Sucursal,
+    If(Sucursal = 'E1', 'MELI Tesi',
+    If(Sucursal = 'E2', 'MELI Pueblo',
+    If(Sucursal = 'WE1', 'WEB Tesi',
+    If(Sucursal = 'WE2', 'WEB Pueblo',
+    If(Sucursal = 'FK1', 'WEB Freekick',
+        nomSucursal))))) as nomSucursal
+WHERE IsNum(Sucursal) 
+   OR Match(Sucursal, 'E1','E2','WE1','WE2','FK1');
+
+SQL SELECT
+    Sucursal,
+    nomSucursal
+FROM db_Cegid.dbo.Sucursales
+WHERE sucvta = 'S'
+AND viewsuc = 'S';
+
+//La guardo en QVD
+STORE Sucursales INTO [C:\QLIKVIEW\VENTASCOMPARATIVAS\DATA\QVD\Sucursales.qvd] (qvd);

@@ -1,0 +1,2031 @@
+﻿### [1] LABEL: ='Alcance: ' & chr(10) & chr(13) &
+Num(
+(
+    (
+        Sum(
+            Aggr(
+                If(
+                    Max(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+                    = Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha)),
+
+                    // Caso 1: todos los días hábiles cubiertos → valor directo
+                    (
+                        Count(DISTINCT If(fecha >= F1 and fecha <= F2 and cantidad > 0, Idventa))
+                        -
+                        Count(DISTINCT If(fecha >= F1 and fecha <= F2 and cantidad < 0, Idventa))
+                    ),
+
+                    // Caso 2: parcial → proyectar por días hábiles
+                    (
+                        (
+                            Count(DISTINCT If(fecha >= F1 and fecha <= F2 and cantidad > 0, Idventa))
+                            -
+                            Count(DISTINCT If(fecha >= F1 and fecha <= F2 and cantidad < 0, Idventa))
+                        )
+                        /
+                        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+                        *
+                        Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+                    )
+                )
+            , Sucursal)
+        )
+        /
+        Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_OPERACIONES))
+    )
+) - 1,
+'#,##0.0%'
+)
+
+/*
+='Alcance: ' & chr(10) & chr(13)& 
+NUM(
+(
+  if(
+    max(if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES)) 
+    = Count(DISTINCT if(fecha>=F1 and fecha<=F2, fecha)),
+
+    // numerador directo
+    (count(DISTINCT if(fecha>=F1 and fecha<=F2 and cantidad>0, Idventa)) 
+     - count(DISTINCT if(fecha>=F1 and fecha<=F2 and cantidad<0, Idventa))),
+
+    // numerador proyectado
+    (
+      (count(DISTINCT if(fecha>=F1 and fecha<=F2 and cantidad>0, Idventa)) 
+       - count(DISTINCT if(fecha>=F1 and fecha<=F2 and cantidad<0, Idventa)))
+      /
+      Count(DISTINCT if(fecha>=F1 and fecha<=F2, Sucursal & '_' & fecha)) 
+      *
+      sum(if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))
+    )
+  )
+  / sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES))
+)-1
+, '#,##0.0%')
+0
+
+### [2] LABEL: ='Proyectado: ' & chr(10) & chr(13)& num( if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha>=F1 and fecha <=F2, fecha)) ,
+
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))),
+
+
+Sum(
+    Aggr(
+        (
+            (
+                Count(DISTINCT If(fecha>=F1 and fecha<=F2 and cantidad>0, Idventa))
+                -
+                Count(DISTINCT If(fecha>=F1 and fecha<=F2 and cantidad<0, Idventa))
+            )
+            /
+            Count(DISTINCT If(fecha>=F1 and fecha<=F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB=Year(F2) and MESHAB=Month(F2), DIAS_HABILES))
+    , Sucursal)
+)), '#,##0')
+if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha>=F1 and fecha <=F2, fecha)) ,
+
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))),
+
+
+Sum(
+    Aggr(
+        (
+            (
+                Count(DISTINCT If(fecha>=F1 and fecha<=F2 and cantidad>0, Idventa))
+                -
+                Count(DISTINCT If(fecha>=F1 and fecha<=F2 and cantidad<0, Idventa))
+            )
+            /
+            Count(DISTINCT If(fecha>=F1 and fecha<=F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB=Year(F2) and MESHAB=Month(F2), DIAS_HABILES))
+    , Sucursal)
+)
+
+/*
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa)))
+/ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )*/
+
+
+
+)
+
+### [3] LABEL: ='Obj. Mes: ' & chr(10) & chr(13)& num(sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) ) , '#,##0')
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )
+
+### [4] LABEL: ='Real: ' & chr(10) & chr(13)& num( count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa)), '#,##0')
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+
+### [5] LABEL: ='Obj. Acum: ' & chr(10) & chr(13)& num(Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_OPERACIONES))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+  , '#,##0')
+Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_OPERACIONES))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+
+/*sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) ) /  sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) ) * Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+
+### [6] LABEL: = 'Diferencia: ' & chr(10) & chr(13) &
+
+num(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+
+-
+
+
+
+Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_OPERACIONES))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+, '#,##0')
+0
+
+### [7] LABEL: ='Alcance: ' & chr(10) & 
+NUM(
+(
+  if(
+    max(if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))
+    = Count(DISTINCT if(fecha>=F1 and fecha <=F2, fecha)),
+    sum(if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ', cantidad)),
+    sum(if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ', cantidad))
+    / Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha))
+    * sum(if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))
+  )
+  / sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS))
+)-1
+, '#,##0.0%')
+
+0
+
+### [8] LABEL: ='Proyectado: ' & chr(10) & chr(13)&
+
+num(
+
+if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha>=F1 and fecha <=F2, fecha)) ,
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ),
+
+Sum(
+    Aggr(
+        (
+            Sum(If(fecha>=F1 and fecha<=F2 and Artículo<>'ZZZZZZZZ', cantidad))
+            /
+            Count(DISTINCT If(fecha>=F1 and fecha<=F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB=Year(F2) and MESHAB=Month(F2), DIAS_HABILES))
+    , Sucursal)
+))
+
+, '#,##0')
+
+
+
+
+if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha>=F1 and fecha <=F2, fecha)) ,
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ),
+
+Sum(
+    Aggr(
+        (
+            Sum(If(fecha>=F1 and fecha<=F2 and Artículo<>'ZZZZZZZZ', cantidad))
+            /
+            Count(DISTINCT If(fecha>=F1 and fecha<=F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB=Year(F2) and MESHAB=Month(F2), DIAS_HABILES))
+    , Sucursal)
+)
+
+
+/*sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ) / Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )*/
+
+)
+
+/*
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ) / Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+*/
+
+### [9] LABEL: ='Obj. Mes: ' & chr(10) & chr(13)& num(
+
+
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+
+, '#,##0')
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+### [10] LABEL: ='Real: '  & chr(10) & chr(13)& num(
+
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ) , '#,##0')
+
+
+
+
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+
+### [11] LABEL: ='Obj. Acum: '
+
+& chr(10) & chr(13)& num( Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_UNIDADES_VTAS))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+, '#,##0')
+Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_UNIDADES_VTAS))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+
+
+### [12] LABEL: = 'Diferencia: ' &chr(10)&chr(13) & num(
+
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+
+-
+
+Sum(
+    Aggr(
+        (
+            Sum(If(ANIOOBJ = Year(F2) and MESOBJ = Month(F2), OBJ_UNIDADES_VTAS))
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+
+
+ , '#,##0')
+0
+
+### [13] LABEL: ='Alcance: ' & chr(10) & chr(13) &
+Num(
+(
+    (
+        Sum(
+            Aggr(
+                If(
+                    Max(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+                    = Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha)),
+
+                    // Caso 1: todos los días hábiles cubiertos → usar total directo
+                    Sum(
+                        If(
+                            fecha >= F1 and fecha <= F2,
+                            importe  +
+                            If(IVA = 'SI', iva_importe, 0) +
+                            If(RF = 'SI', If(IVA = 'SI', recfin + iva_recfin, recfin), 0)
+                        )
+                    ),
+
+                    // Caso 2: parcial → proyectar según días hábiles
+                    (
+                        Sum(
+                            If(
+                                fecha >= F1 and fecha <= F2,
+                                importe  +
+                                If(IVA = 'SI', iva_importe, 0) +
+                                If(RF = 'SI', If(IVA = 'SI', recfin + iva_recfin, recfin), 0)
+                            )
+                        )
+                        /
+                        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+                        *
+                        Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+                    )
+                )
+            , Sucursal)
+        )
+        /
+        Sum(
+            If(
+                ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                If(IVA = 'SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+            )
+        )
+    )
+    * 100
+) - 100,
+'##,##0.0'
+) & ' %'
+
+/*
+'Alcance: ' & chr(10) & chr(13)& NUM((
+if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha>=F1 and fecha <=F2, fecha)) ,
+sum ( if(fecha>=F1 and fecha <=F2, importe+ RECARGO_ENVIO + IVA_RECARGO_ENVIO+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ),
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+ RECARGO_ENVIO + IVA_RECARGO_ENVIO+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+/ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) ))
+/ sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI',OBJ_VTAS_CON_IVA,OBJ_VTAS_SIN_IVA)) ) *100)-100
+, '##,##0.0') & ' %'
+0
+
+### [14] LABEL: = 'Proyectado: '  & chr(10) & chr(13) & Num(
+if(
+  max(if(ANIOHAB = YEAR(F2) AND MESHAB = MONTH(F2), DIAS_HABILES)) = Count(DISTINCT if(fecha >= F1 and fecha <= F2, fecha)),
+
+  sum(
+    if(fecha >= F1 and fecha <= F2,
+       importe + 
+       if(IVA = 'SI', iva_importe, 0) +
+       if(RF = 'SI', if(IVA = 'SI', recfin + iva_recfin, recfin), 0)
+    )
+  ),
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    fecha >= F1 and fecha <= F2,
+                    importe + 
+                    If(IVA = 'SI', iva_importe, 0) +
+                    If(RF = 'SI', If(IVA = 'SI', recfin + iva_recfin, recfin), 0)
+                )
+            )
+            /
+            Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+    , Sucursal)
+)
+
+
+ /* sum(
+    if(fecha >= F1 and fecha <= F2,
+       importe  +
+       if(IVA = 'SI', iva_importe, 0) +
+       if(RF = 'SI', if(IVA = 'SI', recfin + iva_recfin, recfin), 0)
+    )
+  )
+  / Count(DISTINCT if(fecha >= F1 and fecha <= F2, Sucursal & '_' & fecha))
+  * sum(if(ANIOHAB = YEAR(F2) AND MESHAB = MONTH(F2), DIAS_HABILES))*/
+)
+, '$ ##,##0')
+
+
+if(
+  max(if(ANIOHAB = YEAR(F2) AND MESHAB = MONTH(F2), DIAS_HABILES)) = Count(DISTINCT if(fecha >= F1 and fecha <= F2, fecha)),
+
+  sum(
+    if(fecha >= F1 and fecha <= F2,
+       importe + 
+       if(IVA = 'SI', iva_importe, 0) +
+       if(RF = 'SI', if(IVA = 'SI', recfin + iva_recfin, recfin), 0)
+    )
+  ),
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    fecha >= F1 and fecha <= F2,
+                    importe + 
+                    If(IVA = 'SI', iva_importe, 0) +
+                    If(RF = 'SI', If(IVA = 'SI', recfin + iva_recfin, recfin), 0)
+                )
+            )
+            /
+            Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+        )
+        *
+        Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+    , Sucursal)
+)
+
+
+ /* sum(
+    if(fecha >= F1 and fecha <= F2,
+       importe  +
+       if(IVA = 'SI', iva_importe, 0) +
+       if(RF = 'SI', if(IVA = 'SI', recfin + iva_recfin, recfin), 0)
+    )
+  )
+  / Count(DISTINCT if(fecha >= F1 and fecha <= F2, Sucursal & '_' & fecha))
+  * sum(if(ANIOHAB = YEAR(F2) AND MESHAB = MONTH(F2), DIAS_HABILES))*/
+)
+/*
+if(max ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES))=Count(DISTINCT if(fecha>=F1 and fecha <=F2, fecha)) ,
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin)
+,0)) ),
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+/ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+)
+
+/*
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+/ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+*/
+
+### [15] LABEL: = 'Obj. Mes: ' & chr(10) & chr(13)& NUM(sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI',OBJ_VTAS_CON_IVA,OBJ_VTAS_SIN_IVA)) ) 
+, '$ ##,##0') &  CHR(13) & CHR(10) & 
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI',OBJ_VTAS_CON_IVA,OBJ_VTAS_SIN_IVA)) )
+
+### [16] LABEL: ='Real: ' & chr(10) & chr(13)&
+
+num(sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ), '$ ##,##0')
+sum ( if(fecha>=F1 and fecha <=F2, importe+ if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+
+### [17] LABEL: ='Obj. Acum: ' & chr(10) & chr(13)&
+num(
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = 'SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+ , '$ ##,##0')
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = 'SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+
+
+
+### [18] LABEL: ='Diferencia: ' & chr(10) & chr(13)&
+num(
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+ if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+
+-
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = 'SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+
+
+ 
+ 
+ , '$ ##,##0')
+0
+
+### [19] LABEL: = 'Alcance: ' &chr(10)&chr(13)& num(
+
+
+((
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+))
+
+/
+
+
+
+(
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+/
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )
+
+
+)-1
+
+
+
+ , '#,##0.00%')
+0
+
+### [20] LABEL: ='Real: ' & chr(10) & chr(13) & num(
+
+
+(
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+)
+
+
+,'#,##0.00')
+
+
+(
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+)
+
+### [21] LABEL: ='Obj. Acum: '& chr(10) & chr(13) & num(
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+/
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )
+,'#,##0.00')
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+/
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES) )
+/ count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_UNIDADES_CLIENTES<>0,Sucursal))
+
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES) )
+/ count(DISTINCT if(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES)<>0,Sucursal))
+
+*/
+
+
+### [22] LABEL: ='Diferencia: ' & chr(10) & chr(13)&
+NUM(
+(
+(
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+)
+
+)
+-
+(sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+/
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) ))
+
+
+, '#,##0.00')
+
+0
+
+
+### [23] LABEL: ='Alcance ' & chr(10) & chr(13) & NUM(
+
+
+(
+
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)) ) 
+
+)
+
+/
+
+(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT<>0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+) 
+
+
+-1
+
+
+, '##,##0.00%')
+0
+
+
+
+
+### [24] LABEL: ='Real: '  & chr(10) & chr(13) & num(
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)) ) 
+
+,'#,##0.00%')
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)) ) 
+
+
+### [25] LABEL: ='Objetivo: ' & chr(10) & chr(13) & num(
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ 
+count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT<>0,Sucursal))
+
+
+,'#,##0.00%')
+
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ 
+count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT<>0,Sucursal))
+
+
+
+
+### [26] LABEL: ='Obj. Acum: ' & chr(10) & chr(13) & num(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT<>0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+
+,'#,##0.00%')
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT<>0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+
+### [27] LABEL: ='Diferencia ' & chr(10) & chr(13) & NUM(
+
+(
+(
+
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)) ) 
+
+)
+
+-
+(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT<>0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+) 
+
+
+)*100
+
+, '##,##0.00')
+0
+
+### [28] LABEL: ='Alcance: ' & chr(10) & chr(13) & NUM(
+( 
+ 
+ 
+ (
+ 
+ sum ( if(fecha>=F1 and fecha <=F2, importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+ 
+ )
+ 
+ /
+ 
+ (
+ 
+ if(Day(F2) = Day(MonthEnd(F2)), 
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+
+
+  sum(
+  if(
+    fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+    importe +RECARGO_ENVIO+IVA_RECARGO_ENVIO
+      + if(IVA='SI', iva_importe, 0)
+      + if(RF='SI', if(IVA='SI', recfin+iva_recfin, recfin), 0)
+  )
+)
+
+  
+  ,
+  // Fórmula para cualquier otro caso
+  
+  
+  sum ( if(fecha>=F1-(52*7) and fecha <=F2-(52*7), importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+)
+
+ 
+ )
+ 
+ 
+ 
+  - 1)
+, '#,##0.00%')
+
+0
+
+### [29] LABEL: ='Real: '
+& chr(10) & chr(13)& num(sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) 
+, '$ ##,##0')
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+
+### [30] LABEL: ='Real DE ' & chr(10) & chr(13)& num( 
+
+
+if(Day(F2) = Day(MonthEnd(F2)), 
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+
+
+  sum(
+  if(
+    fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+    importe 
+      + if(IVA='SI', iva_importe, 0)
+      + if(RF='SI', if(IVA='SI', recfin+iva_recfin, recfin), 0)
+  )
+)
+
+  
+  ,
+  // Fórmula para cualquier otro caso
+  
+  
+  sum ( if(fecha>=F1-(52*7) and fecha <=F2-(52*7), importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+)
+
+
+, '$ ##,##0')
+=if(Day(F2) = Day(MonthEnd(F2)), 
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+
+
+  sum(
+  if(
+    fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+    importe 
+      + if(IVA='SI', iva_importe, 0)
+      + if(RF='SI', if(IVA='SI', recfin+iva_recfin, recfin), 0)
+  )
+)
+
+  
+  ,
+  // Fórmula para cualquier otro caso
+  
+  
+  sum ( if(fecha>=F1-(52*7) and fecha <=F2-(52*7), importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+)
+
+/*sum(
+  if(
+    fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+    importe 
+      + if(IVA='SI', iva_importe, 0)
+      + if(RF='SI', if(IVA='SI', recfin+iva_recfin, recfin), 0)
+  )
+)
+
+
+
+ MES ABIERTO
+sum ( if(fecha>=F1-(52*7) and fecha <=F2-(52*7), importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+
+### [31] LABEL: ='Diferencia: ' & chr(10) & chr(13) & NUM(
+
+ 
+ 
+ (
+ 
+ sum ( if(fecha>=F1 and fecha <=F2, importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+ 
+ )
+ 
+ -
+ 
+ (
+ 
+ 
+ 
+if(Day(F2) = Day(MonthEnd(F2)), 
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+
+
+  sum(
+  if(
+    fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+    importe +RECARGO_ENVIO+IVA_RECARGO_ENVIO
+      + if(IVA='SI', iva_importe, 0)
+      + if(RF='SI', if(IVA='SI', recfin+iva_recfin, recfin), 0)
+  )
+)
+
+  
+  ,
+  // Fórmula para cualquier otro caso
+  
+  
+  sum ( if(fecha>=F1-(52*7) and fecha <=F2-(52*7), importe+RECARGO_ENVIO+IVA_RECARGO_ENVIO+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+)
+
+ 
+ 
+ 
+ )
+ 
+ 
+ 
+
+, '#,##0')
+0
+
+### [32] LABEL: ='Alcance: ' &chr(10) &chr(13)& NUM(
+(
+
+
+
+(sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ))
+
+/
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  sum(
+    if(
+      fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and Artículo <> 'ZZZZZZZZ',
+      cantidad
+    )
+  ),
+  // Fórmula para cualquier otro caso
+  sum(
+    if(
+      fecha >= F1-(52*7) and fecha <= F2-(52*7) and Artículo <> 'ZZZZZZZZ',
+      cantidad
+    )
+  )
+)
+
+
+
+)
+  
+  
+  
+  
+) - 1
+, '#,##0.0%')
+
+0
+
+### [33] LABEL: ='Real: ' & chr(10) & chr(13)& num(sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ) , '#,##0')
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+
+### [34] LABEL: ='Real DE: ' & chr(10) & chr(13)& num(
+
+  if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  sum(
+    if(
+      fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and Artículo <> 'ZZZZZZZZ',
+      cantidad
+    )
+  ),
+  // Fórmula para cualquier otro caso
+  sum(
+    if(
+      fecha >= F1-(52*7) and fecha <= F2-(52*7) and Artículo <> 'ZZZZZZZZ',
+      cantidad
+    )
+  )
+)
+
+ , '#,##0')
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  sum(
+    if(
+      fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and Artículo <> 'ZZZZZZZZ',
+      cantidad
+    )
+  ),
+  // Fórmula para cualquier otro caso
+  sum(
+    if(
+      fecha >= F1-(52*7) and fecha <= F2-(52*7) and Artículo <> 'ZZZZZZZZ',
+      cantidad
+    )
+  )
+)
+
+
+
+### [35] LABEL: ='Diferencia: ' &chr(10) &chr(13)& NUM(
+(
+
+
+
+(sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ))
+
+-
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  sum(
+    if(
+      fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and Artículo <> 'ZZZZZZZZ',
+      cantidad
+    )
+  ),
+  // Fórmula para cualquier otro caso
+  sum(
+    if(
+      fecha >= F1-(52*7) and fecha <= F2-(52*7) and Artículo <> 'ZZZZZZZZ',
+      cantidad
+    )
+  )
+)
+
+
+)
+  
+  
+  
+  
+) 
+, '#,##0')
+0
+
+### [36] LABEL: ='Alcance: ' &chr(10) & chr(13)& NUM(
+
+
+(
+
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+
+)
+
+/
+
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+  -
+  count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa)),
+  
+  // Fórmula para cualquier otro caso
+  count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+  -
+  count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+)
+
+
+
+)-1
+
+
+
+
+
+
+
+
+, '##,##0.00%')
+
+0
+
+### [37] LABEL: ='Real: ' & chr(10) & chr(13)& num( count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa)), '#,##0')
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+
+### [38] LABEL: ='Real DE: ' & chr(10) & chr(13)& num( 
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+  -
+  count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa)),
+  
+  // Fórmula para cualquier otro caso
+  count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+  -
+  count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+)
+
+, '#,##0')
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+  -
+  count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa)),
+  
+  // Fórmula para cualquier otro caso
+  count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+  -
+  count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+)
+
+
+
+### [39] LABEL: ='Diferencia: ' &chr(10) & chr(13)& NUM(
+
+
+(
+
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+
+)
+
+-
+
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+  // Fórmula para cuando F1 es primer día y F2 último del mes
+  count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+  -
+  count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa)),
+  
+  // Fórmula para cualquier otro caso
+  count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+  -
+  count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+)
+
+
+)
+
+
+
+
+
+
+
+
+, '##,##0')
+0
+
+### [40] LABEL: ='Alcance: ' & chr(10) & chr(13) & NUM(
+
+(
+
+
+(
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))) 
+
+)
+
+/
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+
+  // Caso primer día F1 y último día F2 del mes
+  if(
+    (
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa))
+    ) > 0,
+    sum(
+      if(
+        fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+        importe 
+          + if(IVA='SI', iva_importe, 0)
+          + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa))
+    )
+  ),
+
+  // Caso cualquier otro F1/F2
+  if(
+    (
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+    ) > 0,
+    sum(
+      if(
+        fecha >= F1-(52*7) and fecha <= F2-(52*7),
+        importe 
+          + if(IVA='SI', iva_importe, 0)
+          + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+    )
+  )
+)
+)
+
+
+
+)-1
+
+
+, '##,##0.00%') 
+
+0
+
+
+### [41] LABEL: ='Real: ' & chr(10) & chr(13)& num(sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa)))  , '#,##0')
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))) 
+
+### [42] LABEL: ='Real DE: ' & chr(10) & chr(13)& num(
+
+
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+
+  // Caso primer día F1 y último día F2 del mes
+  if(
+    (
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa))
+    ) > 0,
+    sum(
+      if(
+        fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+        importe 
+          + if(IVA='SI', iva_importe, 0)
+          + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa))
+    )
+  ),
+
+  // Caso cualquier otro F1/F2
+  if(
+    (
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+    ) > 0,
+    sum(
+      if(
+        fecha >= F1-(52*7) and fecha <= F2-(52*7),
+        importe 
+          + if(IVA='SI', iva_importe, 0)
+          + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+    )
+  )
+)
+
+
+
+
+ , '#,##0')
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+
+  // Caso primer día F1 y último día F2 del mes
+  if(
+    (
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa))
+    ) > 0,
+    sum(
+      if(
+        fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+        importe 
+          + if(IVA='SI', iva_importe, 0)
+          + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa))
+    )
+  ),
+
+  // Caso cualquier otro F1/F2
+  if(
+    (
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+    ) > 0,
+    sum(
+      if(
+        fecha >= F1-(52*7) and fecha <= F2-(52*7),
+        importe 
+          + if(IVA='SI', iva_importe, 0)
+          + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+    )
+  )
+)
+
+/*
+if(
+  (
+    count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+    -
+    count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+  ) > 0,
+
+  sum(
+    if(
+      fecha >= F1-(52*7) and fecha <= F2-(52*7),
+      importe + RECARGO_ENVIO + IVA_RECARGO_ENVIO
+        + if(IVA='SI', iva_importe, 0)
+        + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+    )
+  )
+  /
+  (
+    count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+    -
+    count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+  )
+)
+
+/*if(
+  (
+    count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+    -
+    count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+  ) > 0,
+
+  // numerador
+  sum(
+    if(
+      fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+      importe +RECARGO_ENVIO+IVA_RECARGO_ENVIO
+        + if(IVA='SI', iva_importe, 0)
+        + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+    )
+  )
+  /
+  (
+    count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+    -
+    count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+  )
+)
+
+
+
+
+
+### [43] LABEL: ='Diferencia: ' & chr(10) & chr(13) & NUM(
+
+(
+
+
+(
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))) 
+
+)
+
+-
+
+(
+
+if(
+  Day(F2) = Day(MonthEnd(F2)),
+
+  // Caso primer día F1 y último día F2 del mes
+  if(
+    (
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa))
+    ) > 0,
+    sum(
+      if(
+        fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1),
+        importe 
+          + if(IVA='SI', iva_importe, 0)
+          + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= AddYears(F1,-1) and fecha <= AddYears(F2,-1) and cantidad < 0, Idventa))
+    )
+  ),
+
+  // Caso cualquier otro F1/F2
+  if(
+    (
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+    ) > 0,
+    sum(
+      if(
+        fecha >= F1-(52*7) and fecha <= F2-(52*7),
+        importe 
+          + if(IVA='SI', iva_importe, 0)
+          + if(RF='SI', if(IVA='SI', recfin + iva_recfin, recfin), 0)
+      )
+    )
+    /
+    (
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad > 0, Idventa))
+      -
+      count(DISTINCT if(fecha >= F1-(52*7) and fecha <= F2-(52*7) and cantidad < 0, Idventa))
+    )
+  )
+)
+
+
+
+)
+
+
+
+)
+
+
+, '##,##0') 
+
+0
+
+### [44] LABEL: Proyectado
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+/ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+
+### [45] LABEL: Objetivo
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI',OBJ_VTAS_CON_IVA,OBJ_VTAS_SIN_IVA)) )
+
+### [46] LABEL: Proyectado
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) ) / Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+
+### [47] LABEL: Objetivo
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_VTAS) )
+
+### [48] LABEL: Proyectado
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa)))
+/ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+* sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+
+### [49] LABEL: Objetivo
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_OPERACIONES) )
+
+### [50] LABEL: Real
+(
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+)
+
+### [51] LABEL: Objetivo
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES) )
+/ count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_UNIDADES_CLIENTES<>0,Sucursal))
+
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES) )
+/ count(DISTINCT if(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_UNIDADES_CLIENTES)<>0,Sucursal))
+
+*/
+
+
+### [52] LABEL: Real
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)) ) 
+
+
+### [53] LABEL: Objetivo
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ 
+count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_TOT<>0,Sucursal))
+
+
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ count(DISTINCT if(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT)<>0,Sucursal))
+
+*/
+
+### [54] LABEL: Ventas
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+
+### [55] LABEL: Uni
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+
+### [56] LABEL: Oper
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+
+### [57] LABEL: Uni x Cli
+(
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+)
+
+### [58] LABEL: Mrg Op%
+(sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO -RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)) ) ) *100
+
+/*sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)) ) 
+ * 100
+
+//(sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / sum ( if(fecha>=F1 and fecha <=F2,if(IVA='SI',precio_rep+iva_precio_rep,precio_rep)) ) * 100)-100
+
+### [59] LABEL: D Hab
+sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+
+### [60] LABEL: D Ven
+ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+
+### [61] LABEL: Ventas
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+
+### [62] LABEL: Uni
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+
+### [63] LABEL: Oper
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+
+### [64] LABEL: Tkt Promedio
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))) 
+
+### [65] LABEL: Unid Prom
+(sum ( if(fecha>=F1 and fecha <=F2, CUADRO_IMPORTE-CUADRO_DESCUENTO+CUADRO_RECARGO_ENVIO+CUADRO_IVA_RECARGO_ENVIO+if(IVA='SI',CUADRO_IVA,0)+if(RF='SI',if(IVA='SI',CUADRO_RECARGO_FINANCIERO+CUADRO_IVA_RECARGO_FINANCIERO,CUADRO_RECARGO_FINANCIERO),0)) ))
+/
+(sum ( if(fecha>=F1 and fecha <=F2,CUADRO_CANT) ))
+
+### [66] LABEL: Uni x Cli
+(
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+)
+
+### [67] LABEL: Mrg Op%
+(sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO -RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)) ) ) *100
+
+/*sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)) ) 
+ * 100
+
+//(sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / sum ( if(fecha>=F1 and fecha <=F2,if(IVA='SI',precio_rep+iva_precio_rep,precio_rep)) ) * 100)-100
+
+### [68] LABEL: Ventas
+sum ( if(fecha>=F1 and fecha <=F2, importe+iva_importe+recfin+iva_recfin) )
+/*sum ( if(fecha>=F1 and fecha <=F2, CUADRO_IMPORTE-CUADRO_DESCUENTO+CUADRO_RECARGO_ENVIO+CUADRO_IVA_RECARGO_ENVIO +CUADRO_IVA+CUADRO_RECARGO_FINANCIERO+CUADRO_IVA_RECARGO_FINANCIERO ))
+
+### [69] LABEL: Unidades
+sum ( if(fecha>=F1 and fecha <=F2,CUADRO_CANT) )
+
+### [70] LABEL: Operaciones
+sum(if(fecha>=F1 and fecha <=F2 ,CUADRO_OPERACIONES))
+
+### [71] LABEL: Tkt Promedio
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))) 
+
+### [72] LABEL: Unid Prom
+(sum ( if(fecha>=F1 and fecha <=F2, CUADRO_IMPORTE-CUADRO_DESCUENTO+CUADRO_RECARGO_ENVIO+CUADRO_IVA_RECARGO_ENVIO+if(IVA='SI',CUADRO_IVA,0)+if(RF='SI',if(IVA='SI',CUADRO_RECARGO_FINANCIERO+CUADRO_IVA_RECARGO_FINANCIERO,CUADRO_RECARGO_FINANCIERO),0)) ))
+/
+(sum ( if(fecha>=F1 and fecha <=F2,CUADRO_CANT) ))
+
+### [73] LABEL: Uni x Cli
+sum(if(fecha>=F1 and fecha <=F2 ,CUADRO_CANT)) / sum(if(fecha>=F1 and fecha <=F2 ,CUADRO_OPERACIONES))
+
+### [74] LABEL: ='Alcance ' & chr(10) & chr(13) & NUM(
+
+
+(
+
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)) ) 
+
+)
+
+/
+
+(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE<>0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+) 
+
+
+-1
+
+
+, '##,##0.00%')
+0
+
+
+
+
+### [75] LABEL: ='Real: '  & chr(10) & chr(13) & num(
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)) ) 
+
+,'#,##0.00%')
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO -RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)) ) 
+
+
+### [76] LABEL: ='Obj. Acum: ' & chr(10) & chr(13) & num(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE<>0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+
+,'#,##0.00%')
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE<>0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+
+
+### [77] LABEL: ='Diferencia ' & chr(10) & chr(13) & NUM(
+
+(
+(
+
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-IVA_RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)) ) 
+
+)
+
+-
+(
+
+(
+  sum(
+    aggr(
+      (
+        (
+          sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE))
+          /
+          count(distinct if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE<>0, Sucursal))
+        )
+        *
+        sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+      ),
+      Sucursal
+    )
+  )
+)
+/ 
+sum(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), if(IVA='SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)))
+) 
+
+
+)*100
+
+, '##,##0.00')
+0
+
+### [78] LABEL: Real
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_ENVIO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)-if(IVA='SI',precio_rep+iva_precio_rep,precio_rep))) / 
+sum ( if(fecha>=F1 and fecha <=F2, importe+descuento-RECARGO_ENVIO-RECARGO_FINANCIERO-IVA_RECARGO_ENVIO-IVA_RECARGO_FINANCIERO+if(IVA='SI',iva_importe,0)) ) 
+
+
+### [79] LABEL: Objetivo
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_OPE) )
+/ 
+count(DISTINCT if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2) AND OBJ_MARGEN_OPE<>0,Sucursal))
+
+
+/*
+sum ( if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT) )
+/ count(DISTINCT if(if(ANIOOBJ=YEAR(F2) AND MESOBJ=MONTH(F2), OBJ_MARGEN_TOT)<>0,Sucursal))
+
+*/
+
+### [80] LABEL: Ventas
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) )
+
+### [81] LABEL: Uni
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+
+### [82] LABEL: Oper
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+
+### [83] LABEL: Tkt Prom
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+(count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))) 
+
+### [84] LABEL: Unid Prom
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+
+### [85] LABEL: Uni x Cli
+(
+sum ( if(fecha>=F1 and fecha <=F2 and Artículo<>'ZZZZZZZZ',cantidad) )
+)
+
+/
+
+(
+count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad>0,Idventa) ) 
+- count(DISTINCT if(fecha>=F1 and fecha <=F2 and cantidad<0,Idventa))
+)
+
+### [86] LABEL: Prom Dia
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+### [87] LABEL: Prom Obj
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = 'SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+
+
+
+
+/
+
+ 
+Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+### [88] LABEL: Dif Dia Prom
+(
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+)
+
+-
+
+(
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = 'SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+
+
+
+
+/
+
+ 
+Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+)
+
+### [89] LABEL: Dif Acum
+((
+
+sum ( if(fecha>=F1 and fecha <=F2, importe+if(IVA='SI',iva_importe,0)+if(RF='SI',if(IVA='SI',recfin+iva_recfin,recfin),0)) ) / 
+Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+)
+
+-
+
+(
+
+Sum(
+    Aggr(
+        (
+            Sum(
+                If(
+                    ANIOOBJ = Year(F2) and MESOBJ = Month(F2),
+                    If(IVA = 'SI', OBJ_VTAS_CON_IVA, OBJ_VTAS_SIN_IVA)
+                )
+            )
+            /
+            Sum(If(ANIOHAB = Year(F2) and MESHAB = Month(F2), DIAS_HABILES))
+        )
+        *
+        Count(DISTINCT If(fecha >= F1 and fecha <= F2, fecha))
+    , Sucursal)
+)
+
+
+
+
+/
+
+ 
+Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+))
+
+*
+
+(
+
+ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+)
+
+### [90] LABEL: D Hab
+sum ( if(ANIOHAB=YEAR(F2) AND MESHAB=MONTH(F2), DIAS_HABILES) )
+
+### [91] LABEL: D Ven
+ Count(DISTINCT if(fecha>=F1 and fecha <=F2, Sucursal & '_' & fecha)) 
+
+

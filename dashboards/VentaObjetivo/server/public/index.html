@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ventas Comparativas</title>
+<style>
+  :root{
+    --bg:#eef1f6; --panel:#ffffff; --panel2:#f4f6fa; --border:#dde3ec; --border-fuerte:#b9c2d1;
+    --text:#1f2937; --muted:#6b7280; --accent:#2563eb; --obj:#9333ea; --objBg:#f3e8ff;
+    --good:#16a34a; --bad:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{background:var(--bg);color:var(--text);font:14px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;display:flex;flex-direction:column}
+  .tabs{display:flex;align-items:center;gap:4px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--panel);flex:0 0 auto}
+  .tab{padding:12px 16px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;font-size:13px}
+  .tab.activo{color:var(--text);border-bottom-color:var(--accent)}
+  .vista{display:none;flex:1;min-height:0}
+  .vista.activa{display:flex;flex-direction:column}
+  .sello{font-size:11px;color:var(--muted);margin-left:auto}
+  .btn-ayuda{background:none;border:1px solid var(--border);color:var(--muted);border-radius:50%;width:26px;height:26px;cursor:pointer;font-weight:700;font-size:13px}
+  .btn-ayuda:hover{color:var(--text);border-color:var(--accent)}
+  .btn-guardar{background:var(--good);color:#04240f;border:none;border-radius:8px;padding:8px 16px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+  .btn-guardar:disabled{background:#e2e5eb;color:#9aa3b2;cursor:not-allowed}
+
+  .layout{flex:1;min-height:0;display:flex;gap:16px;padding:16px;overflow:hidden}
+  .filtros{width:280px;flex:0 0 280px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+  .filtros h2{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 8px}
+  .filtros .grupo label{display:block;margin-bottom:4px}
+  select{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip{background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted)}
+  .btn-limpiar{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;width:100%}
+  .btn-limpiar:hover{color:var(--text);border-color:var(--accent)}
+  .separador{border:none;border-top:1px solid var(--border);margin:0}
+
+  .anios-lista{display:flex;flex-wrap:wrap;gap:6px;max-height:110px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--panel2)}
+  .anio-chip{display:flex;align-items:center;gap:4px;font-size:12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:3px 7px;cursor:pointer;user-select:none}
+  .anio-chip input{margin:0}
+  .anio-chip.marcado{border-color:var(--accent);color:var(--accent)}
+
+  .obj-sidebar-titulo{display:flex;justify-content:space-between;align-items:baseline}
+  .obj-sidebar-titulo .progreso{font-size:11px;color:var(--muted)}
+  .obj-grupo{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:10px}
+  .obj-grupo h4{margin:0;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;background:var(--panel2)}
+  .obj-lista{max-height:220px;overflow-y:auto}
+  .obj-item{padding:7px 10px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .obj-item:last-child{border-bottom:none}
+  .obj-item:hover{background:var(--panel2)}
+  .obj-item.activo{background:rgba(79,140,255,.14);color:var(--accent)}
+  .obj-item .punto{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .obj-item.pendiente .punto{background:#f59e0b}
+  .obj-item.cargada .punto{background:var(--good)}
+  .obj-vacio{padding:10px;color:var(--muted);font-size:12px}
+  .btn-borrar{margin-left:auto;background:none;border:none;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;border-radius:4px}
+  .btn-borrar:hover{color:var(--bad);background:rgba(239,68,68,.12)}
+
+  .contenido{flex:1;min-width:0;height:100%;overflow:hidden;display:flex;flex-direction:column}
+  .tabla-card{flex:1;min-height:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  .badge-obj{background:var(--objBg);color:var(--obj);border:1px solid var(--obj);border-radius:999px;padding:1px 8px;font-size:10px;font-weight:600}
+  .badge-proximo{background:rgba(79,140,255,.15);color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 8px;font-size:10px;font-weight:600}
+  .tabla-scroll{flex:1;min-height:0;overflow:auto}
+  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+  th,td{padding:5px 9px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:500;font-size:11.5px;text-align:right;position:sticky;top:0;background:var(--panel);z-index:2}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);z-index:1}
+  th:first-child{z-index:3}
+  tbody tr:hover td{background:var(--panel2)}
+  td.vacio{color:var(--muted)}
+  td.celda-clickable{cursor:pointer}
+  td.celda-clickable:hover{outline:1px solid var(--accent);outline-offset:-1px}
+  td.obj{color:var(--obj);background:rgba(168,85,247,.08)}
+  th.obj{color:var(--obj)}
+  th.proximo{color:var(--accent)}
+  td.celda-calculada,td.celda-proximo{color:var(--accent);background:rgba(79,140,255,.09);font-weight:600}
+  td.celda-proximo{font-style:italic;font-weight:400}
+  td.celda-editable{background:rgba(79,140,255,.12);padding:2px 5px}
+  td.celda-editable input{width:76px;background:var(--panel2);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:3px 5px;text-align:right;font:inherit}
+  td.celda-editable input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  th.total-header,td.celda-total{border-left:2px solid var(--border);font-weight:600}
+  td.celda-total{background:var(--panel2)}
+  tr.fila-variacion td{font-style:italic;background:var(--panel2)}
+  td.var-pos{color:var(--good);font-weight:600;font-style:normal}
+  td.var-neg{color:var(--bad);font-weight:600;font-style:normal}
+  td.th-metrica{background:var(--panel2);padding:0;width:30px;vertical-align:middle;border-right:2px solid var(--border-fuerte)}
+  td.th-metrica .vertical{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;font-size:11.5px;font-weight:600;color:var(--text);display:block;padding:8px 5px;text-align:center;letter-spacing:.02em}
+  tr.fila-grupo-inicio td{border-top:3px solid var(--border-fuerte)}
+  thead th{border-bottom:2px solid var(--border-fuerte)}
+
+  .pe-header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--border);flex:0 0 auto}
+  .pe-grupos{display:flex;gap:6px}
+  .pe-grupo-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 16px;font-size:13px;cursor:pointer}
+  .pe-grupo-btn.activo{color:var(--text);border-color:var(--accent);background:rgba(79,140,255,.12)}
+  .pe-contenido{flex:1;min-height:0;padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+  .pe-stats{display:flex;gap:10px;flex-wrap:wrap;flex:0 0 auto}
+  .pe-stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 14px;min-width:120px}
+  .pe-stat .lbl{font-size:10.5px;color:var(--muted)}
+  .pe-stat .val{font-size:15px;font-weight:600}
+  .pe-stat.ajustado{border-color:var(--accent);background:rgba(79,140,255,.09)}
+  .pe-stat.parcial .val{color:#f59e0b}
+  .pe-tabla-card{flex:1;min-height:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:auto}
+  .pe-tabla-card table{width:100%}
+  .pe-tabla-card input{width:64px;background:var(--panel2);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:3px 5px;text-align:right;font:inherit}
+  tr.pe-total td{font-weight:600;border-top:3px solid var(--border-fuerte);background:var(--panel2)}
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.18);z-index:20}
+
+  .modal-fondo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:30}
+  .modal-fondo.abierto{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;padding:22px 26px}
+  .modal h2{margin:0 0 14px;font-size:16px}
+  .modal p{margin:0 0 12px;color:var(--muted);font-size:13px}
+  .modal p b{color:var(--text)}
+  .modal .cerrar{float:right;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
+  #modalDesglose .modal{max-width:96vw;width:auto;max-height:94vh;overflow:visible}
+  .desglose-columnas{display:flex;gap:14px;align-items:flex-start}
+  #desgloseContenido table{border-collapse:collapse}
+  #desgloseContenido th,#desgloseContenido td{padding:3px 8px;border-bottom:1px solid var(--border);text-align:right;font-size:12px;white-space:nowrap}
+  #desgloseContenido th:first-child,#desgloseContenido td:first-child{text-align:left}
+  #desgloseContenido tr.total{font-weight:600;border-top:2px solid var(--border-fuerte)}
+  #desgloseContenido .desglose-total{width:100%;margin-top:4px}
+  #desgloseContenido tr.pareto-vital{background:rgba(22,163,74,.09)}
+  #desgloseContenido tr.pareto-vital td:first-child{border-left:3px solid var(--good)}
+  #desgloseContenido tr.pareto-resto{color:var(--muted)}
+  #desgloseContenido tr.pareto-resto td:first-child{border-left:3px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="tabs">
+  <div class="tab activo" data-vista="comparativas">Comparativas</div>
+  <div class="tab" data-vista="porEmpresa">Por Empresa</div>
+  <span class="sello" id="sello">cargando…</span>
+  <button class="btn-ayuda" id="btnAyuda" title="Ayuda">?</button>
+  <button class="btn-guardar" id="btnGuardarTodo" disabled>GUARDAR OBJETIVOS</button>
+</div>
+
+<section class="vista activa" id="vistaComparativas">
+  <div class="layout">
+    <aside class="filtros">
+      <div>
+        <h2>Filtros</h2>
+        <div class="grupo" style="margin-bottom:12px">
+          <label>Empresa</label>
+          <select id="fEmpresa"><option value="">Todas</option></select>
+        </div>
+        <div class="grupo" style="margin-bottom:12px">
+          <label>Sucursal</label>
+          <select id="fSucursal"><option value="">Todas</option></select>
+        </div>
+        <div class="grupo">
+          <label>Años (mostrando <span id="cntAnios"></span>)</label>
+          <div class="anios-lista" id="listaAnios"></div>
+        </div>
+        <button class="btn-limpiar" style="margin-top:10px" id="btnLimpiar">Limpiar selección</button>
+        <div class="chip-row" id="chips"></div>
+      </div>
+
+      <hr class="separador">
+
+      <div>
+        <div class="obj-sidebar-titulo">
+          <h2 style="margin:0">Objetivo <span id="objMesTitulo"></span></h2>
+          <span class="progreso" id="objProgreso"></span>
+        </div>
+        <div class="obj-grupo">
+          <h4>Cargar Objetivos <span id="cntPendientes"></span></h4>
+          <div class="obj-lista" id="listaPendientes"></div>
+        </div>
+        <div class="obj-grupo">
+          <h4>Editar Objetivos <span id="cntCargadas"></span></h4>
+          <div class="obj-lista" id="listaCargadas"></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="contenido" id="tablas"></main>
+  </div>
+</section>
+
+<section class="vista" id="vistaPorEmpresa">
+  <div class="pe-header">
+    <div class="pe-grupos">
+      <button class="pe-grupo-btn activo" data-grupo="PUEBLO">Pueblo</button>
+      <button class="pe-grupo-btn" data-grupo="TESI">Tesi</button>
+      <button class="pe-grupo-btn" data-grupo="WEB">Web</button>
+    </div>
+    <span class="sello" id="peMes"></span>
+  </div>
+  <div class="pe-contenido">
+    <div class="pe-stats" id="peStats"></div>
+    <div class="pe-tabla-card" id="peTablaCont"></div>
+  </div>
+</section>
+
+<div class="modal-fondo" id="modalAyuda">
+  <div class="modal">
+    <button class="cerrar" id="cerrarAyuda">✕</button>
+    <h2>Cómo leer este tablero</h2>
+    <p>Cada cuadro compara <b>Año</b> (filas) × <b>Mes</b> (columnas) para la sucursal o el grupo elegido en los filtros.</p>
+    <p>La columna <b>morada</b> es el mes en curso: todavía no cerró, así que muestra el <b>objetivo</b> de la sucursal, no venta real. Se reemplaza sola por venta real cuando el mes cierra.</p>
+    <p>La columna <b>azul</b> es el mes que viene. En <b>Operaciones</b>, <b>Tkt Prom</b> y <b>Uni x Cli</b> es editable: escribí ahí el objetivo de la sucursal elegida. <b>Ventas</b> y <b>Unidades</b> se calculan solos (Unidades = Uni x Cli × Operaciones; Venta $ sin IVA = Tkt Prom × Operaciones ÷ 1,21) y se guardan automáticamente al completar los tres campos.</p>
+    <p>Si no elegís sucursal ("Todas"), esa misma columna azul muestra el total de lo ya cargado en la red hasta el momento (o de la empresa elegida).</p>
+    <p><b>Cargar Objetivos</b> / <b>Editar Objetivos</b>, en el panel izquierdo, listan las sucursales sin y con todo cargado — clic para pasar a esa sucursal. Una sucursal sólo pasa a "Editar" cuando tiene <b>las 5 cosas</b>: Operaciones, Tkt Prom, Uni x Cli (acá) y Días Venta, Margen % (pestaña Por Empresa). La <b>×</b> junto a una sucursal cargada borra su objetivo (del borrador, o de la base si ya se había guardado).</p>
+    <p><b>GUARDAR OBJETIVOS</b> ya no escribe la base directo: carga <code>db_Cegid.TEMP_BI_APP</code> y ejecuta el SP <code>SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD</code> (copia del que ya usa el proceso manual), que es quien mueve los datos a las tablas reales. Si hay una Empresa elegida en el filtro, guarda sólo esa empresa (podés guardar Pueblo y seguir cargando Tesi después); sin filtro de empresa, exige tener las sucursales completas.</p>
+    <p>El filtro de <b>Años</b> controla cuántas filas se muestran (por defecto, las 5 más recientes) — sumá o sacá años según necesites.</p>
+    <p>La última columna, <b>Total Año</b>, suma (o promedia, en Tkt Prom y Uni x Cli) los 12 meses de esa fila, incluyendo lo cargado en la columna azul si corresponde.</p>
+    <p>Una sucursal marcada "No aplica" en la columna azul no carga objetivo (deshabilitada a pedido).</p>
+    <p><b>Por Empresa</b> (otra pestaña): toma el Objetivo/Unidades/Operaciones ya cargado acá y les suma Días Venta y Margen % (a mano, por sucursal) para llegar al Margen Total y al "Objetivo Margen Total" — el mismo con el ajuste fijo de cada grupo (0% Tesi, +1,5% Pueblo, +1% Web).</p>
+    <p>Clic en cualquier celda con datos abre el <b>desglose por sucursal</b> de ese número, respetando los filtros de Empresa/Sucursal aplicados. La fila en cursiva arriba de cada bloque es la <b>variación interanual</b> del mes en curso contra el mismo mes del año pasado.</p>
+  </div>
+</div>
+
+<div class="modal-fondo" id="modalDesglose">
+  <div class="modal">
+    <button class="cerrar" id="cerrarDesglose">✕</button>
+    <h2 id="desgloseTitulo"></h2>
+    <div id="desgloseContenido"></div>
+  </div>
+</div>
+
+<script>
+const METRICAS = [
+  { key: 'ventas',      titulo: 'Ventas',      fmt: 'money',
+    real: r => num(r.ventas_sin_iva), obj: r => num(r.obj_vtas_sin_iva) },
+  { key: 'operaciones', titulo: 'Operaciones', fmt: 'int',
+    real: r => num(r.cant_operaciones), obj: r => num(r.obj_operaciones), editable: 'operaciones' },
+  { key: 'unidades',    titulo: 'Unidades',    fmt: 'int',
+    real: r => num(r.unidades_vta), obj: r => num(r.obj_unidades_vtas) },
+  { key: 'tktprom',     titulo: 'Tkt Prom',    fmt: 'money', ratio: true,
+    realNum: r => num(r.vta_neta), realDen: r => num(r.cant_operaciones),
+    objNum: r => num(r.obj_vta_neta), objDen: r => num(r.obj_operaciones), editable: 'tktProm' },
+  { key: 'unixcli',     titulo: 'Uni x Cli',   fmt: 'dec2', ratio: true,
+    realNum: r => num(r.unidades_vta), realDen: r => num(r.cant_operaciones),
+    objNum: r => num(r.obj_unidades_vtas), objDen: r => num(r.obj_operaciones), editable: 'uniXCli' }
+];
+const NOMBRES_MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const ID_INPUT = { uniXCli: 'inCeldaUniXCli', tktProm: 'inCeldaTktProm', operaciones: 'inCeldaOperaciones' };
+const ANIOS_POR_DEFECTO = 3;
+
+const state = { filas: [], anioMesActual: null, filtro: { empresa: '', sucursal: '', anios: new Set() } };
+const objState = { datos: null };
+let temporizadorGuardado = null;
+
+function num(v){ return v === null || v === undefined ? 0 : Number(v); }
+
+function fmt(v, tipo){
+  if (v === null || v === undefined) return '';
+  if (tipo === 'money') return '$' + Math.round(v).toLocaleString('es-AR');
+  if (tipo === 'int') return Math.round(v).toLocaleString('es-AR');
+  return v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function calcularValores(uniXCli, tktProm, operaciones){
+  const ventaConIva = tktProm * operaciones;
+  return { uniXCli, tktProm, operaciones, unidades: uniXCli * operaciones, ventaConIva, ventaSinIva: ventaConIva / 1.21 };
+}
+
+/* ── Comparativas ──────────────────────────────────────────────────────── */
+function distinctPares(filas){
+  const m = new Map();
+  for (const f of filas) if (f.cod_sucursal) m.set(f.cod_sucursal, f.desc_sucursal2);
+  return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+}
+function distinct(filas, campo){
+  return [...new Set(filas.map(f => f[campo]).filter(v => v !== null && v !== undefined && v !== ''))].sort();
+}
+
+function llenarSelectEmpresa(){
+  const base = state.filas.filter(f => !state.filtro.sucursal || f.cod_sucursal === state.filtro.sucursal);
+  const sel = document.getElementById('fEmpresa');
+  sel.innerHTML = '<option value="">Todas</option>';
+  for (const v of distinct(base, 'Empresa')) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    if (v === state.filtro.empresa) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+function llenarSelectSucursal(){
+  const base = state.filas.filter(f => !state.filtro.empresa || f.Empresa === state.filtro.empresa);
+  const sel = document.getElementById('fSucursal');
+  sel.innerHTML = '<option value="">Todas</option>';
+  for (const [cod, nombre] of distinctPares(base)) {
+    const o = document.createElement('option');
+    o.value = cod; o.textContent = nombre;
+    if (cod === state.filtro.sucursal) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+function todosLosAnios(){
+  return [...new Set(state.filas.map(f => f.anio))].sort((a, b) => b - a);
+}
+
+function inicializarAniosPorDefecto(){
+  const anios = todosLosAnios();
+  state.filtro.anios = new Set(anios.slice(0, ANIOS_POR_DEFECTO));
+}
+
+function renderListaAnios(){
+  const cont = document.getElementById('listaAnios');
+  cont.innerHTML = '';
+  for (const anio of todosLosAnios()) {
+    const marcado = state.filtro.anios.has(anio);
+    const lbl = document.createElement('label');
+    lbl.className = 'anio-chip' + (marcado ? ' marcado' : '');
+    lbl.innerHTML = `<input type="checkbox" ${marcado ? 'checked' : ''}> ${anio}`;
+    lbl.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) state.filtro.anios.add(anio); else state.filtro.anios.delete(anio);
+      renderListaAnios();
+      renderTablas();
+    });
+    cont.appendChild(lbl);
+  }
+  document.getElementById('cntAnios').textContent = state.filtro.anios.size;
+}
+
+function nombreDeSucursal(cod){
+  const f = state.filas.find(x => x.cod_sucursal === cod);
+  return f ? f.desc_sucursal2 : cod;
+}
+
+function sincronizarFiltros(){
+  llenarSelectEmpresa();
+  llenarSelectSucursal();
+  renderChips();
+}
+
+function renderChips(){
+  const cont = document.getElementById('chips');
+  cont.innerHTML = '';
+  if (!state.filtro.empresa && !state.filtro.sucursal) {
+    cont.innerHTML = '<span class="chip">Sin filtros — toda la red</span>'; return;
+  }
+  if (state.filtro.empresa) cont.appendChild(chip(state.filtro.empresa));
+  if (state.filtro.sucursal) cont.appendChild(chip(nombreDeSucursal(state.filtro.sucursal)));
+}
+function chip(texto){ const s = document.createElement('span'); s.className = 'chip'; s.textContent = texto; return s; }
+
+function filasFiltradas(){
+  return state.filas.filter(f =>
+    (!state.filtro.empresa || f.Empresa === state.filtro.empresa) &&
+    (!state.filtro.sucursal || f.cod_sucursal === state.filtro.sucursal) &&
+    state.filtro.anios.has(f.anio));
+}
+
+/* Igual que filasFiltradas() pero sin el filtro de Años — lo necesitan la
+   variación interanual y el desglose por sucursal, que tienen que poder
+   comparar contra un año que el usuario no tenga tildado para ver. */
+function filasFiltradasSinAnio(){
+  return state.filas.filter(f =>
+    (!state.filtro.empresa || f.Empresa === state.filtro.empresa) &&
+    (!state.filtro.sucursal || f.cod_sucursal === state.filtro.sucursal));
+}
+
+function valorEnCelda(metrica, filas, anio, mes){
+  const grupo = filas.filter((f) => f.anio === anio && f.mes === mes);
+  if (!grupo.length) return null;
+  const esObjetivo = grupo[0].esObjetivo;
+  if (metrica.ratio) {
+    const num_ = grupo.reduce((s, r) => s + (esObjetivo ? metrica.objNum(r) : metrica.realNum(r)), 0);
+    const den = grupo.reduce((s, r) => s + (esObjetivo ? metrica.objDen(r) : metrica.realDen(r)), 0);
+    return den ? num_ / den : 0;
+  }
+  return grupo.reduce((s, r) => s + (esObjetivo ? metrica.obj(r) : metrica.real(r)), 0);
+}
+
+function fmtPctSigned(v){
+  const pct = v * 100;
+  const signo = pct >= 0 ? '+' : '';
+  return signo + pct.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+}
+
+function calcularPivot(metrica, filas){
+  const anios = [...new Set(filas.map(f => f.anio))];
+  const celdas = {};
+  for (const anio of anios) {
+    for (let mes = 1; mes <= 12; mes++) {
+      const grupo = filas.filter(f => f.anio === anio && f.mes === mes);
+      if (!grupo.length) { celdas[anio + '|' + mes] = null; continue; }
+      const esObjetivo = grupo[0].esObjetivo;
+      let valor;
+      if (metrica.ratio) {
+        const num_ = grupo.reduce((s, r) => s + (esObjetivo ? metrica.objNum(r) : metrica.realNum(r)), 0);
+        const den = grupo.reduce((s, r) => s + (esObjetivo ? metrica.objDen(r) : metrica.realDen(r)), 0);
+        valor = den ? num_ / den : 0;
+      } else {
+        valor = grupo.reduce((s, r) => s + (esObjetivo ? metrica.obj(r) : metrica.real(r)), 0);
+      }
+      celdas[anio + '|' + mes] = { valor, esObjetivo };
+    }
+  }
+  return { anios, celdas };
+}
+
+/* ── Celda del mes que viene: editable (Operaciones/Tkt Prom/Uni x Cli) o
+   calculada (Ventas/Unidades) para la sucursal elegida; agregado de lo ya
+   cargado (de la empresa elegida, o de toda la red) cuando no hay sucursal
+   puntual seleccionada; "No aplica" si la sucursal no carga objetivo. ───── */
+function contribProximaDeValores(metrica, v){
+  if (metrica.ratio) {
+    if (metrica.key === 'tktprom') return { num: v.ventaConIva, den: v.operaciones };
+    return { num: v.unidades, den: v.operaciones }; // unixcli
+  }
+  if (metrica.key === 'ventas') return { suma: v.ventaSinIva };
+  if (metrica.key === 'operaciones') return { suma: v.operaciones };
+  return { suma: v.unidades }; // unidades
+}
+
+function contribProximaAgregada(metrica){
+  const sucursales = objState.datos.sucursales.filter((s) =>
+    (!state.filtro.empresa || s.empresa === state.filtro.empresa) && s.valores);
+  if (!sucursales.length) return null;
+  if (metrica.ratio) {
+    let num_ = 0, den = 0;
+    for (const s of sucursales) { const c = contribProximaDeValores(metrica, s.valores); num_ += c.num; den += c.den; }
+    return { num: num_, den };
+  }
+  let suma = 0;
+  for (const s of sucursales) suma += contribProximaDeValores(metrica, s.valores).suma;
+  return { suma };
+}
+
+/* Desglose por sucursal de una celda (mes puntual o 'total' = Total Año),
+   respetando Empresa/Sucursal — pero no el filtro de Años (si la celda está
+   pintada, el año ya está incluido). Si la celda es la del mes que viene,
+   suma la contribución de objState en vez de buscarla en filas reales. */
+function desglosePorSucursal(metrica, anio, mes){
+  const base = filasFiltradasSinAnio();
+  const filas = base.filter((f) => f.anio === anio && (mes === 'total' || f.mes === mes));
+  const porSucursal = new Map();
+  for (const f of filas) {
+    if (!porSucursal.has(f.cod_sucursal)) {
+      porSucursal.set(f.cod_sucursal, { nombre: f.desc_sucursal2, num: 0, den: 0, suma: 0, esObjetivo: false });
+    }
+    const acc = porSucursal.get(f.cod_sucursal);
+    if (metrica.ratio) {
+      acc.num += f.esObjetivo ? metrica.objNum(f) : metrica.realNum(f);
+      acc.den += f.esObjetivo ? metrica.objDen(f) : metrica.realDen(f);
+    } else {
+      acc.suma += f.esObjetivo ? metrica.obj(f) : metrica.real(f);
+    }
+    if (f.esObjetivo) acc.esObjetivo = true;
+  }
+
+  const objData = objState.datos;
+  const targetAnio = objData ? Math.floor(objData.mes / 100) : null;
+  const targetMes = objData ? objData.mes % 100 : null;
+  const incluyeProximo = objData && anio === targetAnio && (mes === 'total' || mes === targetMes);
+  if (incluyeProximo) {
+    const sucursales = objData.sucursales.filter((s) =>
+      (!state.filtro.empresa || s.empresa === state.filtro.empresa) &&
+      (!state.filtro.sucursal || s.cod_sucursal === state.filtro.sucursal) && s.valores);
+    for (const s of sucursales) {
+      if (!porSucursal.has(s.cod_sucursal)) {
+        porSucursal.set(s.cod_sucursal, { nombre: s.nombre, num: 0, den: 0, suma: 0, esObjetivo: true });
+      }
+      const acc = porSucursal.get(s.cod_sucursal);
+      const c = contribProximaDeValores(metrica, s.valores);
+      if (metrica.ratio) { acc.num += c.num; acc.den += c.den; } else { acc.suma += c.suma; }
+      acc.esObjetivo = true;
+    }
+  }
+
+  return [...porSucursal.entries()]
+    .map(([cod, acc]) => ({
+      cod, nombre: acc.nombre, esObjetivo: acc.esObjetivo,
+      valor: metrica.ratio ? (acc.den ? acc.num / acc.den : 0) : acc.suma
+    }))
+    .sort((a, b) => b.valor - a.valor);
+}
+
+function abrirDesglose(metricaKey, anio, mesAttr){
+  const metrica = METRICAS.find((m) => m.key === metricaKey);
+  const mes = mesAttr === 'total' ? 'total' : Number(mesAttr);
+  const filas = desglosePorSucursal(metrica, anio, mes);
+  const tituloMes = mes === 'total' ? 'Total Año' : NOMBRES_MES[mes - 1];
+  document.getElementById('desgloseTitulo').textContent = `${metrica.titulo} — ${tituloMes} ${anio}`;
+
+  const cont = document.getElementById('desgloseContenido');
+  if (!filas.length) {
+    cont.innerHTML = '<p style="color:var(--muted)">Sin datos para este filtro.</p>';
+  } else {
+    // Pareto 80/20: % de participación y % acumulado (ya viene ordenado desc por valor).
+    // "Vital" = el acumulado hasta esta fila (inclusive) todavía no pasó el 80%.
+    const total = filas.reduce((s, f) => s + f.valor, 0);
+    let acumulado = 0;
+    const filasHtml = filas.map((f) => {
+      const participacion = total ? f.valor / total : 0;
+      acumulado += participacion;
+      const esVital = acumulado <= 0.8;
+      const claseFila = esVital ? 'pareto-vital' : 'pareto-resto';
+      return `<tr class="${claseFila}">
+        <td>${f.nombre}${f.esObjetivo ? ' <span class="badge-obj">Obj.</span>' : ''}</td>
+        <td>${fmt(f.valor, metrica.fmt)}</td>
+        <td>${(participacion * 100).toFixed(1)}%</td>
+        <td>${(acumulado * 100).toFixed(1)}%</td>
+      </tr>`;
+    });
+
+    // Se reparte en columnas (máx. ~18 filas cada una) para que entre todo
+    // sin scroll, en vez de una lista larga de una sola columna.
+    const encabezado = `<thead><tr><th>Sucursal</th><th>${metrica.titulo}</th><th>% Part.</th><th>% Acum.</th></tr></thead>`;
+    const maxColumnas = 3, maxPorColumna = 18;
+    const columnas = Math.min(maxColumnas, Math.max(1, Math.ceil(filasHtml.length / maxPorColumna)));
+    const porColumna = Math.ceil(filasHtml.length / columnas);
+    let tablasHtml = '';
+    for (let i = 0; i < filasHtml.length; i += porColumna) {
+      const grupo = filasHtml.slice(i, i + porColumna).join('');
+      tablasHtml += `<table>${encabezado}<tbody>${grupo}</tbody></table>`;
+    }
+
+    let totalHtml = '';
+    if (!metrica.ratio) {
+      totalHtml = `<table class="desglose-total"><tbody><tr class="total"><td>Total</td><td>${fmt(total, metrica.fmt)}</td><td>100,0%</td><td></td></tr></tbody></table>`;
+    }
+    cont.innerHTML = `<div class="desglose-columnas">${tablasHtml}</div>${totalHtml}`;
+  }
+  document.getElementById('modalDesglose').classList.add('abierto');
+}
+
+/* ── Miles con punto mientras se escribe (Operaciones / Tkt Prom) ────────── */
+function formatearMiles(n){
+  if (n === null || n === undefined || n === '') return '';
+  const num_ = Number(n);
+  if (!Number.isFinite(num_)) return '';
+  const partes = num_.toFixed(2).split('.');
+  let entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return partes[1] === '00' ? entero : entero + ',' + partes[1];
+}
+
+function formatoMilesLive(e){
+  const el = e.target;
+  const alFinal = el.selectionEnd === el.value.length;
+  let raw = el.value.replace(/[^\d,]/g, '');
+  const partes = raw.split(',');
+  let entero = partes[0].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const decimal = partes[1];
+  el.value = decimal !== undefined ? entero + ',' + decimal.slice(0, 2) : entero;
+  if (alFinal) el.selectionStart = el.selectionEnd = el.value.length;
+}
+
+function valorNumerico(el){
+  if (!el || el.value === '') return NaN;
+  return Number(el.value.replace(/\./g, '').replace(',', '.'));
+}
+
+/* Suma cruda del año (real donde hay venta cerrada, objetivo donde la fila ya
+   es objetivo — ej. el mes en curso) para las 5 métricas de una sola pasada. */
+function calcularBaseAnio(filas, anio){
+  const grupo = filas.filter((f) => f.anio === anio);
+  const base = {};
+  for (const m of METRICAS) {
+    if (m.ratio) {
+      let num_ = 0, den = 0;
+      for (const r of grupo) { num_ += r.esObjetivo ? m.objNum(r) : m.realNum(r); den += r.esObjetivo ? m.objDen(r) : m.realDen(r); }
+      base[m.key + '_num'] = num_; base[m.key + '_den'] = den;
+    } else {
+      let suma = 0;
+      for (const r of grupo) suma += r.esObjetivo ? m.obj(r) : m.real(r);
+      base[m.key] = suma;
+    }
+  }
+  return base;
+}
+
+function finalizarTotal(metrica, base, contrib){
+  base = base || {};
+  if (metrica.ratio) {
+    let num_ = base[metrica.key + '_num'] || 0, den = base[metrica.key + '_den'] || 0;
+    if (contrib) { num_ += contrib.num; den += contrib.den; }
+    return den ? num_ / den : 0;
+  }
+  let suma = base[metrica.key] || 0;
+  if (contrib) suma += contrib.suma;
+  return suma;
+}
+
+/* Valor plano de la columna del mes que viene (sucursal elegida, o agregado
+   de la red/empresa) — lo usa la fila de variación interanual para poder
+   comparar esa columna contra el mismo mes del año pasado. null si todavía
+   no hay nada cargado ahí. */
+function valorProximoPlano(metrica){
+  const cod = state.filtro.sucursal;
+  if (!cod) {
+    const contrib = contribProximaAgregada(metrica);
+    return contrib ? finalizarTotal(metrica, null, contrib) : null;
+  }
+  if (!objState.datos) return null;
+  const s = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
+  if (!s || !s.valores) return null;
+  const c = contribProximaDeValores(metrica, s.valores);
+  return metrica.ratio ? (c.den ? c.num / c.den : 0) : c.suma;
+}
+
+function celdaProxima(metrica, anio, mes){
+  const cod = state.filtro.sucursal;
+  const attrs = ` class="celda-proximo celda-clickable" data-metrica="${metrica.key}" data-anio="${anio}" data-mes="${mes}"`;
+  if (!cod) {
+    const contrib = contribProximaAgregada(metrica);
+    const valor = contrib ? finalizarTotal(metrica, null, contrib) : null;
+    return `<td${attrs}>${valor === null ? '—' : fmt(valor, metrica.fmt)}</td>`;
+  }
+  const s = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
+  if (!s) return '<td class="vacio" title="Esta sucursal no carga objetivo">No aplica</td>';
+  const v = s.valores || {};
+  if (metrica.editable) {
+    const id = ID_INPUT[metrica.editable];
+    const valor = v[metrica.editable];
+    if (metrica.editable === 'uniXCli') {
+      return `<td class="celda-editable"><input type="number" step="0.01" min="0" id="${id}" data-campo="uniXCli" value="${valor ?? ''}"></td>`;
+    }
+    const inicial = formatearMiles(valor);
+    return `<td class="celda-editable"><input type="text" inputmode="decimal" id="${id}" data-campo="${metrica.editable}" value="${inicial}"></td>`;
+  }
+  if (metrica.key === 'ventas') {
+    return `<td class="celda-calculada celda-clickable" id="celdaVentas" data-metrica="${metrica.key}" data-anio="${anio}" data-mes="${mes}">${v.ventaSinIva != null ? fmt(v.ventaSinIva, 'money') : '—'}</td>`;
+  }
+  if (metrica.key === 'unidades') {
+    return `<td class="celda-calculada celda-clickable" id="celdaUnidades" data-metrica="${metrica.key}" data-anio="${anio}" data-mes="${mes}">${v.unidades != null ? fmt(v.unidades, 'int') : '—'}</td>`;
+  }
+  return '<td class="vacio">—</td>';
+}
+
+function celdaTotalAnio(metrica, anio, filas, objData, targetAnio){
+  const base = (anio === targetAnio && baseAnioObjetivo) ? baseAnioObjetivo : calcularBaseAnio(filas, anio);
+  let contrib = null;
+  if (objData && anio === targetAnio) {
+    if (state.filtro.sucursal) {
+      const s = objData.sucursales.find((x) => x.cod_sucursal === state.filtro.sucursal);
+      if (s && s.valores) contrib = contribProximaDeValores(metrica, s.valores);
+    } else {
+      contrib = contribProximaAgregada(metrica);
+    }
+  }
+  const valor = finalizarTotal(metrica, base, contrib);
+  const idAttr = (objData && anio === targetAnio) ? ` id="totalAnio_${metrica.key}"` : '';
+  return `<td class="celda-total celda-clickable"${idAttr} data-metrica="${metrica.key}" data-anio="${anio}" data-mes="total">${fmt(valor, metrica.fmt)}</td>`;
+}
+
+/* ── Un solo contenedor: una tabla combinada, mes alineado una sola vez
+   arriba, y una columna angosta a la izquierda con el nombre de la métrica
+   en vertical (rowspan por todas las filas-año de ese bloque). ──────────── */
+let baseAnioObjetivo = null;
+let varAnteriorPorMetrica = {};
+
+function aniosCompartidos(filas, objData){
+  let anios = [...new Set(filas.map((f) => f.anio))];
+  const targetAnio = objData ? Math.floor(objData.mes / 100) : null;
+  if (targetAnio !== null && state.filtro.anios.has(targetAnio) && !anios.includes(targetAnio)) anios.push(targetAnio);
+  anios.sort((a, b) => b - a); // más nuevo arriba
+  return anios;
+}
+
+function renderTablas(){
+  const filas = filasFiltradas();
+  const objData = objState.datos;
+  const targetAnio = objData ? Math.floor(objData.mes / 100) : null;
+  const targetMes = objData ? objData.mes % 100 : null;
+  baseAnioObjetivo = targetAnio !== null ? calcularBaseAnio(filas, targetAnio) : null;
+
+  const anios = aniosCompartidos(filas, objData);
+
+  const cont = document.getElementById('tablas');
+  cont.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'tabla-card';
+  const wrap = document.createElement('div');
+  wrap.className = 'tabla-scroll';
+  const table = document.createElement('table');
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  trh.innerHTML = '<th></th><th>Año</th>' + NOMBRES_MES.map((m, i) => {
+    const esActual = state.anioMesActual && (state.anioMesActual % 100) === (i + 1);
+    const esProximo = targetMes === (i + 1);
+    const clase = esActual ? 'obj' : (esProximo ? 'proximo' : '');
+    const badge = esActual ? ' <span class="badge-obj">Obj.</span>' : (esProximo ? ' <span class="badge-proximo">Próx.</span>' : '');
+    return `<th class="${clase}">${m}${badge}</th>`;
+  }).join('') + '<th class="total-header">Total Año</th>';
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const anioActual = state.anioMesActual ? Math.floor(state.anioMesActual / 100) : null;
+  const mesActual = state.anioMesActual ? state.anioMesActual % 100 : null;
+  const filasSinAnio = filasFiltradasSinAnio();
+
+  varAnteriorPorMetrica = {};
+  const tbody = document.createElement('tbody');
+  for (const metrica of METRICAS) {
+    const { celdas } = calcularPivot(metrica, filas);
+    const totalFilas = anios.length + 1; // + fila de variación interanual
+
+    const trVar = document.createElement('tr');
+    trVar.className = 'fila-grupo-inicio fila-variacion';
+    let filaVar = `<td class="th-metrica" rowspan="${totalFilas}"><span class="vertical">${metrica.titulo}</span></td><td>Var. a/a</td>`;
+    for (let mes = 1; mes <= 12; mes++) {
+      const esMesProximo = anioActual !== null && anioActual === targetAnio && mes === targetMes;
+      const valorAnterior = anioActual !== null ? valorEnCelda(metrica, filasSinAnio, anioActual - 1, mes) : null;
+      let valorActualMes = null;
+      if (esMesProximo) {
+        varAnteriorPorMetrica[metrica.key] = valorAnterior; // para actualizar en vivo al tipear
+        valorActualMes = valorProximoPlano(metrica);
+      } else if (mesActual !== null && mes <= mesActual) {
+        valorActualMes = valorEnCelda(metrica, filasSinAnio, anioActual, mes);
+      }
+      const variacion = (valorActualMes !== null && valorAnterior) ? (valorActualMes / valorAnterior - 1) : null;
+      const idAttr = esMesProximo ? ` id="varProximo_${metrica.key}"` : '';
+      if (variacion !== null) {
+        filaVar += `<td class="${variacion >= 0 ? 'var-pos' : 'var-neg'}"${idAttr}>${fmtPctSigned(variacion)}</td>`;
+      } else {
+        filaVar += `<td class="vacio"${idAttr}>—</td>`;
+      }
+    }
+    filaVar += '<td class="vacio">—</td>';
+    trVar.innerHTML = filaVar;
+    tbody.appendChild(trVar);
+
+    for (const anio of anios) {
+      const tr = document.createElement('tr');
+      let fila = `<td>${anio}</td>`;
+      for (let mes = 1; mes <= 12; mes++) {
+        if (objData && anio === targetAnio && mes === targetMes) {
+          fila += celdaProxima(metrica, anio, mes);
+          continue;
+        }
+        const c = celdas[anio + '|' + mes];
+        if (!c) { fila += '<td class="vacio">—</td>'; continue; }
+        const clase = c.esObjetivo ? 'obj celda-clickable' : 'celda-clickable';
+        fila += `<td class="${clase}" data-metrica="${metrica.key}" data-anio="${anio}" data-mes="${mes}">${fmt(c.valor, metrica.fmt)}</td>`;
+      }
+      fila += celdaTotalAnio(metrica, anio, filas, objData, targetAnio);
+      tr.innerHTML = fila;
+      tbody.appendChild(tr);
+    }
+  }
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  card.appendChild(wrap);
+  cont.appendChild(card);
+  conectarInputsCelda();
+}
+
+function setTxt(id, val){
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+/* ── Edición inline: leer los 3 inputs, refrescar Ventas/Unidades en vivo,
+   y guardar el borrador con un pequeño debounce (no en cada tecla). ─────── */
+function conectarInputsCelda(){
+  Object.values(ID_INPUT).forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', onInputCelda);
+  });
+}
+
+function onInputCelda(e){
+  const elTktProm = document.getElementById(ID_INPUT.tktProm);
+  const elOperaciones = document.getElementById(ID_INPUT.operaciones);
+  if (e && (e.target === elTktProm || e.target === elOperaciones)) formatoMilesLive(e);
+
+  const uniXCli = Number(document.getElementById(ID_INPUT.uniXCli)?.value || 0);
+  const tktProm = elTktProm ? (valorNumerico(elTktProm) || 0) : 0;
+  const operaciones = elOperaciones ? (valorNumerico(elOperaciones) || 0) : 0;
+  const calc = calcularValores(uniXCli, tktProm, operaciones);
+  setTxt('celdaVentas', fmt(calc.ventaSinIva, 'money'));
+  setTxt('celdaUnidades', fmt(calc.unidades, 'int'));
+
+  if (baseAnioObjetivo) {
+    setTxt('totalAnio_ventas', fmt((baseAnioObjetivo.ventas || 0) + calc.ventaSinIva, 'money'));
+    setTxt('totalAnio_operaciones', fmt((baseAnioObjetivo.operaciones || 0) + calc.operaciones, 'int'));
+    setTxt('totalAnio_unidades', fmt((baseAnioObjetivo.unidades || 0) + calc.unidades, 'int'));
+    const tktNum = (baseAnioObjetivo.tktprom_num || 0) + calc.ventaConIva;
+    const tktDen = (baseAnioObjetivo.tktprom_den || 0) + calc.operaciones;
+    setTxt('totalAnio_tktprom', fmt(tktDen ? tktNum / tktDen : 0, 'money'));
+    const uniNum = (baseAnioObjetivo.unixcli_num || 0) + calc.unidades;
+    const uniDen = (baseAnioObjetivo.unixcli_den || 0) + calc.operaciones;
+    setTxt('totalAnio_unixcli', fmt(uniDen ? uniNum / uniDen : 0, 'dec2'));
+  }
+
+  for (const m of METRICAS) {
+    const anterior = varAnteriorPorMetrica[m.key];
+    const el = document.getElementById(`varProximo_${m.key}`);
+    if (!el || !anterior) continue;
+    const c = contribProximaDeValores(m, calc);
+    const actual = m.ratio ? (c.den ? c.num / c.den : 0) : c.suma;
+    const variacion = actual / anterior - 1;
+    el.textContent = fmtPctSigned(variacion);
+    el.className = variacion >= 0 ? 'var-pos' : 'var-neg';
+  }
+
+  clearTimeout(temporizadorGuardado);
+  temporizadorGuardado = setTimeout(guardarEdicionActual, 700);
+}
+
+async function guardarEdicionActual(){
+  const cod = state.filtro.sucursal;
+  if (!cod) return;
+  const uniXCliEl = document.getElementById(ID_INPUT.uniXCli);
+  const tktPromEl = document.getElementById(ID_INPUT.tktProm);
+  const operacionesEl = document.getElementById(ID_INPUT.operaciones);
+  if (!uniXCliEl || !tktPromEl || !operacionesEl) return;
+  if (uniXCliEl.value === '' || tktPromEl.value === '' || operacionesEl.value === '') return;
+  const uniXCli = uniXCliEl.value;
+  const tktProm = valorNumerico(tktPromEl);
+  const operaciones = valorNumerico(operacionesEl);
+  if (!Number.isFinite(tktProm) || !Number.isFinite(operaciones)) return;
+
+  try {
+    const r = await fetch(`api/objetivos-proximo/${encodeURIComponent(cod)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uniXCli, tktProm, operaciones })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+
+    const s = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
+    if (s) {
+      s.valores = data.valores;
+      s.objetivoCargado = true;
+      s.origen = 'borrador';
+      s.cargado = s.objetivoCargado && s.diasVenta != null && s.margenPct != null;
+    }
+    objState.datos.totalCargadas = objState.datos.sucursales.filter((x) => x.cargado).length;
+    objState.datos.listoParaGuardar = objState.datos.totalCargadas === objState.datos.totalUniverso;
+    renderObjSidebar();
+  } catch (e) {
+    mostrarToast('Error al guardar: ' + e.message);
+  }
+}
+
+async function eliminarObjetivo(cod, nombre){
+  if (!confirm(`¿Borrar el objetivo de ${objState.datos.mesNombre} cargado para ${nombre}?`)) return;
+  try {
+    const r = await fetch(`api/objetivos-proximo/${encodeURIComponent(cod)}`, { method: 'DELETE' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+    const s = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
+    if (s) { s.valores = null; s.cargado = false; s.origen = null; }
+    objState.datos.totalCargadas = objState.datos.sucursales.filter((x) => x.cargado).length;
+    objState.datos.listoParaGuardar = objState.datos.totalCargadas === objState.datos.totalUniverso;
+    renderTablas();
+    renderObjSidebar();
+    mostrarToast('Borrado: ' + nombre);
+  } catch (e) {
+    mostrarToast('Error al borrar: ' + e.message);
+  }
+}
+
+function seleccionarSucursal(cod){
+  state.filtro.sucursal = cod || '';
+  sincronizarFiltros();
+  renderTablas();
+  renderObjSidebar();
+}
+
+function conectarFiltros(){
+  document.getElementById('fEmpresa').addEventListener('change', (e) => {
+    state.filtro.empresa = e.target.value;
+    sincronizarFiltros(); renderTablas(); renderObjSidebar();
+  });
+  document.getElementById('fSucursal').addEventListener('change', (e) => {
+    seleccionarSucursal(e.target.value);
+  });
+  document.getElementById('btnLimpiar').addEventListener('click', () => {
+    state.filtro.empresa = ''; state.filtro.sucursal = '';
+    sincronizarFiltros(); renderTablas(); renderObjSidebar();
+  });
+  document.getElementById('btnAyuda').addEventListener('click', () => {
+    document.getElementById('modalAyuda').classList.add('abierto');
+  });
+  document.getElementById('cerrarAyuda').addEventListener('click', () => {
+    document.getElementById('modalAyuda').classList.remove('abierto');
+  });
+  document.getElementById('modalAyuda').addEventListener('click', (e) => {
+    if (e.target.id === 'modalAyuda') e.target.classList.remove('abierto');
+  });
+  document.getElementById('cerrarDesglose').addEventListener('click', () => {
+    document.getElementById('modalDesglose').classList.remove('abierto');
+  });
+  document.getElementById('modalDesglose').addEventListener('click', (e) => {
+    if (e.target.id === 'modalDesglose') e.target.classList.remove('abierto');
+  });
+  document.getElementById('tablas').addEventListener('click', (e) => {
+    const td = e.target.closest('td[data-metrica]');
+    if (!td) return;
+    abrirDesglose(td.dataset.metrica, Number(td.dataset.anio), td.dataset.mes);
+  });
+}
+
+async function fetchGrilla(){
+  const r = await fetch('api/grilla');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const data = await r.json();
+  state.filas = data.filas;
+  state.anioMesActual = data.anioMesActual;
+  document.getElementById('sello').textContent =
+    'Datos en vivo · SQL Server · recarga ' + new Date(data.recarga).toLocaleString('es-AR');
+}
+
+async function fetchObjetivos(){
+  const r = await fetch('api/objetivos-proximo');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  objState.datos = await r.json();
+}
+
+function universoObjetivoActual(){
+  const d = objState.datos;
+  if (!d) return [];
+  return state.filtro.empresa ? d.sucursales.filter((s) => s.empresa === state.filtro.empresa) : d.sucursales;
+}
+
+function renderObjSidebar(){
+  const d = objState.datos;
+  if (!d) return;
+  document.getElementById('objMesTitulo').textContent = d.mesNombre;
+
+  const universo = universoObjetivoActual();
+  const cargadasUniverso = universo.filter((s) => s.cargado).length;
+  document.getElementById('objProgreso').innerHTML = `<b>${cargadasUniverso}/${universo.length}</b>`;
+
+  const pendientes = universo.filter((s) => !s.cargado);
+  const cargadas = universo.filter((s) => s.cargado);
+  document.getElementById('cntPendientes').textContent = pendientes.length;
+  document.getElementById('cntCargadas').textContent = cargadas.length;
+
+  renderLista('listaPendientes', pendientes, 'pendiente');
+  renderLista('listaCargadas', cargadas, 'cargada');
+
+  const btn = document.getElementById('btnGuardarTodo');
+  const listo = universo.length > 0 && cargadasUniverso === universo.length;
+  btn.disabled = !listo;
+  const sufijoEmpresa = state.filtro.empresa ? ` — ${state.filtro.empresa}` : '';
+  btn.textContent = listo
+    ? `GUARDAR OBJETIVOS${sufijoEmpresa}`
+    : `GUARDAR OBJETIVOS${sufijoEmpresa} (${cargadasUniverso}/${universo.length})`;
+}
+
+function renderLista(idCont, lista, clase){
+  const cont = document.getElementById(idCont);
+  cont.innerHTML = '';
+  if (!lista.length) { cont.innerHTML = '<div class="obj-vacio">Sin sucursales</div>'; return; }
+  for (const s of lista) {
+    const div = document.createElement('div');
+    div.className = 'obj-item ' + clase + (state.filtro.sucursal === s.cod_sucursal ? ' activo' : '');
+    div.innerHTML = `<span class="punto"></span><span style="flex:1">${s.nombre}</span>` +
+      (clase === 'cargada' ? '<button class="btn-borrar" title="Borrar objetivo">✕</button>' : '');
+    div.addEventListener('click', () => seleccionarSucursal(s.cod_sucursal));
+    const btnB = div.querySelector('.btn-borrar');
+    if (btnB) btnB.addEventListener('click', (e) => { e.stopPropagation(); eliminarObjetivo(s.cod_sucursal, s.nombre); });
+    cont.appendChild(div);
+  }
+}
+
+function mostrarToast(msg){
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+document.getElementById('btnGuardarTodo').addEventListener('click', async () => {
+  const empresa = state.filtro.empresa || null;
+  const aviso = empresa
+    ? `Esto va a cargar el objetivo de las sucursales de ${empresa} (TEMP_BI_APP + SP) y va a quedar en la base real. ¿Confirmás?`
+    : 'Esto va a cargar el objetivo de todas las sucursales (TEMP_BI_APP + SP) y va a quedar en la base real. ¿Confirmás?';
+  if (!confirm(aviso)) return;
+  try {
+    const r = await fetch('api/objetivos-proximo/guardar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ empresa })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+    mostrarToast(`Guardadas ${data.guardadas} sucursales en la base`);
+    await fetchObjetivos();
+    renderTablas();
+    renderObjSidebar();
+  } catch (e) {
+    mostrarToast('Error: ' + e.message);
+  }
+});
+
+/* ── Pestaña "Por Empresa" ─────────────────────────────────────────────── */
+const peState = { datos: null, grupo: 'PUEBLO' };
+let peTemporizadorGuardado = {};
+
+function fmtPct(frac){ return frac == null ? '' : (frac * 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%'; }
+
+async function fetchMargenes(){
+  const r = await fetch('api/margenes-empresa');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  peState.datos = await r.json();
+}
+
+function conectarTabs(){
+  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((x) => x.classList.remove('activo'));
+    document.querySelectorAll('.vista').forEach((x) => x.classList.remove('activa'));
+    t.classList.add('activo');
+    const idVista = 'vista' + t.dataset.vista[0].toUpperCase() + t.dataset.vista.slice(1);
+    document.getElementById(idVista).classList.add('activa');
+    if (t.dataset.vista === 'porEmpresa') cargarPorEmpresa();
+  }));
+  document.querySelectorAll('.pe-grupo-btn').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.pe-grupo-btn').forEach((x) => x.classList.remove('activo'));
+    b.classList.add('activo');
+    peState.grupo = b.dataset.grupo;
+    renderPorEmpresa();
+  }));
+}
+
+async function cargarPorEmpresa(){
+  try {
+    await fetchMargenes();
+    document.getElementById('peMes').textContent = peState.datos.mesNombre;
+    renderPorEmpresa();
+  } catch (e) {
+    document.getElementById('peTablaCont').innerHTML = `<p style="padding:16px;color:var(--muted)">Error: ${e.message}</p>`;
+  }
+}
+
+function renderPeStats(){
+  const g = peState.datos.grupos[peState.grupo];
+  const cont = document.getElementById('peStats');
+  const t = g.total;
+  const stat = (lbl, val, clases = '') => `<div class="pe-stat ${clases}"><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;
+  cont.innerHTML =
+    stat('Objetivo sin IVA', fmt(t.objetivoSinIva, 'money')) +
+    stat('Objetivo con IVA', fmt(t.objetivoConIva, 'money')) +
+    stat('Unidades', fmt(t.unidades, 'int')) +
+    stat('Operaciones', fmt(t.operaciones, 'int')) +
+    stat('Uni/Oper', t.uniXOper.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) +
+    stat('Margen Total' + (t.completo ? '' : ' (parcial)'), fmtPct(t.margenPct), t.completo ? '' : 'parcial') +
+    stat(`Objetivo Margen Total (+${(g.ajuste * 100).toLocaleString('es-AR')}%)`, fmtPct(g.margenPctAjustado), 'ajustado' + (t.completo ? '' : ' parcial'));
+}
+
+function renderPeTabla(){
+  const g = peState.datos.grupos[peState.grupo];
+  const cont = document.getElementById('peTablaCont');
+  if (!g.sucursales.length) { cont.innerHTML = '<p style="padding:16px;color:var(--muted)">Sin sucursales con objetivo cargado en este grupo.</p>'; return; }
+
+  const filasHtml = g.sucursales.map((s) => `
+    <tr data-cod="${s.cod_sucursal}">
+      <td>${s.nombre}</td>
+      <td>${s.supervisor || ''}</td>
+      <td>${fmt(s.objetivoSinIva, 'money')}</td>
+      <td>${fmt(s.objetivoConIva, 'money')}</td>
+      <td class="celda-editable"><input type="number" step="1" min="1" class="pe-in-dias" data-cod="${s.cod_sucursal}" value="${s.diasVenta ?? ''}"></td>
+      <td id="peDiarioSin_${s.cod_sucursal}">${s.diarioSinIva != null ? fmt(s.diarioSinIva, 'money') : '—'}</td>
+      <td id="peDiarioCon_${s.cod_sucursal}">${s.diarioConIva != null ? fmt(s.diarioConIva, 'money') : '—'}</td>
+      <td class="celda-editable"><input type="number" step="0.1" min="0" max="100" class="pe-in-margen" data-cod="${s.cod_sucursal}" value="${s.margenPct != null ? (s.margenPct * 100) : ''}"></td>
+      <td id="peMargenPesos_${s.cod_sucursal}">${s.margenPesos != null ? fmt(s.margenPesos, 'money') : '—'}</td>
+      <td>${fmt(s.unidades, 'int')}</td>
+      <td>${fmt(s.operaciones, 'int')}</td>
+      <td>${s.uniXOper.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+    </tr>`).join('');
+
+  const t = g.total;
+  const filaTotal = `
+    <tr class="pe-total">
+      <td>Total</td>
+      <td></td>
+      <td>${fmt(t.objetivoSinIva, 'money')}</td>
+      <td>${fmt(t.objetivoConIva, 'money')}</td>
+      <td></td>
+      <td>${t.diarioSinIva != null ? fmt(t.diarioSinIva, 'money') : '—'}</td>
+      <td>${t.diarioConIva != null ? fmt(t.diarioConIva, 'money') : '—'}</td>
+      <td>${fmtPct(t.margenPct)}</td>
+      <td>${fmt(t.margenPesos, 'money')}</td>
+      <td>${fmt(t.unidades, 'int')}</td>
+      <td>${fmt(t.operaciones, 'int')}</td>
+      <td>${t.uniXOper.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+    </tr>`;
+
+  cont.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left">Sucursal</th>
+          <th style="text-align:left">Supervisor</th>
+          <th>Objetivo sin IVA</th>
+          <th>Objetivo con IVA</th>
+          <th>Días Venta</th>
+          <th>Diario sin IVA</th>
+          <th>Diario con IVA</th>
+          <th>Margen %</th>
+          <th>Margen $</th>
+          <th>Unidades</th>
+          <th>Operaciones</th>
+          <th>Uni/Oper</th>
+        </tr>
+      </thead>
+      <tbody>${filasHtml}${filaTotal}</tbody>
+    </table>`;
+
+  cont.querySelectorAll('.pe-in-dias, .pe-in-margen').forEach((el) =>
+    el.addEventListener('input', () => onInputPe(el.dataset.cod)));
+}
+
+function onInputPe(cod){
+  const g = peState.datos.grupos[peState.grupo];
+  const s = g.sucursales.find((x) => x.cod_sucursal === cod);
+  const diasEl = document.querySelector(`.pe-in-dias[data-cod="${cod}"]`);
+  const margenEl = document.querySelector(`.pe-in-margen[data-cod="${cod}"]`);
+  const dias = Number(diasEl.value);
+  const margenPct = margenEl.value === '' ? null : Number(margenEl.value) / 100;
+
+  if (Number.isFinite(dias) && dias > 0) {
+    const diarioSin = s.objetivoSinIva / dias;
+    setTxt(`peDiarioSin_${cod}`, fmt(diarioSin, 'money'));
+    setTxt(`peDiarioCon_${cod}`, fmt(diarioSin * 1.21, 'money'));
+  }
+  if (margenPct != null && Number.isFinite(margenPct)) {
+    setTxt(`peMargenPesos_${cod}`, fmt(margenPct * s.objetivoSinIva, 'money'));
+  }
+
+  clearTimeout(peTemporizadorGuardado[cod]);
+  peTemporizadorGuardado[cod] = setTimeout(() => guardarPe(cod), 700);
+}
+
+async function guardarPe(cod){
+  const diasEl = document.querySelector(`.pe-in-dias[data-cod="${cod}"]`);
+  const margenEl = document.querySelector(`.pe-in-margen[data-cod="${cod}"]`);
+  const diasVenta = diasEl.value;
+  const margenPct = margenEl.value;
+  if (diasVenta === '' || margenPct === '') return; // sólo se guarda con los dos campos completos
+
+  try {
+    const r = await fetch(`api/margenes-empresa/${encodeURIComponent(cod)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ diasVenta, margenPct: Number(margenPct) / 100 })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+
+    const g = peState.datos.grupos[peState.grupo];
+    const s = g.sucursales.find((x) => x.cod_sucursal === cod);
+    s.diasVenta = Number(diasVenta);
+    s.margenPct = Number(margenPct) / 100;
+    s.diarioSinIva = s.objetivoSinIva / s.diasVenta;
+    s.diarioConIva = s.diarioSinIva * 1.21;
+    s.margenPesos = s.margenPct * s.objetivoSinIva;
+    s.cargado = true;
+    g.total = calcularTotalGrupoCliente(g.sucursales);
+    g.margenPctAjustado = g.total.margenPct + g.ajuste;
+    renderPeStats();
+
+    // Sincroniza con la pestaña Comparativas: "cargado" ahí exige también días/margen.
+    if (objState.datos) {
+      const so = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
+      if (so) {
+        so.diasVenta = s.diasVenta;
+        so.margenPct = s.margenPct;
+        so.cargado = so.objetivoCargado && so.diasVenta != null && so.margenPct != null;
+        objState.datos.totalCargadas = objState.datos.sucursales.filter((x) => x.cargado).length;
+        objState.datos.listoParaGuardar = objState.datos.totalCargadas === objState.datos.totalUniverso;
+        renderObjSidebar();
+      }
+    }
+  } catch (e) {
+    mostrarToast('Error al guardar: ' + e.message);
+  }
+}
+
+function calcularTotalGrupoCliente(filas){
+  const sumObjSinIva = filas.reduce((s, f) => s + f.objetivoSinIva, 0);
+  const sumObjConIva = filas.reduce((s, f) => s + f.objetivoConIva, 0);
+  const conDiario = filas.filter((f) => f.diarioSinIva != null);
+  const sumDiarioSinIva = conDiario.reduce((s, f) => s + f.diarioSinIva, 0);
+  const sumDiarioConIva = conDiario.reduce((s, f) => s + f.diarioConIva, 0);
+  const sumUnidades = filas.reduce((s, f) => s + f.unidades, 0);
+  const sumOperaciones = filas.reduce((s, f) => s + f.operaciones, 0);
+  const conMargen = filas.filter((f) => f.margenPct != null);
+  const sumMargenPesos = conMargen.reduce((s, f) => s + f.margenPesos, 0);
+  return {
+    objetivoSinIva: sumObjSinIva,
+    objetivoConIva: sumObjConIva,
+    diarioSinIva: conDiario.length ? sumDiarioSinIva : null,
+    diarioConIva: conDiario.length ? sumDiarioConIva : null,
+    unidades: sumUnidades,
+    operaciones: sumOperaciones,
+    uniXOper: sumOperaciones ? sumUnidades / sumOperaciones : 0,
+    margenPct: sumObjSinIva ? sumMargenPesos / sumObjSinIva : 0,
+    margenPesos: sumMargenPesos,
+    completo: filas.length > 0 && conMargen.length === filas.length
+  };
+}
+
+function renderPorEmpresa(){
+  renderPeStats();
+  renderPeTabla();
+}
+
+async function iniciar(){
+  conectarFiltros();
+  conectarTabs();
+  try {
+    await Promise.all([fetchGrilla(), fetchObjetivos()]);
+    inicializarAniosPorDefecto();
+    sincronizarFiltros();
+    renderListaAnios();
+    renderTablas();
+    renderObjSidebar();
+  } catch (e) {
+    document.getElementById('sello').textContent = 'Error: ' + e.message;
+  }
+}
+
+iniciar();
+</script>
+</body>
+</html>

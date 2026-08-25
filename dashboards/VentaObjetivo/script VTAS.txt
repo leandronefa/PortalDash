@@ -1,0 +1,25 @@
+
+
+// Script principal de carga
+SET QvdPath = C:\QLIKVIEW\VENTASCOMPARATIVAS\DATA\QVD;
+
+GrillaVentasComparativas:
+LOAD 
+    *
+FROM [$(QvdPath)\GrillaVentasComparativas.qvd] (qvd);
+
+Sucursales:
+LOAD 
+    *
+FROM [$(QvdPath)\Sucursales.qvd] (qvd);
+
+
+CONCATENATE (Sucursales)
+LOAD * INLINE [
+Sucursal, nomSucursal
+E1, MELI Tesi
+E2, MELI Pueblo
+WE1, WEB Tesi
+WE2, WEB Pueblo
+FK1, WEB Freekick
+];

@@ -78,6 +78,8 @@
   td.celda-editable{background:rgba(79,140,255,.12);padding:2px 5px}
   td.celda-editable input{width:76px;background:var(--panel2);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:3px 5px;text-align:right;font:inherit}
   td.celda-editable input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  td.celda-empresa{background:rgba(22,163,74,.12)}
+  td.celda-empresa input{border-color:var(--good)}
   th.total-header,td.celda-total{border-left:2px solid var(--border);font-weight:600}
   td.celda-total{background:var(--panel2)}
   tr.fila-variacion td{font-style:italic;background:var(--panel2)}
@@ -207,6 +209,7 @@
     <p>Una sucursal marcada "No aplica" en la columna azul no carga objetivo (deshabilitada a pedido).</p>
     <p><b>Por Empresa</b> (otra pestaña): toma el Objetivo/Unidades/Operaciones ya cargado acá y les suma Días Venta y Margen % (a mano, por sucursal) para llegar al Margen Total y al "Objetivo Margen Total" — el mismo con el ajuste fijo de cada grupo (0% Tesi, +1,5% Pueblo, +1% Web).</p>
     <p>Clic en cualquier celda con datos abre el <b>desglose por sucursal</b> de ese número, respetando los filtros de Empresa/Sucursal aplicados. La fila en cursiva arriba de cada bloque es la <b>variación interanual</b> del mes en curso contra el mismo mes del año pasado.</p>
+    <p><b>Carga a nivel empresa</b> (celda verde): elegí una Empresa (Pueblo o Tesi) y dejá Sucursal en "Todas" — mientras ninguna de sus sucursales tenga el objetivo cargado, esa columna azul queda editable. Al completar los 3 campos se reparte solo entre las sucursales según su participación en la venta $ del mes en curso (real si ya cerró, objetivo si no) — Tkt Prom y Uni x Cli quedan iguales en todas, Operaciones se reparte proporcional. Una vez repartido (o si ya venías cargando por sucursal), la celda vuelve a ser de sólo lectura — los ajustes puntuales se hacen desde Editar Objetivos.</p>
   </div>
 </div>
 
@@ -235,11 +238,14 @@ const METRICAS = [
 ];
 const NOMBRES_MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const ID_INPUT = { uniXCli: 'inCeldaUniXCli', tktProm: 'inCeldaTktProm', operaciones: 'inCeldaOperaciones' };
+const ID_INPUT_EMPRESA = { uniXCli: 'inEmpresaUniXCli', tktProm: 'inEmpresaTktProm', operaciones: 'inEmpresaOperaciones' };
 const ANIOS_POR_DEFECTO = 3;
 
 const state = { filas: [], anioMesActual: null, filtro: { empresa: '', sucursal: '', anios: new Set() } };
 const objState = { datos: null };
 let temporizadorGuardado = null;
+let temporizadorGuardadoEmpresa = null;
+let borradorEmpresa = { uniXCli: '', tktProm: '', operaciones: '' };
 
 function num(v){ return v === null || v === undefined ? 0 : Number(v); }
 
@@ -594,13 +600,49 @@ function valorProximoPlano(metrica){
   return metrica.ratio ? (c.den ? c.num / c.den : 0) : c.suma;
 }
 
+/* Alguna sucursal de esta empresa ya tiene el objetivo (Operaciones/Tkt Prom/
+   Uni x Cli) cargado — bloquea la carga a nivel empresa para que los dos
+   modelos (por sucursal / por empresa con reparto) no se pisen. */
+function empresaTieneSucursalesCargadas(empresa){
+  if (!objState.datos) return true;
+  return objState.datos.sucursales.some((s) => s.empresa === empresa && s.objetivoCargado);
+}
+
+/* "cargado" = sólo el objetivo (lo que decide Cargar/Editar Objetivos).
+   "completo" = las 5 cosas juntas (objetivo + Días + Margen) — lo único que
+   de verdad habilita GUARDAR, porque el SP necesita Margen y Días sí o sí. */
+function actualizarFlagsCargado(s){
+  s.cargado = s.objetivoCargado;
+  s.completo = s.objetivoCargado && s.diasVenta != null && s.margenPct != null;
+}
+
+function recomputarTotalesObjetivo(){
+  if (!objState.datos) return;
+  const sucursales = objState.datos.sucursales;
+  objState.datos.totalCargadas = sucursales.filter((x) => x.cargado).length;
+  objState.datos.totalCompletas = sucursales.filter((x) => x.completo).length;
+  objState.datos.listoParaGuardar = objState.datos.totalCompletas === objState.datos.totalUniverso;
+}
+
 function celdaProxima(metrica, anio, mes){
   const cod = state.filtro.sucursal;
   const attrs = ` class="celda-proximo celda-clickable" data-metrica="${metrica.key}" data-anio="${anio}" data-mes="${mes}"`;
   if (!cod) {
+    const empresa = state.filtro.empresa;
+    const empresaEditable = metrica.editable && empresa && !empresaTieneSucursalesCargadas(empresa);
+    if (empresaEditable) {
+      const id = ID_INPUT_EMPRESA[metrica.editable];
+      const guardado = borradorEmpresa[metrica.editable];
+      if (metrica.editable === 'uniXCli') {
+        return `<td class="celda-editable celda-empresa"><input type="number" step="0.01" min="0" id="${id}" data-campo="uniXCli" value="${guardado || ''}"></td>`;
+      }
+      return `<td class="celda-editable celda-empresa"><input type="text" inputmode="decimal" id="${id}" data-campo="${metrica.editable}" value="${formatearMiles(guardado)}"></td>`;
+    }
     const contrib = contribProximaAgregada(metrica);
     const valor = contrib ? finalizarTotal(metrica, null, contrib) : null;
-    return `<td${attrs}>${valor === null ? '—' : fmt(valor, metrica.fmt)}</td>`;
+    const idAttr = metrica.key === 'ventas' ? ' id="celdaVentas"' : (metrica.key === 'unidades' ? ' id="celdaUnidades"' : '');
+    const tituloAttr = metrica.editable && empresa ? ' title="Ya hay sucursales de esta empresa cargadas — ajustá desde Editar Objetivos"' : '';
+    return `<td${idAttr}${attrs}${tituloAttr}>${valor === null ? '—' : fmt(valor, metrica.fmt)}</td>`;
   }
   const s = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
   if (!s) return '<td class="vacio" title="Esta sucursal no carga objetivo">No aplica</td>';
@@ -748,23 +790,21 @@ function setTxt(id, val){
 }
 
 /* ── Edición inline: leer los 3 inputs, refrescar Ventas/Unidades en vivo,
-   y guardar el borrador con un pequeño debounce (no en cada tecla). ─────── */
+   y guardar el borrador con un pequeño debounce (no en cada tecla). Sirve
+   tanto para la sucursal elegida como para la carga a nivel empresa (misma
+   celda-agregado, en modo lectura vs. edición según empresaTieneSucursalesCargadas). ─── */
 function conectarInputsCelda(){
   Object.values(ID_INPUT).forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', onInputCelda);
   });
+  Object.values(ID_INPUT_EMPRESA).forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', onInputCeldaEmpresa);
+  });
 }
 
-function onInputCelda(e){
-  const elTktProm = document.getElementById(ID_INPUT.tktProm);
-  const elOperaciones = document.getElementById(ID_INPUT.operaciones);
-  if (e && (e.target === elTktProm || e.target === elOperaciones)) formatoMilesLive(e);
-
-  const uniXCli = Number(document.getElementById(ID_INPUT.uniXCli)?.value || 0);
-  const tktProm = elTktProm ? (valorNumerico(elTktProm) || 0) : 0;
-  const operaciones = elOperaciones ? (valorNumerico(elOperaciones) || 0) : 0;
-  const calc = calcularValores(uniXCli, tktProm, operaciones);
+function actualizarCalculadosEnVivo(calc){
   setTxt('celdaVentas', fmt(calc.ventaSinIva, 'money'));
   setTxt('celdaUnidades', fmt(calc.unidades, 'int'));
 
@@ -790,9 +830,101 @@ function onInputCelda(e){
     el.textContent = fmtPctSigned(variacion);
     el.className = variacion >= 0 ? 'var-pos' : 'var-neg';
   }
+}
+
+function onInputCelda(e){
+  const elTktProm = document.getElementById(ID_INPUT.tktProm);
+  const elOperaciones = document.getElementById(ID_INPUT.operaciones);
+  if (e && (e.target === elTktProm || e.target === elOperaciones)) formatoMilesLive(e);
+
+  const uniXCli = Number(document.getElementById(ID_INPUT.uniXCli)?.value || 0);
+  const tktProm = elTktProm ? (valorNumerico(elTktProm) || 0) : 0;
+  const operaciones = elOperaciones ? (valorNumerico(elOperaciones) || 0) : 0;
+  actualizarCalculadosEnVivo(calcularValores(uniXCli, tktProm, operaciones));
 
   clearTimeout(temporizadorGuardado);
   temporizadorGuardado = setTimeout(guardarEdicionActual, 700);
+}
+
+function onInputCeldaEmpresa(e){
+  const elUniXCli = document.getElementById(ID_INPUT_EMPRESA.uniXCli);
+  const elTktProm = document.getElementById(ID_INPUT_EMPRESA.tktProm);
+  const elOperaciones = document.getElementById(ID_INPUT_EMPRESA.operaciones);
+  if (e && (e.target === elTktProm || e.target === elOperaciones)) formatoMilesLive(e);
+
+  borradorEmpresa = {
+    uniXCli: elUniXCli?.value ?? '',
+    tktProm: elTktProm?.value ?? '',
+    operaciones: elOperaciones?.value ?? ''
+  };
+
+  const uniXCli = Number(elUniXCli?.value || 0);
+  const tktProm = elTktProm ? (valorNumerico(elTktProm) || 0) : 0;
+  const operaciones = elOperaciones ? (valorNumerico(elOperaciones) || 0) : 0;
+  actualizarCalculadosEnVivo(calcularValores(uniXCli, tktProm, operaciones));
+
+  clearTimeout(temporizadorGuardadoEmpresa);
+  temporizadorGuardadoEmpresa = setTimeout(distribuirObjetivoEmpresa, 700);
+}
+
+/* Reparte el objetivo cargado a nivel empresa entre sus sucursales, según la
+   participación de cada una en la venta $ del mes pasado (el mes en curso:
+   real si ya cerró, objetivo si todavía no — es lo que hay). Tkt Prom y
+   Uni x Cli quedan iguales para todas (el promedio de la empresa); Operaciones
+   se reparte proporcional, así Unidades y Venta $ suman exacto al total
+   ingresado. */
+async function distribuirObjetivoEmpresa(){
+  const empresa = state.filtro.empresa;
+  if (!empresa || state.filtro.sucursal) return;
+  const elUniXCli = document.getElementById(ID_INPUT_EMPRESA.uniXCli);
+  const elTktProm = document.getElementById(ID_INPUT_EMPRESA.tktProm);
+  const elOperaciones = document.getElementById(ID_INPUT_EMPRESA.operaciones);
+  if (!elUniXCli || !elTktProm || !elOperaciones) return;
+  if (elUniXCli.value === '' || elTktProm.value === '' || elOperaciones.value === '') return;
+  const uniXCliTotal = Number(elUniXCli.value);
+  const tktPromTotal = valorNumerico(elTktProm);
+  const operacionesTotal = valorNumerico(elOperaciones);
+  if (!Number.isFinite(tktPromTotal) || !Number.isFinite(operacionesTotal)) return;
+
+  const anioActual = Math.floor(state.anioMesActual / 100);
+  const mesActual = state.anioMesActual % 100;
+  const metricaVentas = METRICAS.find((m) => m.key === 'ventas');
+  const codsValidos = new Set(objState.datos.sucursales.filter((s) => s.empresa === empresa).map((s) => s.cod_sucursal));
+  const pesos = desglosePorSucursal(metricaVentas, anioActual, mesActual).filter((p) => codsValidos.has(p.cod));
+  const totalPesos = pesos.reduce((s, f) => s + f.valor, 0);
+  if (!pesos.length || !totalPesos) {
+    mostrarToast(`No hay venta de ${NOMBRES_MES[mesActual - 1]} para repartir por participación en ${empresa}`);
+    return;
+  }
+
+  try {
+    await Promise.all(pesos.map(async (p) => {
+      // Entero más próximo: Operaciones (y por lo tanto Unidades) son conteos.
+      const operacionesSuc = Math.round(operacionesTotal * (p.valor / totalPesos));
+      const r = await fetch(`api/objetivos-proximo/${encodeURIComponent(p.cod)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uniXCli: uniXCliTotal, tktProm: tktPromTotal, operaciones: operacionesSuc })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      const s = objState.datos.sucursales.find((x) => x.cod_sucursal === p.cod);
+      if (s) {
+        s.valores = data.valores;
+        s.objetivoCargado = true;
+        s.origen = 'borrador';
+        actualizarFlagsCargado(s);
+      }
+    }));
+
+    recomputarTotalesObjetivo();
+    borradorEmpresa = { uniXCli: '', tktProm: '', operaciones: '' };
+    mostrarToast(`Objetivo de ${empresa} repartido entre ${pesos.length} sucursales según su venta de ${NOMBRES_MES[mesActual - 1]}`);
+    renderTablas();
+    renderObjSidebar();
+  } catch (e) {
+    mostrarToast('Error al repartir: ' + e.message);
+  }
 }
 
 async function guardarEdicionActual(){
@@ -822,10 +954,9 @@ async function guardarEdicionActual(){
       s.valores = data.valores;
       s.objetivoCargado = true;
       s.origen = 'borrador';
-      s.cargado = s.objetivoCargado && s.diasVenta != null && s.margenPct != null;
+      actualizarFlagsCargado(s);
     }
-    objState.datos.totalCargadas = objState.datos.sucursales.filter((x) => x.cargado).length;
-    objState.datos.listoParaGuardar = objState.datos.totalCargadas === objState.datos.totalUniverso;
+    recomputarTotalesObjetivo();
     renderObjSidebar();
   } catch (e) {
     mostrarToast('Error al guardar: ' + e.message);
@@ -839,9 +970,8 @@ async function eliminarObjetivo(cod, nombre){
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
     const s = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
-    if (s) { s.valores = null; s.cargado = false; s.origen = null; }
-    objState.datos.totalCargadas = objState.datos.sucursales.filter((x) => x.cargado).length;
-    objState.datos.listoParaGuardar = objState.datos.totalCargadas === objState.datos.totalUniverso;
+    if (s) { s.valores = null; s.objetivoCargado = false; s.origen = null; actualizarFlagsCargado(s); }
+    recomputarTotalesObjetivo();
     renderTablas();
     renderObjSidebar();
     mostrarToast('Borrado: ' + nombre);
@@ -860,6 +990,7 @@ function seleccionarSucursal(cod){
 function conectarFiltros(){
   document.getElementById('fEmpresa').addEventListener('change', (e) => {
     state.filtro.empresa = e.target.value;
+    borradorEmpresa = { uniXCli: '', tktProm: '', operaciones: '' };
     sincronizarFiltros(); renderTablas(); renderObjSidebar();
   });
   document.getElementById('fSucursal').addEventListener('change', (e) => {
@@ -930,13 +1061,17 @@ function renderObjSidebar(){
   renderLista('listaPendientes', pendientes, 'pendiente');
   renderLista('listaCargadas', cargadas, 'cargada');
 
+  // GUARDAR exige las 5 cosas (objetivo + Días/Margen) — "cargado" (arriba)
+  // sólo pide el objetivo, así que puede haber más sucursales en Editar que
+  // sucursales realmente completas para guardar.
+  const completasUniverso = universo.filter((s) => s.completo).length;
   const btn = document.getElementById('btnGuardarTodo');
-  const listo = universo.length > 0 && cargadasUniverso === universo.length;
+  const listo = universo.length > 0 && completasUniverso === universo.length;
   btn.disabled = !listo;
   const sufijoEmpresa = state.filtro.empresa ? ` — ${state.filtro.empresa}` : '';
   btn.textContent = listo
     ? `GUARDAR OBJETIVOS${sufijoEmpresa}`
-    : `GUARDAR OBJETIVOS${sufijoEmpresa} (${cargadasUniverso}/${universo.length})`;
+    : `GUARDAR OBJETIVOS${sufijoEmpresa} (${completasUniverso}/${universo.length} con Días/Margen)`;
 }
 
 function renderLista(idCont, lista, clase){
@@ -1152,15 +1287,14 @@ async function guardarPe(cod){
     g.margenPctAjustado = g.total.margenPct + g.ajuste;
     renderPeStats();
 
-    // Sincroniza con la pestaña Comparativas: "cargado" ahí exige también días/margen.
+    // Sincroniza con la pestaña Comparativas: "completo" (lo que exige GUARDAR) sí necesita días/margen.
     if (objState.datos) {
       const so = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
       if (so) {
         so.diasVenta = s.diasVenta;
         so.margenPct = s.margenPct;
-        so.cargado = so.objetivoCargado && so.diasVenta != null && so.margenPct != null;
-        objState.datos.totalCargadas = objState.datos.sucursales.filter((x) => x.cargado).length;
-        objState.datos.listoParaGuardar = objState.datos.totalCargadas === objState.datos.totalUniverso;
+        actualizarFlagsCargado(so);
+        recomputarTotalesObjetivo();
         renderObjSidebar();
       }
     }

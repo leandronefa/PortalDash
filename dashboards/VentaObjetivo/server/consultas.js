@@ -37,6 +37,19 @@ const COD_SUCURSAL_CON_VENTAS = `
   SELECT DISTINCT cod_sucursal FROM ${T.grilla};
 `;
 
+/* ── Sucursales activas (venta en alguno de los últimos 12 AñoMes cerrados) ──
+   Dinámico a propósito: una sucursal cerrada (ej. sin venta desde 2018) no
+   debe pedir carga de objetivo, sin necesidad de mantener una lista a mano.
+   Sólo se usa para el universo de OBJETIVOS — Comparativas sigue mostrando
+   todo el historial igual, esto no le pega. */
+const SUCURSALES_ACTIVAS_RECIENTES = `
+  WITH ultimos AS (
+    SELECT DISTINCT TOP 12 CAST(AñoMes AS INT) AS am FROM ${T.grilla} ORDER BY am DESC
+  )
+  SELECT DISTINCT cod_sucursal FROM ${T.grilla}
+  WHERE CAST(AñoMes AS INT) IN (SELECT am FROM ultimos);
+`;
+
 /* ── Grilla real (meses cerrados) ─────────────────────────────────────────── */
 const GRILLA = `
   SELECT
@@ -240,6 +253,7 @@ const SUPERVISORES = `
 
 module.exports = {
   T, GRILLA, OBJETIVO_MES, CANAL_A_COD,
-  SUCURSALES, COD_SUCURSAL_CON_VENTAS, OBJETIVOS_DEL_MES, INSERT_OBJETIVO, UPDATE_OBJETIVO, DELETE_OBJETIVO,
+  SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
+  OBJETIVOS_DEL_MES, INSERT_OBJETIVO, UPDATE_OBJETIVO, DELETE_OBJETIVO,
   SUPERVISORES, DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 };

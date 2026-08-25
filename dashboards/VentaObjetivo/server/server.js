@@ -3,7 +3,7 @@ const path = require('path');
 const express = require('express');
 const sql = require('mssql');
 const {
-  GRILLA, OBJETIVO_MES, SUCURSALES, COD_SUCURSAL_CON_VENTAS,
+  GRILLA, OBJETIVO_MES, SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
   OBJETIVOS_DEL_MES, DELETE_OBJETIVO, SUPERVISORES,
   DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 } = require('./consultas');
@@ -105,6 +105,25 @@ async function obtenerSucursalesCacheadas() {
   }
   const data = await cargarSucursales();
   cacheSucursales = { data, ts: Date.now() };
+  return data;
+}
+
+/* ── Sucursales activas recientes (dinámico, sólo para el universo de
+   OBJETIVOS — ver consultas.js) ──────────────────────────────────────────── */
+let cacheSucursalesActivas = { data: null, ts: 0 };
+
+async function cargarSucursalesActivasRecientes() {
+  const pool = await getPoolTableros();
+  const r = await pool.request().query(SUCURSALES_ACTIVAS_RECIENTES);
+  return new Set(r.recordset.map((row) => row.cod_sucursal));
+}
+
+async function obtenerSucursalesActivasRecientes() {
+  if (cacheSucursalesActivas.data && Date.now() - cacheSucursalesActivas.ts < TTL_SUCURSALES_MS) {
+    return cacheSucursalesActivas.data;
+  }
+  const data = await cargarSucursalesActivasRecientes();
+  cacheSucursalesActivas = { data, ts: Date.now() };
   return data;
 }
 
@@ -247,15 +266,20 @@ function calcular(valores) {
    editable de Comparativas no debe vaciarse aunque falte el margen. */
 async function construirVistaObjetivoProximo() {
   const mes = mesObjetivoAAAAMM();
-  const [sucursales, draft, dbRows, draftMargenes] = await Promise.all([
+  const [sucursales, draft, dbRows, draftMargenes, activasRecientes] = await Promise.all([
     obtenerSucursalesCacheadas(),
     Promise.resolve(store.leer(mes)),
     cargarObjetivosDelMesDb(mes),
-    Promise.resolve(storeMargenes.leer(mes))
+    Promise.resolve(storeMargenes.leer(mes)),
+    obtenerSucursalesActivasRecientes().catch((e) => {
+      log('warn', `sucursales activas recientes falló, no se filtra por eso: ${e.message}`);
+      return null;
+    })
   ]);
 
   const filas = sucursales
     .filter((s) => !SUCURSALES_SIN_OBJETIVO.has(s.cod_sucursal))
+    .filter((s) => !activasRecientes || activasRecientes.has(s.cod_sucursal))
     .map((s) => {
     const enDb = dbRows.get(s.id_sucursal);
     const enDraft = draft[s.cod_sucursal];
@@ -283,7 +307,11 @@ async function construirVistaObjetivoProximo() {
       objetivoCargado: !!valores,
       diasVenta,
       margenPct,
-      cargado: !!valores && diasVenta != null && margenPct != null,
+      // "cargado" = sólo el objetivo (lo que ve Cargar/Editar Objetivos).
+      // "completo" = las 5 cosas juntas — lo que de verdad exige GUARDAR,
+      // porque el SP necesita Margen y Días sí o sí.
+      cargado: !!valores,
+      completo: !!valores && diasVenta != null && margenPct != null,
       origen,
       valores
     };
@@ -291,6 +319,7 @@ async function construirVistaObjetivoProximo() {
 
   const totalUniverso = filas.length;
   const totalCargadas = filas.filter((f) => f.cargado).length;
+  const totalCompletas = filas.filter((f) => f.completo).length;
 
   return {
     mes,
@@ -298,7 +327,8 @@ async function construirVistaObjetivoProximo() {
     sucursales: filas,
     totalUniverso,
     totalCargadas,
-    listoParaGuardar: totalUniverso > 0 && totalCargadas === totalUniverso
+    totalCompletas,
+    listoParaGuardar: totalUniverso > 0 && totalCompletas === totalUniverso
   };
 }
 
@@ -458,7 +488,7 @@ app.post('/api/objetivos-proximo/guardar', async (req, res) => {
     if (!universo.length) {
       return res.status(400).json({ error: 'No hay sucursales para ese filtro' });
     }
-    const faltan = universo.filter((s) => !s.cargado);
+    const faltan = universo.filter((s) => !s.completo);
     if (faltan.length) {
       const detalle = faltan.map((s) => {
         const partes = [];

@@ -26,33 +26,6 @@
   --font-ui:"Segoe UI",Tahoma,Arial,sans-serif;
   --font-mono:Consolas,"Courier New",monospace;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --qv-page:#12171C; --qv-panel:#1B222A; --qv-head:#222B34; --qv-head-2:#1D252D;
-    --qv-border:#3A4552; --qv-border-soft:#2B343D;
-    --ink:#E7EEF4; --ink-2:#A7B4C0; --ink-3:#78868F;
-    --purple:#7276AE; --purple-ink:#0E1116;
-    --accent:#79B3D6; --accent-soft:#173042;
-    --teal:#3F9C87; --orange:#E5A253; --yellow:#D9CC55; --green2:#5AA854;
-    --sem-good:#2E8F53; --sem-good-ink:#0B1F12;
-    --sem-warn:#D8AE3E; --sem-warn-ink:#231C05;
-    --sem-bad:#B24A41;  --sem-bad-ink:#210B09;
-    --shadow:0 1px 2px rgba(0,0,0,.5), 0 4px 14px -8px rgba(0,0,0,.7);
-  }
-}
-:root[data-theme="dark"]{
-  --qv-page:#12171C; --qv-panel:#1B222A; --qv-head:#222B34; --qv-head-2:#1D252D;
-  --qv-border:#3A4552; --qv-border-soft:#2B343D;
-  --ink:#E7EEF4; --ink-2:#A7B4C0; --ink-3:#78868F;
-  --purple:#7276AE; --purple-ink:#0E1116;
-  --accent:#79B3D6; --accent-soft:#173042;
-  --teal:#3F9C87; --orange:#E5A253; --yellow:#D9CC55; --green2:#5AA854;
-  --sem-good:#2E8F53; --sem-good-ink:#0B1F12;
-  --sem-warn:#D8AE3E; --sem-warn-ink:#231C05;
-  --sem-bad:#B24A41;  --sem-bad-ink:#210B09;
-  --shadow:0 1px 2px rgba(0,0,0,.5), 0 4px 14px -8px rgba(0,0,0,.7);
-}
-
 *{box-sizing:border-box}
 body{
   margin:0; background:var(--qv-page); color:var(--ink);
@@ -60,19 +33,6 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 h1,h2,h3{margin:0}
-
-/* ─────────────────────────────  tabs de hoja  ─────────────────────── */
-.qv-tabbar{
-  display:flex; gap:2px; background:var(--qv-page);
-  padding:8px 10px 0; border-bottom:1px solid var(--qv-border);
-}
-.qv-tab{
-  font-family:var(--font-ui); font-size:12.5px; font-weight:600; color:var(--ink-2);
-  background:var(--qv-head-2); border:1px solid var(--qv-border); border-bottom:0;
-  border-radius:4px 4px 0 0; padding:7px 16px; cursor:default;
-}
-.qv-tab.active{background:var(--qv-panel); color:var(--ink); box-shadow:0 -1px 0 var(--accent) inset}
-.qv-tab[disabled]{opacity:.6; cursor:not-allowed}
 
 /* ─────────────────────────────  fila superior  ────────────────────── */
 /* Período + Selecciones actuales, apiladas y fijas a la izquierda: no
@@ -402,10 +362,6 @@ body[data-cargando] .qv-body{opacity:.6; transition:opacity .15s ease}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important}}
 </style>
-
-<div class="qv-tabbar" role="tablist" aria-label="Hojas del tablero">
-  <button class="qv-tab active" type="button">Objetivos Sucursal</button>
-</div>
 
 <div class="qv-shell">
 <div class="qv-topbar">

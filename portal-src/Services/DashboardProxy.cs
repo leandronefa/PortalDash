@@ -44,13 +44,22 @@ public static class DashboardProxy
         app.MapFallback("{**path}", HandleFallback).RequireAuthorization();
     }
 
-    /// <summary>Entrada explícita: /d/{id}/... (la URL que usa el iframe del portal).</summary>
+    /// <summary>Entrada explícita: /d/{id}/... (la URL que abre cada tarjeta del catálogo, en pestaña nueva).</summary>
     private static async Task HandleEntry(
         HttpContext ctx, int id, string? rest,
-        IDashboardService dashboards, IPermissionService permissions, IHttpForwarder forwarder)
+        IDashboardService dashboards, IPermissionService permissions, IHttpForwarder forwarder, IAuthService auth)
     {
         var dash = await AuthorizeAsync(ctx, id, dashboards, permissions);
         if (dash is null) return;
+
+        // Solo se loguea en la raíz del dashboard (rest vacío): evita spamear
+        // el log con cada asset/api que la SPA pide bajo el mismo prefijo.
+        if (string.IsNullOrEmpty(rest))
+        {
+            var username = ctx.User.Identity?.Name ?? string.Empty;
+            var ip = ctx.Connection.RemoteIpAddress?.ToString();
+            await auth.LogAsync(username, "OpenDashboard", true, ip, id, dash.Name);
+        }
 
         if (!string.IsNullOrWhiteSpace(dash.UrlOverride))
         {

@@ -619,6 +619,18 @@ app.post('/api/margenes-empresa/:cod', async (req, res) => {
   }
 });
 
+app.delete('/api/margenes-empresa/:cod', async (req, res) => {
+  try {
+    const { cod } = req.params;
+    const mes = mesObjetivoAAAAMM();
+    storeMargenes.eliminarUno(mes, cod);
+    res.json({ ok: true, mes, cod_sucursal: cod });
+  } catch (e) {
+    log('error', `margenes-empresa DELETE: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, HOST, () => {

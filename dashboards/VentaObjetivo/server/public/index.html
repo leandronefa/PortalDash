@@ -115,6 +115,7 @@
   .modal p b{color:var(--text)}
   .modal .cerrar{float:right;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
   #modalDesglose .modal{max-width:96vw;width:auto;max-height:94vh;overflow:visible}
+  #desgloseContenido.comparacion{max-height:75vh;overflow-y:auto;min-width:360px}
   .desglose-columnas{display:flex;gap:14px;align-items:flex-start}
   #desgloseContenido table{border-collapse:collapse}
   #desgloseContenido th,#desgloseContenido td{padding:3px 8px;border-bottom:1px solid var(--border);text-align:right;font-size:12px;white-space:nowrap}
@@ -125,9 +126,17 @@
   #desgloseContenido tr.pareto-vital td:first-child{border-left:3px solid var(--good)}
   #desgloseContenido tr.pareto-resto{color:var(--muted)}
   #desgloseContenido tr.pareto-resto td:first-child{border-left:3px solid var(--border)}
+
+  td.cmp-deshabilitada{opacity:.3;filter:grayscale(1);pointer-events:none}
+  .banner-comparacion{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:40;box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px}
+  .banner-comparacion button{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px}
 </style>
 </head>
 <body>
+<div class="banner-comparacion" id="bannerComparacion" style="display:none">
+  <span></span>
+  <button id="btnCancelarComparacion">Cancelar</button>
+</div>
 <div class="tabs">
   <div class="tab activo" data-vista="comparativas">Comparativas</div>
   <div class="tab" data-vista="porEmpresa">Por Empresa</div>
@@ -164,6 +173,7 @@
           <h2 style="margin:0">Objetivo <span id="objMesTitulo"></span></h2>
           <span class="progreso" id="objProgreso"></span>
         </div>
+        <button class="btn-limpiar" id="btnBorrarObjetivoEmpresa" style="margin-bottom:10px;display:none"></button>
         <div class="obj-grupo">
           <h4>Cargar Objetivos <span id="cntPendientes"></span></h4>
           <div class="obj-lista" id="listaPendientes"></div>
@@ -186,6 +196,7 @@
       <button class="pe-grupo-btn" data-grupo="TESI">Tesi</button>
       <button class="pe-grupo-btn" data-grupo="WEB">Web</button>
     </div>
+    <button class="btn-limpiar" id="btnBorrarMargenesGrupo" style="width:auto;margin-left:auto;display:none"></button>
     <span class="sello" id="peMes"></span>
   </div>
   <div class="pe-contenido">
@@ -217,6 +228,7 @@
   <div class="modal">
     <button class="cerrar" id="cerrarDesglose">✕</button>
     <h2 id="desgloseTitulo"></h2>
+    <button class="btn-limpiar" id="btnCompararPeriodo" style="width:auto;margin-bottom:12px">Comparar Período</button>
     <div id="desgloseContenido"></div>
   </div>
 </div>
@@ -477,14 +489,35 @@ function desglosePorSucursal(metrica, anio, mes){
     .sort((a, b) => b.valor - a.valor);
 }
 
+function etiquetaPeriodo(anio, mes){
+  return mes === 'total' ? `Total ${anio}` : `${NOMBRES_MES[mes - 1]} ${anio}`;
+}
+
+/* Reparte filas de <tr> en hasta 3 tablas lado a lado (máx. ~18 filas cada
+   una) para que una lista larga de sucursales entre en el modal sin scroll.
+   Lo usan tanto el desglose Pareto como la comparación de períodos. */
+function repartirEnColumnas(filasHtml, encabezadoHtml){
+  const maxColumnas = 3, maxPorColumna = 18;
+  const columnas = Math.min(maxColumnas, Math.max(1, Math.ceil(filasHtml.length / maxPorColumna)));
+  const porColumna = Math.ceil(filasHtml.length / columnas);
+  let tablasHtml = '';
+  for (let i = 0; i < filasHtml.length; i += porColumna) {
+    const grupo = filasHtml.slice(i, i + porColumna).join('');
+    tablasHtml += `<table>${encabezadoHtml}<tbody>${grupo}</tbody></table>`;
+  }
+  return tablasHtml;
+}
+
 function abrirDesglose(metricaKey, anio, mesAttr){
   const metrica = METRICAS.find((m) => m.key === metricaKey);
   const mes = mesAttr === 'total' ? 'total' : Number(mesAttr);
+  desgloseActual = { metricaKey, anio, mes };
   const filas = desglosePorSucursal(metrica, anio, mes);
   const tituloMes = mes === 'total' ? 'Total Año' : NOMBRES_MES[mes - 1];
   document.getElementById('desgloseTitulo').textContent = `${metrica.titulo} — ${tituloMes} ${anio}`;
 
   const cont = document.getElementById('desgloseContenido');
+  cont.classList.remove('comparacion');
   if (!filas.length) {
     cont.innerHTML = '<p style="color:var(--muted)">Sin datos para este filtro.</p>';
   } else {
@@ -505,17 +538,8 @@ function abrirDesglose(metricaKey, anio, mesAttr){
       </tr>`;
     });
 
-    // Se reparte en columnas (máx. ~18 filas cada una) para que entre todo
-    // sin scroll, en vez de una lista larga de una sola columna.
     const encabezado = `<thead><tr><th>Sucursal</th><th>${metrica.titulo}</th><th>% Part.</th><th>% Acum.</th></tr></thead>`;
-    const maxColumnas = 3, maxPorColumna = 18;
-    const columnas = Math.min(maxColumnas, Math.max(1, Math.ceil(filasHtml.length / maxPorColumna)));
-    const porColumna = Math.ceil(filasHtml.length / columnas);
-    let tablasHtml = '';
-    for (let i = 0; i < filasHtml.length; i += porColumna) {
-      const grupo = filasHtml.slice(i, i + porColumna).join('');
-      tablasHtml += `<table>${encabezado}<tbody>${grupo}</tbody></table>`;
-    }
+    const tablasHtml = repartirEnColumnas(filasHtml, encabezado);
 
     let totalHtml = '';
     if (!metrica.ratio) {
@@ -523,6 +547,72 @@ function abrirDesglose(metricaKey, anio, mesAttr){
     }
     cont.innerHTML = `<div class="desglose-columnas">${tablasHtml}</div>${totalHtml}`;
   }
+  document.getElementById('modalDesglose').classList.add('abierto');
+}
+
+/* ── Comparar Período: elegir una segunda celda de la MISMA métrica (el
+   resto del tablero queda grisado mientras se elige) y mostrar los dos
+   valores lado a lado por sucursal. ──────────────────────────────────── */
+/* Mismo mes siempre ("mes a mes") — sólo cambia el año; distinta celda a la
+   ya elegida (si no, no hay nada para comparar). */
+function esCeldaElegibleParaComparar(td){
+  return td.dataset.metrica === modoComparacion.metricaKey
+    && td.dataset.mes === String(modoComparacion.mes)
+    && Number(td.dataset.anio) !== modoComparacion.anio;
+}
+
+function activarModoComparacion(){
+  if (!desgloseActual) return;
+  modoComparacion = { ...desgloseActual };
+  document.getElementById('modalDesglose').classList.remove('abierto');
+  document.querySelectorAll('#tablas td[data-metrica]').forEach((td) => {
+    td.classList.add(esCeldaElegibleParaComparar(td) ? 'cmp-elegible' : 'cmp-deshabilitada');
+  });
+  const metrica = METRICAS.find((m) => m.key === modoComparacion.metricaKey);
+  const banner = document.getElementById('bannerComparacion');
+  banner.querySelector('span').textContent = `Elegí otro año de ${etiquetaPeriodo(modoComparacion.anio, modoComparacion.mes)} para comparar (misma métrica, mismo mes)`;
+  banner.style.display = 'flex';
+}
+
+function cancelarModoComparacion(){
+  modoComparacion = null;
+  document.querySelectorAll('#tablas td.cmp-elegible, #tablas td.cmp-deshabilitada').forEach((td) => {
+    td.classList.remove('cmp-elegible', 'cmp-deshabilitada');
+  });
+  document.getElementById('bannerComparacion').style.display = 'none';
+}
+
+function abrirComparacion(metricaKey, p1, p2){
+  const metrica = METRICAS.find((m) => m.key === metricaKey);
+  const d1 = desglosePorSucursal(metrica, p1.anio, p1.mes);
+  const d2 = desglosePorSucursal(metrica, p2.anio, p2.mes);
+
+  const mapa = new Map();
+  for (const f of d1) mapa.set(f.cod, { nombre: f.nombre, v1: f.valor, v2: null });
+  for (const f of d2) {
+    if (mapa.has(f.cod)) mapa.get(f.cod).v2 = f.valor;
+    else mapa.set(f.cod, { nombre: f.nombre, v1: null, v2: f.valor });
+  }
+  const filas = [...mapa.values()].sort((a, b) => (b.v2 ?? -Infinity) - (a.v2 ?? -Infinity));
+
+  const et1 = etiquetaPeriodo(p1.anio, p1.mes), et2 = etiquetaPeriodo(p2.anio, p2.mes);
+  document.getElementById('desgloseTitulo').textContent = `${metrica.titulo} — ${et1} vs ${et2}`;
+
+  const filasHtml = filas.map((f) => {
+    const variacion = (f.v1 && f.v2 != null) ? (f.v2 / f.v1 - 1) : null;
+    const claseVar = variacion == null ? '' : (variacion >= 0 ? 'var-pos' : 'var-neg');
+    return `<tr>
+      <td>${f.nombre}</td>
+      <td>${f.v1 != null ? fmt(f.v1, metrica.fmt) : '—'}</td>
+      <td>${f.v2 != null ? fmt(f.v2, metrica.fmt) : '—'}</td>
+      <td class="${claseVar}">${variacion == null ? '—' : fmtPctSigned(variacion)}</td>
+    </tr>`;
+  }).join('');
+
+  const cont = document.getElementById('desgloseContenido');
+  cont.classList.add('comparacion');
+  cont.innerHTML =
+    `<table><thead><tr><th>Sucursal</th><th>${et1}</th><th>${et2}</th><th>Var. %</th></tr></thead><tbody>${filasHtml}</tbody></table>`;
   document.getElementById('modalDesglose').classList.add('abierto');
 }
 
@@ -685,6 +775,8 @@ function celdaTotalAnio(metrica, anio, filas, objData, targetAnio){
    arriba, y una columna angosta a la izquierda con el nombre de la métrica
    en vertical (rowspan por todas las filas-año de ese bloque). ──────────── */
 let baseAnioObjetivo = null;
+let desgloseActual = null;
+let modoComparacion = null;
 let varAnteriorPorMetrica = {};
 
 function aniosCompartidos(filas, objData){
@@ -980,6 +1072,32 @@ async function eliminarObjetivo(cod, nombre){
   }
 }
 
+async function borrarObjetivoEmpresa(){
+  const empresa = state.filtro.empresa;
+  if (!empresa) return;
+  const universo = universoObjetivoActual().filter((s) => s.cargado);
+  if (!universo.length) return;
+  if (!confirm(`¿Borrar el objetivo de ${objState.datos.mesNombre} de las ${universo.length} sucursales cargadas de ${empresa}?`)) return;
+
+  try {
+    await Promise.all(universo.map(async (s) => {
+      const r = await fetch(`api/objetivos-proximo/${encodeURIComponent(s.cod_sucursal)}`, { method: 'DELETE' });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      s.valores = null;
+      s.objetivoCargado = false;
+      s.origen = null;
+      actualizarFlagsCargado(s);
+    }));
+    recomputarTotalesObjetivo();
+    mostrarToast(`Borrado el objetivo de ${universo.length} sucursales de ${empresa}`);
+    renderTablas();
+    renderObjSidebar();
+  } catch (e) {
+    mostrarToast('Error al borrar: ' + e.message);
+  }
+}
+
 function seleccionarSucursal(cod){
   state.filtro.sucursal = cod || '';
   sincronizarFiltros();
@@ -1000,6 +1118,7 @@ function conectarFiltros(){
     state.filtro.empresa = ''; state.filtro.sucursal = '';
     sincronizarFiltros(); renderTablas(); renderObjSidebar();
   });
+  document.getElementById('btnBorrarObjetivoEmpresa').addEventListener('click', borrarObjetivoEmpresa);
   document.getElementById('btnAyuda').addEventListener('click', () => {
     document.getElementById('modalAyuda').classList.add('abierto');
   });
@@ -1018,7 +1137,22 @@ function conectarFiltros(){
   document.getElementById('tablas').addEventListener('click', (e) => {
     const td = e.target.closest('td[data-metrica]');
     if (!td) return;
+    if (modoComparacion) {
+      if (!esCeldaElegibleParaComparar(td)) return; // grisada, no debería llegar acá
+      const anio2 = Number(td.dataset.anio);
+      const mes2 = td.dataset.mes === 'total' ? 'total' : Number(td.dataset.mes);
+      const p1 = { anio: modoComparacion.anio, mes: modoComparacion.mes };
+      const metricaKey = modoComparacion.metricaKey;
+      cancelarModoComparacion();
+      abrirComparacion(metricaKey, p1, { anio: anio2, mes: mes2 });
+      return;
+    }
     abrirDesglose(td.dataset.metrica, Number(td.dataset.anio), td.dataset.mes);
+  });
+  document.getElementById('btnCompararPeriodo').addEventListener('click', activarModoComparacion);
+  document.getElementById('btnCancelarComparacion').addEventListener('click', cancelarModoComparacion);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modoComparacion) cancelarModoComparacion();
   });
 }
 
@@ -1060,6 +1194,14 @@ function renderObjSidebar(){
 
   renderLista('listaPendientes', pendientes, 'pendiente');
   renderLista('listaCargadas', cargadas, 'cargada');
+
+  const btnBorrarEmpresa = document.getElementById('btnBorrarObjetivoEmpresa');
+  if (state.filtro.empresa && cargadas.length > 0) {
+    btnBorrarEmpresa.style.display = '';
+    btnBorrarEmpresa.textContent = `Borrar objetivo de ${state.filtro.empresa} (${cargadas.length})`;
+  } else {
+    btnBorrarEmpresa.style.display = 'none';
+  }
 
   // GUARDAR exige las 5 cosas (objetivo + Días/Margen) — "cargado" (arriba)
   // sólo pide el objetivo, así que puede haber más sucursales en Editar que
@@ -1148,6 +1290,7 @@ function conectarTabs(){
     peState.grupo = b.dataset.grupo;
     renderPorEmpresa();
   }));
+  document.getElementById('btnBorrarMargenesGrupo').addEventListener('click', borrarMargenesGrupo);
 }
 
 async function cargarPorEmpresa(){
@@ -1173,6 +1316,52 @@ function renderPeStats(){
     stat('Uni/Oper', t.uniXOper.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) +
     stat('Margen Total' + (t.completo ? '' : ' (parcial)'), fmtPct(t.margenPct), t.completo ? '' : 'parcial') +
     stat(`Objetivo Margen Total (+${(g.ajuste * 100).toLocaleString('es-AR')}%)`, fmtPct(g.margenPctAjustado), 'ajustado' + (t.completo ? '' : ' parcial'));
+
+  const conMargen = g.sucursales.filter((s) => s.diasVenta != null || s.margenPct != null);
+  const btnBorrar = document.getElementById('btnBorrarMargenesGrupo');
+  if (conMargen.length) {
+    btnBorrar.style.display = '';
+    btnBorrar.textContent = `Borrar Días/Margen de ${peState.grupo} (${conMargen.length})`;
+  } else {
+    btnBorrar.style.display = 'none';
+  }
+}
+
+async function borrarMargenesGrupo(){
+  const g = peState.datos.grupos[peState.grupo];
+  const conMargen = g.sucursales.filter((s) => s.diasVenta != null || s.margenPct != null);
+  if (!conMargen.length) return;
+  if (!confirm(`¿Borrar Días Venta y Margen % de las ${conMargen.length} sucursales de ${peState.grupo}?`)) return;
+
+  try {
+    await Promise.all(conMargen.map(async (s) => {
+      const r = await fetch(`api/margenes-empresa/${encodeURIComponent(s.cod_sucursal)}`, { method: 'DELETE' });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      s.diasVenta = null;
+      s.margenPct = null;
+      s.diarioSinIva = null;
+      s.diarioConIva = null;
+      s.margenPesos = null;
+      s.cargado = false;
+
+      if (objState.datos) {
+        const so = objState.datos.sucursales.find((x) => x.cod_sucursal === s.cod_sucursal);
+        if (so) {
+          so.diasVenta = null;
+          so.margenPct = null;
+          actualizarFlagsCargado(so);
+        }
+      }
+    }));
+    g.total = calcularTotalGrupoCliente(g.sucursales);
+    g.margenPctAjustado = g.total.margenPct + g.ajuste;
+    if (objState.datos) { recomputarTotalesObjetivo(); renderObjSidebar(); }
+    mostrarToast(`Borrado Días/Margen de ${conMargen.length} sucursales de ${peState.grupo}`);
+    renderPorEmpresa();
+  } catch (e) {
+    mostrarToast('Error al borrar: ' + e.message);
+  }
 }
 
 function renderPeTabla(){

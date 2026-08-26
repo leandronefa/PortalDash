@@ -237,3 +237,20 @@ node install-dashboard-service.js "Dash-Nombre" "C:\apps\dashboards\<carpeta>" <
 - Login corporativo: valida contra `db_Cegid.dbo.SP_VALIDAR_INICIO_SESION_APPS` (SQL Server 10.0.0.115).
 - Administración → Dashboards / Usuarios / Permisos / Configuración.
 - Los dashboards consultan SQL Server por su cuenta vía su propio `.env` (paquete `mssql`).
+
+### Incidente (26/08/2026): nadie podía iniciar sesión
+
+`C:\apps\portal\appsettings.json` tenía `ConnectionStrings:CorporateSqlServer` con
+`Password=<CHANGE_ME>` (el placeholder del template, no la contraseña real de `sa`). El SQL
+Server 10.0.0.115 rechazaba la conexión ODBC antes de llegar a ejecutar el SP de validación
+(`CorporateAuthService`, evento de Application log: `Error de inicio de sesión del usuario 'sa'`),
+así que **ningún** usuario corporativo podía loguearse (el Master local `admin` sí funcionaba,
+porque no depende de esta conexión).
+
+Fix: se copió la contraseña real de `sa` desde `dashboards\tablero-objetivos-web\server\.env`
+(mismo servidor/usuario) a `appsettings.json` y se reinició el servicio `DashboardPortal`.
+
+**Pendiente/riesgo:** no se determinó cómo ni cuándo `appsettings.json` quedó con el placeholder
+(el archivo tenía fecha 03/07/2026). Si vuelve a pasar tras un `publish.ps1`/redeploy, revisar que
+el script de publicación no esté pisando el `appsettings.json` de producción con el template del
+repo.

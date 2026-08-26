@@ -599,7 +599,7 @@ function abrirComparacion(metricaKey, p1, p2){
   document.getElementById('desgloseTitulo').textContent = `${metrica.titulo} — ${et1} vs ${et2}`;
 
   const filasHtml = filas.map((f) => {
-    const variacion = (f.v1 && f.v2 != null) ? (f.v2 / f.v1 - 1) : null;
+    const variacion = (f.v1 != null && f.v2) ? (f.v1 / f.v2 - 1) : null;
     const claseVar = variacion == null ? '' : (variacion >= 0 ? 'var-pos' : 'var-neg');
     return `<tr>
       <td>${f.nombre}</td>
@@ -609,10 +609,24 @@ function abrirComparacion(metricaKey, p1, p2){
     </tr>`;
   }).join('');
 
+  let totalHtml = '';
+  if (!metrica.ratio) {
+    const total1 = filas.reduce((s, f) => s + (f.v1 || 0), 0);
+    const total2 = filas.reduce((s, f) => s + (f.v2 || 0), 0);
+    const variacionTotal = total2 ? (total1 / total2 - 1) : null;
+    const claseVarTotal = variacionTotal == null ? '' : (variacionTotal >= 0 ? 'var-pos' : 'var-neg');
+    totalHtml = `<tr class="total">
+      <td>Total</td>
+      <td>${fmt(total1, metrica.fmt)}</td>
+      <td>${fmt(total2, metrica.fmt)}</td>
+      <td class="${claseVarTotal}">${variacionTotal == null ? '—' : fmtPctSigned(variacionTotal)}</td>
+    </tr>`;
+  }
+
   const cont = document.getElementById('desgloseContenido');
   cont.classList.add('comparacion');
   cont.innerHTML =
-    `<table><thead><tr><th>Sucursal</th><th>${et1}</th><th>${et2}</th><th>Var. %</th></tr></thead><tbody>${filasHtml}</tbody></table>`;
+    `<table><thead><tr><th>Sucursal</th><th>${et1}</th><th>${et2}</th><th>Var. %</th></tr></thead><tbody>${filasHtml}${totalHtml}</tbody></table>`;
   document.getElementById('modalDesglose').classList.add('abierto');
 }
 

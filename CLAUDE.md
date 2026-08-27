@@ -45,11 +45,13 @@ Desde jul 2026 el portal es **proxy inverso** (YARP): los usuarios entran por `h
 | `dashtableroobjetivos.exe` | 3012 | `C:\apps\dashboards\tablero-objetivos-web\server` |
 | `dashapcweb` | 3013 | `C:\apps\dashboards\APCWeb` |
 | `dashcontrolcaja.exe` | 3014 | `C:\apps\dashboards\ControlCaja` |
+| `dashventaobjetivo.exe` | 3016 | `C:\apps\dashboards\VentaObjetivo` |
+| `dashstockproveedormarca.exe` | 3017 | `C:\apps\dashboards\StockProveedorMarca` |
 
 ```powershell
 Get-Service | Where-Object DisplayName -like 'Dash-*' | ft Name,DisplayName,Status
 Get-Service DashboardPortal
-Get-NetTCPConnection -State Listen | ? LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012,3013,3014 | ft LocalAddress,LocalPort,OwningProcess
+Get-NetTCPConnection -State Listen | ? LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012,3013,3014,3016,3017 | ft LocalAddress,LocalPort,OwningProcess
 # LocalAddress debe ser 127.0.0.1 en todos salvo 3003 (agentes). 127.0.0.1:3005 es el conector de Qlik, no un dashboard.
 ```
 

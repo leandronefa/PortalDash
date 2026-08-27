@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock por Proveedor y Marca</title>
+<style>
+  :root{
+    --bg:#eef1f6; --panel:#ffffff; --panel2:#f4f6fa; --border:#dde3ec; --border-fuerte:#b9c2d1;
+    --text:#1f2937; --muted:#6b7280; --accent:#2563eb; --good:#16a34a; --bad:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{background:var(--bg);color:var(--text);font:14px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;display:flex;flex-direction:column}
+
+  .header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--panel);flex:0 0 auto;flex-wrap:wrap}
+  .header h1{font-size:15px;margin:0;font-weight:600;white-space:nowrap}
+  .grupo{display:flex;align-items:center;gap:6px}
+  .grupo label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  select,input[type=search]{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit}
+  .empresa-btns{display:flex;gap:4px}
+  .empresa-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer}
+  .empresa-btn.activo{color:var(--text);border-color:var(--accent);background:rgba(37,99,235,.1)}
+  .sello{font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .buscar{margin-left:auto}
+
+  .stats{display:flex;gap:10px;padding:10px 20px;flex:0 0 auto;flex-wrap:wrap;background:var(--panel)}
+  .stat{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;min-width:110px}
+  .stat .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .stat .val{font-size:15px;font-weight:600}
+
+  .contenido{flex:1;min-height:0;padding:0 20px 16px;display:flex;flex-direction:column;overflow:hidden}
+  .tabla-card{flex:1;min-height:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;margin-top:12px}
+  .tabla-scroll{flex:1;min-height:0;overflow:auto}
+  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+  th,td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:500;font-size:11.5px;position:sticky;top:0;background:var(--panel);z-index:2;cursor:pointer;user-select:none}
+  th:hover{color:var(--text)}
+  th.col-texto,td.col-texto{text-align:left}
+  th .flecha{font-size:10px;color:var(--accent);margin-left:3px}
+  tbody tr:hover td{background:var(--panel2)}
+  tfoot td{font-weight:600;background:var(--panel2);border-top:2px solid var(--border-fuerte);position:sticky;bottom:0}
+  td.sin-marca{color:var(--muted);font-style:italic}
+
+  .estado{padding:40px;text-align:center;color:var(--muted)}
+  .estado.error{color:var(--bad)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Stock por Proveedor y Marca</h1>
+  <div class="grupo">
+    <label for="selAnio">Año</label>
+    <select id="selAnio"></select>
+  </div>
+  <div class="grupo">
+    <label for="selMes">Mes</label>
+    <select id="selMes"></select>
+  </div>
+  <div class="grupo">
+    <label>Empresa</label>
+    <div class="empresa-btns" id="empresaBtns">
+      <button class="empresa-btn" data-empresa="TODAS">Todas</button>
+      <button class="empresa-btn" data-empresa="TESI">Tesi</button>
+      <button class="empresa-btn" data-empresa="PUEBLO">Pueblo</button>
+    </div>
+  </div>
+  <div class="grupo buscar">
+    <input type="search" id="buscar" placeholder="Buscar proveedor o marca..." size="28">
+  </div>
+  <div class="sello" id="sello"></div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="contenido">
+  <div class="tabla-card">
+    <div class="tabla-scroll" id="tablaScroll">
+      <div class="estado" id="estado">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const NOMBRES_MES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+const fmtInt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+const fmtMoneda = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
+
+const estado = {
+  periodos: [],
+  empresa: 'TODAS',
+  fecha: null,
+  filas: [],
+  totales: null,
+  orden: { col: 'stock', dir: -1 },
+  filtro: ''
+};
+
+const $ = (id) => document.getElementById(id);
+
+async function cargarPeriodos() {
+  const r = await fetch('/api/periodos');
+  if (!r.ok) throw new Error('No se pudieron cargar los períodos');
+  estado.periodos = await r.json();
+  if (!estado.periodos.length) throw new Error('No hay períodos con foto de stock');
+
+  const anios = [...new Set(estado.periodos.map((p) => p.anio))].sort((a, b) => b - a);
+  const selAnio = $('selAnio');
+  selAnio.innerHTML = anios.map((a) => `<option value="${a}">${a}</option>`).join('');
+
+  const masReciente = estado.periodos[0];
+  selAnio.value = masReciente.anio;
+  llenarMeses(masReciente.anio, masReciente.mes);
+
+  selAnio.addEventListener('change', () => {
+    const meses = estado.periodos.filter((p) => p.anio === Number(selAnio.value));
+    llenarMeses(Number(selAnio.value), meses[0].mes);
+    seleccionarPeriodo();
+  });
+  $('selMes').addEventListener('change', seleccionarPeriodo);
+}
+
+function llenarMeses(anio, mesSeleccionado) {
+  const meses = estado.periodos.filter((p) => p.anio === anio).sort((a, b) => b.mes - a.mes);
+  const selMes = $('selMes');
+  selMes.innerHTML = meses.map((p) => `<option value="${p.mes}">${NOMBRES_MES[p.mes]}</option>`).join('');
+  selMes.value = mesSeleccionado;
+}
+
+function seleccionarPeriodo() {
+  const anio = Number($('selAnio').value);
+  const mes = Number($('selMes').value);
+  const periodo = estado.periodos.find((p) => p.anio === anio && p.mes === mes);
+  if (!periodo) return;
+  estado.fecha = periodo.fecha;
+  cargarStock();
+}
+
+async function cargarStock() {
+  mostrarEstado('Cargando...');
+  try {
+    const url = `/api/stock?fecha=${encodeURIComponent(estado.fecha)}&empresa=${encodeURIComponent(estado.empresa)}`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error al cargar el stock');
+    estado.filas = data.filas;
+    estado.totales = data.totales;
+    $('sello').textContent = `Actualizado ${new Date(data.recarga).toLocaleString('es-AR')}`;
+    renderStats();
+    renderTabla();
+  } catch (e) {
+    mostrarEstado(e.message, true);
+  }
+}
+
+function mostrarEstado(msg, esError) {
+  $('tablaScroll').innerHTML = `<div class="estado${esError ? ' error' : ''}">${msg}</div>`;
+}
+
+function renderStats() {
+  const t = estado.totales;
+  $('stats').innerHTML = `
+    <div class="stat"><div class="lbl">Stock (unidades)</div><div class="val">${fmtInt.format(t.stock)}</div></div>
+    <div class="stat"><div class="lbl">Valorizado</div><div class="val">${fmtMoneda.format(t.stockPesos)}</div></div>
+    <div class="stat"><div class="lbl">Proveedores</div><div class="val">${fmtInt.format(t.proveedores)}</div></div>
+    <div class="stat"><div class="lbl">Marcas</div><div class="val">${fmtInt.format(t.marcas)}</div></div>
+    <div class="stat"><div class="lbl">Artículos distintos</div><div class="val">${fmtInt.format(t.articulos)}</div></div>
+  `;
+}
+
+function filasFiltradasOrdenadas() {
+  let filas = estado.filas;
+  const q = estado.filtro.trim().toLowerCase();
+  if (q) {
+    filas = filas.filter((f) =>
+      f.proveedor.toLowerCase().includes(q) || (f.marca || '').toLowerCase().includes(q));
+  }
+  const { col, dir } = estado.orden;
+  filas = filas.slice().sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (col === 'proveedor' || col === 'marca') {
+      va = (va || '').toLowerCase(); vb = (vb || '').toLowerCase();
+      return va < vb ? -dir : va > vb ? dir : 0;
+    }
+    return ((va || 0) - (vb || 0)) * dir;
+  });
+  return filas;
+}
+
+const COLUMNAS = [
+  { key: 'proveedor', label: 'Proveedor', texto: true },
+  { key: 'marca', label: 'Marca', texto: true },
+  { key: 'stock', label: 'Stock (u.)' },
+  { key: 'stockPesos', label: 'Valorizado' },
+  { key: 'articulos', label: 'Artículos' }
+];
+
+function renderTabla() {
+  const filas = filasFiltradasOrdenadas();
+  if (!filas.length) return mostrarEstado('No hay stock para este período/filtro.');
+
+  const totFila = filas.reduce((acc, f) => {
+    acc.stock += f.stock || 0; acc.stockPesos += f.stockPesos || 0; acc.articulos += f.articulos || 0;
+    return acc;
+  }, { stock: 0, stockPesos: 0, articulos: 0 });
+
+  const th = COLUMNAS.map((c) => {
+    const activa = estado.orden.col === c.key;
+    const flecha = activa ? `<span class="flecha">${estado.orden.dir === 1 ? '▲' : '▼'}</span>` : '';
+    return `<th class="${c.texto ? 'col-texto' : ''}" data-col="${c.key}">${c.label}${flecha}</th>`;
+  }).join('');
+
+  const filasHtml = filas.map((f) => `
+    <tr>
+      <td class="col-texto">${escapeHtml(f.proveedor)}</td>
+      <td class="col-texto${f.marca ? '' : ' sin-marca'}">${f.marca ? escapeHtml(f.marca) : '(sin marca)'}</td>
+      <td>${fmtInt.format(f.stock)}</td>
+      <td>${fmtMoneda.format(f.stockPesos)}</td>
+      <td>${fmtInt.format(f.articulos)}</td>
+    </tr>
+  `).join('');
+
+  $('tablaScroll').innerHTML = `
+    <table>
+      <thead><tr>${th}</tr></thead>
+      <tbody>${filasHtml}</tbody>
+      <tfoot>
+        <tr>
+          <td class="col-texto">Total (${filas.length})</td>
+          <td></td>
+          <td>${fmtInt.format(totFila.stock)}</td>
+          <td>${fmtMoneda.format(totFila.stockPesos)}</td>
+          <td>${fmtInt.format(totFila.articulos)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+
+  $('tablaScroll').querySelectorAll('th[data-col]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const col = el.dataset.col;
+      if (estado.orden.col === col) estado.orden.dir *= -1;
+      else estado.orden = { col, dir: col === 'proveedor' || col === 'marca' ? 1 : -1 };
+      renderTabla();
+    });
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+$('empresaBtns').addEventListener('click', (e) => {
+  const btn = e.target.closest('.empresa-btn');
+  if (!btn) return;
+  estado.empresa = btn.dataset.empresa;
+  document.querySelectorAll('.empresa-btn').forEach((b) => b.classList.toggle('activo', b === btn));
+  cargarStock();
+});
+
+let debounceBuscar;
+$('buscar').addEventListener('input', (e) => {
+  clearTimeout(debounceBuscar);
+  debounceBuscar = setTimeout(() => { estado.filtro = e.target.value; renderTabla(); }, 150);
+});
+
+document.querySelector(`.empresa-btn[data-empresa="TODAS"]`).classList.add('activo');
+
+cargarPeriodos()
+  .then(seleccionarPeriodo)
+  .catch((e) => mostrarEstado(e.message, true));
+</script>
+</body>
+</html>

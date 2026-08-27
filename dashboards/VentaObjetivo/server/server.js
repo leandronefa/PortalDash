@@ -487,6 +487,11 @@ function calcularTotalGrupo(filas) {
   const sumMargenPesos = conMargen.reduce((s, f) => s + f.margenPesos, 0);
   const margenPct = sumObjSinIva ? sumMargenPesos / sumObjSinIva : 0;
   const uniXOper = sumOperaciones ? sumUnidades / sumOperaciones : 0;
+  const tktProm = sumOperaciones ? sumObjConIva / sumOperaciones : 0;
+  // Sólo se usa en Digitales, donde el ajuste ya no es un % fijo de grupo
+  // sino uno por sucursal: pondera el ajuste propio de cada una.
+  const margenPesosAjustadoPorSucursal = conMargen.reduce((s, f) => s + (f.margenPct + (f.ajusteMargen || 0)) * f.objetivoSinIva, 0);
+  const margenPctAjustadoPorSucursal = sumObjSinIva ? margenPesosAjustadoPorSucursal / sumObjSinIva : 0;
   return {
     objetivoSinIva: sumObjSinIva,
     objetivoConIva: sumObjConIva,
@@ -495,8 +500,10 @@ function calcularTotalGrupo(filas) {
     unidades: sumUnidades,
     operaciones: sumOperaciones,
     uniXOper,
+    tktProm,
     margenPct,
     margenPesos: sumMargenPesos,
+    margenPctAjustadoPorSucursal,
     // El % ponderado sólo es exacto si TODAS las sucursales del grupo ya
     // tienen su margen cargado — si falta alguna, es un total parcial.
     completo: filas.length > 0 && conMargen.length === filas.length
@@ -526,21 +533,29 @@ async function construirVistaMargenes() {
       const diarioSinIva = diasVenta ? objetivoSinIva / diasVenta : null;
       const diarioConIva = diarioSinIva != null ? diarioSinIva * 1.21 : null;
       const margenPesos = margenPct != null ? margenPct * objetivoSinIva : null;
+      // Sólo Digitales usa ajuste por sucursal (antes era +1% fijo de grupo);
+      // Pueblo/Tesi siguen con el ajuste fijo a nivel grupo (AJUSTE_MARGEN).
+      const ajusteMargen = grupo === 'WEB' ? (m.ajusteMargen != null ? Number(m.ajusteMargen) : AJUSTE_MARGEN.WEB) : null;
+      const margenPctAjustadoFila = grupo === 'WEB' && margenPct != null ? margenPct + ajusteMargen : null;
       return {
         cod_sucursal: s.cod_sucursal,
         nombre: s.nombre,
         grupo,
+        empresaReal: s.empresa,
         supervisor: supervisores.get(s.cod_sucursal) || null,
         objetivoSinIva,
         objetivoConIva,
         unidades: s.valores.unidades,
         operaciones: s.valores.operaciones,
         uniXOper: s.valores.uniXCli,
+        tktProm: s.valores.tktProm,
         diasVenta,
         margenPct,
         diarioSinIva,
         diarioConIva,
         margenPesos,
+        ajusteMargen,
+        margenPctAjustadoFila,
         cargado: diasVenta != null && margenPct != null
       };
     });
@@ -549,11 +564,13 @@ async function construirVistaMargenes() {
   for (const g of ['PUEBLO', 'TESI', 'WEB']) {
     const filasGrupo = filas.filter((f) => f.grupo === g);
     const total = calcularTotalGrupo(filasGrupo);
+    const esDigital = g === 'WEB';
     grupos[g] = {
       sucursales: filasGrupo,
       total,
-      ajuste: AJUSTE_MARGEN[g],
-      margenPctAjustado: total.margenPct + AJUSTE_MARGEN[g]
+      // Digitales: el ajuste es por sucursal, no hay un único % de grupo.
+      ajuste: esDigital ? null : AJUSTE_MARGEN[g],
+      margenPctAjustado: esDigital ? total.margenPctAjustadoPorSucursal : total.margenPct + AJUSTE_MARGEN[g]
     };
   }
 
@@ -741,10 +758,32 @@ app.post('/api/margenes-empresa/:cod', async (req, res) => {
       return res.status(400).json({ error: 'diasVenta debe ser > 0 y margenPct una fracción entre 0 y 1' });
     }
     const mes = mesObjetivoAAAAMM();
-    storeMargenes.guardarUno(mes, cod, { diasVenta: dv, margenPct: mp });
+    // guardarUno pisa todo el registro — hay que preservar el ajuste de
+    // Digitales si ya tenía uno cargado, si no se pierde al tocar Días/Margen.
+    const actual = storeMargenes.leer(mes)[cod];
+    storeMargenes.guardarUno(mes, cod, { diasVenta: dv, margenPct: mp, ajusteMargen: actual ? actual.ajusteMargen : undefined });
     res.json({ ok: true, mes, cod_sucursal: cod });
   } catch (e) {
     log('error', `margenes-empresa POST: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* Ajuste de margen personalizado por sucursal (sólo tiene sentido en
+   Digitales — Pueblo/Tesi siguen con el % fijo por grupo). */
+app.post('/api/margenes-empresa/:cod/ajuste', async (req, res) => {
+  try {
+    const { cod } = req.params;
+    const aj = Number(req.body && req.body.ajusteMargen);
+    if (!Number.isFinite(aj) || aj < -1 || aj > 1) {
+      return res.status(400).json({ error: 'ajusteMargen debe ser una fracción entre -1 y 1' });
+    }
+    const mes = mesObjetivoAAAAMM();
+    const actual = storeMargenes.leer(mes)[cod] || {};
+    storeMargenes.guardarUno(mes, cod, { diasVenta: actual.diasVenta, margenPct: actual.margenPct, ajusteMargen: aj });
+    res.json({ ok: true, mes, cod_sucursal: cod });
+  } catch (e) {
+    log('error', `margenes-empresa ajuste POST: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });

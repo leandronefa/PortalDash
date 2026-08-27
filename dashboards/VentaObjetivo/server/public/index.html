@@ -104,6 +104,10 @@
   .pe-tabla-card{flex:1;min-height:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:auto}
   .pe-tabla-card table{width:100%}
   .pe-tabla-card input{width:64px;background:var(--panel2);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:3px 5px;text-align:right;font:inherit}
+  tr.sug-pendiente{background:rgba(37,99,235,.06)}
+  tr.sug-cargada{color:var(--muted)}
+  #sugTablaCont tr.total{font-weight:600;border-top:2px solid var(--border-fuerte)}
+  #sugTablaCont tr.total td{color:var(--text)}
   tr.pe-total td{font-weight:600;border-top:3px solid var(--border-fuerte);background:var(--panel2)}
   .toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.18);z-index:20}
 
@@ -140,6 +144,7 @@
 <div class="tabs">
   <div class="tab activo" data-vista="comparativas">Comparativas</div>
   <div class="tab" data-vista="porEmpresa">Por Empresa</div>
+  <div class="tab" data-vista="sugerencia">Sugerencia</div>
   <span class="sello" id="sello">cargando…</span>
   <button class="btn-ayuda" id="btnAyuda" title="Ayuda">?</button>
   <button class="btn-guardar" id="btnGuardarTodo" disabled>GUARDAR OBJETIVOS</button>
@@ -202,6 +207,17 @@
   <div class="pe-contenido">
     <div class="pe-stats" id="peStats"></div>
     <div class="pe-tabla-card" id="peTablaCont"></div>
+  </div>
+</section>
+
+<section class="vista" id="vistaSugerencia">
+  <div class="pe-header">
+    <span id="sugMes" style="font-weight:600"></span>
+    <span id="sugAlcance" style="color:var(--muted);font-size:12px"></span>
+    <button class="btn-limpiar" id="btnConfirmarSugerencia" style="width:auto;margin-left:auto;display:none"></button>
+  </div>
+  <div class="pe-contenido">
+    <div class="pe-tabla-card" id="sugTablaCont"></div>
   </div>
 </section>
 
@@ -1289,6 +1305,160 @@ async function fetchMargenes(){
   peState.datos = await r.json();
 }
 
+/* ── Pestaña "Sugerencia" ──────────────────────────────────────────────── */
+const sugState = { datos: null };
+
+async function fetchSugerencia(){
+  const r = await fetch('api/objetivos-proximo/sugerencia');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  sugState.datos = await r.json();
+}
+
+function filasSugerenciaFiltradas(){
+  const d = sugState.datos;
+  if (!d) return [];
+  return d.sucursales.filter((s) =>
+    (!state.filtro.empresa || s.empresa === state.filtro.empresa) &&
+    (!state.filtro.sucursal || s.cod_sucursal === state.filtro.sucursal));
+}
+
+async function cargarSugerencia(){
+  try {
+    await fetchSugerencia();
+    document.getElementById('sugMes').textContent = 'Sugerencia ' + sugState.datos.mesNombre;
+    renderSugerencia();
+  } catch (e) {
+    document.getElementById('sugTablaCont').innerHTML = `<p style="padding:16px;color:var(--muted)">Error: ${e.message}</p>`;
+  }
+}
+
+function renderSugerencia(){
+  const filas = filasSugerenciaFiltradas();
+  const alcance = state.filtro.sucursal ? nombreDeSucursal(state.filtro.sucursal) : (state.filtro.empresa || 'Toda la red');
+  document.getElementById('sugAlcance').textContent = `Alcance: ${alcance} (${filas.length} sucursal${filas.length === 1 ? '' : 'es'})`;
+
+  const pendientes = filas.filter((f) => !f.cargado && f.sugerido);
+  const btn = document.getElementById('btnConfirmarSugerencia');
+  if (pendientes.length) {
+    btn.style.display = '';
+    btn.textContent = `Confirmar sugerencia en las ${pendientes.length} sin cargar`;
+  } else {
+    btn.style.display = 'none';
+  }
+
+  const CAMPOS_DESF = [
+    { campo: 'operaciones', tipo: 'int' },
+    { campo: 'tktProm', tipo: 'money' },
+    { campo: 'uniXCli', tipo: 'dec' },
+    { campo: 'unidades', tipo: 'int' },
+    { campo: 'ventaSinIva', tipo: 'money' }
+  ];
+  function fmtCampo(v, tipo){
+    if (v == null) return '—';
+    if (tipo === 'dec') return v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return fmt(v, tipo);
+  }
+  function celdaDesf(desf, tipo){
+    if (!desf) return '<td>—</td>';
+    const clase = desf.unidades >= 0 ? 'var-pos' : 'var-neg';
+    const pct = desf.pct == null ? '' : ` (${fmtPctSigned(desf.pct)})`;
+    return `<td class="${clase}">${fmtCampo(desf.unidades, tipo)}${pct}</td>`;
+  }
+
+  const filasHtml = filas.map((f) => {
+    const sinDatos = !f.sugerido;
+    const claseFila = f.cargado ? 'sug-cargada' : (sinDatos ? '' : 'sug-pendiente');
+    const sug = f.sugerido;
+    const celdasCampos = CAMPOS_DESF.map(({ campo, tipo }) =>
+      `<td>${sug ? fmtCampo(sug[campo], tipo) : '—'}</td>${celdaDesf(f.desfasaje && f.desfasaje[campo], tipo)}`
+    ).join('');
+    return `<tr class="${claseFila}">
+      <td style="text-align:left">${f.nombre}</td>
+      <td style="text-align:left">${f.empresa || ''}</td>
+      ${celdasCampos}
+      <td style="text-align:left">${f.cargado ? 'Ya cargada (sólo referencia)' : (sinDatos ? 'Sin historia suficiente' : 'Se completa al confirmar')}</td>
+    </tr>`;
+  }).join('');
+
+  const encabezadosCampos = CAMPOS_DESF.map(({ campo }) => {
+    const titulo = { operaciones: 'Operaciones', tktProm: 'Tkt Prom', uniXCli: 'Uni x Cli', unidades: 'Unidades', ventaSinIva: 'Venta $ s/IVA' }[campo];
+    return `<th>${titulo}</th><th>Δ ${titulo}</th>`;
+  }).join('');
+
+  // Total sugerido: suma de operaciones/unidades/venta, con Tkt Prom y Uni x
+  // Cli derivados (ponderados) para que Unidades = UniXCli×Operaciones y
+  // Venta = TktProm×Operaciones÷1,21 sigan cuadrando en el total.
+  function agregar(lista){
+    const operaciones = lista.reduce((s, v) => s + v.operaciones, 0);
+    const unidades = lista.reduce((s, v) => s + v.unidades, 0);
+    const ventaConIva = lista.reduce((s, v) => s + v.ventaConIva, 0);
+    const ventaSinIva = ventaConIva / 1.21;
+    return {
+      operaciones, unidades, ventaSinIva,
+      tktProm: operaciones ? ventaConIva / operaciones : null,
+      uniXCli: operaciones ? unidades / operaciones : null
+    };
+  }
+  const conSugerido = filas.filter((f) => f.sugerido);
+  const totalSugerido = agregar(conSugerido.map((f) => f.sugerido));
+  const conCargadoYSugerido = filas.filter((f) => f.cargado && f.sugerido);
+  const totalCargadoCargadas = agregar(conCargadoYSugerido.map((f) => f.valoresCargados));
+  const totalSugeridoDeCargadas = agregar(conCargadoYSugerido.map((f) => f.sugerido));
+  const totalDesfasaje = {};
+  for (const { campo } of CAMPOS_DESF) {
+    const dif = totalCargadoCargadas[campo] - totalSugeridoDeCargadas[campo];
+    totalDesfasaje[campo] = conCargadoYSugerido.length ? { unidades: dif, pct: totalSugeridoDeCargadas[campo] ? dif / totalSugeridoDeCargadas[campo] : null } : null;
+  }
+  const celdasTotal = CAMPOS_DESF.map(({ campo, tipo }) =>
+    `<td>${fmtCampo(totalSugerido[campo], tipo)}</td>${celdaDesf(totalDesfasaje[campo], tipo)}`
+  ).join('');
+  const filaTotal = `<tr class="total">
+    <td style="text-align:left">Total (${filas.length} sucursal${filas.length === 1 ? '' : 'es'})</td>
+    <td></td>
+    ${celdasTotal}
+    <td style="text-align:left">Δ = ${conCargadoYSugerido.length} cargada${conCargadoYSugerido.length === 1 ? '' : 's'} vs lo sugerido para esas mismas</td>
+  </tr>`;
+
+  document.getElementById('sugTablaCont').innerHTML = `<table>
+    <thead><tr>
+      <th>Sucursal</th><th>Empresa</th>${encabezadosCampos}<th>Estado</th>
+    </tr></thead>
+    <tbody>${filasHtml || `<tr><td colspan="${3 + CAMPOS_DESF.length * 2}" style="padding:16px;color:var(--muted)">Sin sucursales para este filtro</td></tr>`}${filas.length ? filaTotal : ''}</tbody>
+  </table>`;
+}
+
+async function confirmarSugerenciaEnBloque(){
+  const pendientes = filasSugerenciaFiltradas().filter((f) => !f.cargado && f.sugerido);
+  if (!pendientes.length) return;
+  if (!confirm(`Se va a cargar el objetivo sugerido en ${pendientes.length} sucursal${pendientes.length === 1 ? '' : 'es'} que todavía no tienen nada cargado. ¿Confirmar?`)) return;
+
+  try {
+    await Promise.all(pendientes.map(async (f) => {
+      const r = await fetch(`api/objetivos-proximo/${encodeURIComponent(f.cod_sucursal)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uniXCli: f.sugerido.uniXCli, tktProm: f.sugerido.tktProm, operaciones: f.sugerido.operaciones })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      const s = objState.datos.sucursales.find((x) => x.cod_sucursal === f.cod_sucursal);
+      if (s) {
+        s.valores = data.valores;
+        s.objetivoCargado = true;
+        s.origen = 'borrador';
+        actualizarFlagsCargado(s);
+      }
+    }));
+    recomputarTotalesObjetivo();
+    mostrarToast(`Sugerencia cargada en ${pendientes.length} sucursal${pendientes.length === 1 ? '' : 'es'}`);
+    renderTablas();
+    renderObjSidebar();
+    await cargarSugerencia();
+  } catch (e) {
+    mostrarToast('Error al confirmar sugerencia: ' + e.message);
+  }
+}
+
 function conectarTabs(){
   document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((x) => x.classList.remove('activo'));
@@ -1297,6 +1467,7 @@ function conectarTabs(){
     const idVista = 'vista' + t.dataset.vista[0].toUpperCase() + t.dataset.vista.slice(1);
     document.getElementById(idVista).classList.add('activa');
     if (t.dataset.vista === 'porEmpresa') cargarPorEmpresa();
+    if (t.dataset.vista === 'sugerencia') cargarSugerencia();
   }));
   document.querySelectorAll('.pe-grupo-btn').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.pe-grupo-btn').forEach((x) => x.classList.remove('activo'));
@@ -1305,6 +1476,7 @@ function conectarTabs(){
     renderPorEmpresa();
   }));
   document.getElementById('btnBorrarMargenesGrupo').addEventListener('click', borrarMargenesGrupo);
+  document.getElementById('btnConfirmarSugerencia').addEventListener('click', confirmarSugerenciaEnBloque);
 }
 
 async function cargarPorEmpresa(){

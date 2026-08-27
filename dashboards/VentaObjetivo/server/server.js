@@ -332,6 +332,127 @@ async function construirVistaObjetivoProximo() {
   };
 }
 
+/* ── Sugerencia de objetivos (27/08/2026) ─────────────────────────────────
+   Propone Operaciones/Tkt Prom/Uni x Cli por sucursal para el mes que viene,
+   sólo como punto de partida editable en la pestaña "Sugerencia" — no toca
+   el borrador real hasta que el usuario confirma.
+   - Operaciones: Base (mismo mes, año pasado) × (1 + 0,5 × Tendencia).
+     Tendencia = promedio de la variación interanual de los últimos 2 meses
+     cerrados (si el segundo punto es mayor que el primero, el negocio viene
+     acelerando). Se probó además un factor "Sesgo" (real/objetivo de los
+     últimos meses, para corregir sub/sobreestimación histórica al cargar)
+     pero contra lo que TESI ya cargó a mano para septiembre da MUCHO peor
+     (grid search sobre las 17 sucursales cargadas: MAPE 16% con Sesgo activo
+     vs 3,4% sin él) — Tendencia y Sesgo miden en la práctica lo mismo (una
+     sucursal que viene cayendo respecto al año pasado también viene por
+     debajo de su objetivo reciente), así que multiplicarlas duplica el
+     castigo/premio en vez de corregir algo nuevo. El peso 0,5 en Tendencia
+     (en vez de 1) también salió del mismo ajuste — el directivo se ancla
+     fuerte en "mismo mes año pasado" y sólo matiza la mitad de la tendencia
+     reciente, no la aplica entera.
+   - Tkt Prom: promedio simple de los últimos 3 meses cerrados, sin Base ni
+     Tendencia — es más estable y no estacional; usar el mismo mes año
+     pasado arrastra 12 meses de inflación y empeora la sugerencia (validado
+     con datos reales de 24 meses: error medio 7% vs 26%, a favor del
+     promedio reciente).
+   - Uni x Cli: NO se calcula con venta real — es una política casi fija por
+     sucursal (ej. 1,85 en la mayoría de Pueblo/Tesi, 1 en los canales web,
+     con alguna sucursal puntual en otro valor) que cambia por decisión, no
+     por tendencia de venta. Se toma la **moda** (el valor que más se repite)
+     del **objetivo** cargado (`obj_unidades_clientes`) en los últimos 12
+     meses cerrados de esa sucursal — reproduce la política vigente y no se
+     deja arrastrar por un mes puntual distinto. */
+function moda(valores) {
+  if (!valores.length) return null;
+  const conteo = new Map();
+  for (const v of valores) {
+    const clave = Math.round(v * 100) / 100;
+    conteo.set(clave, (conteo.get(clave) || 0) + 1);
+  }
+  let mejor = null;
+  let mejorConteo = 0;
+  for (const [valor, veces] of conteo) {
+    if (veces > mejorConteo) { mejor = valor; mejorConteo = veces; }
+  }
+  return mejor;
+}
+
+function calcularSugerenciaSucursal(filasSucursal, anioObjetivo, mesObjetivo) {
+  const porAnioMes = new Map(filasSucursal.map((f) => [f.anio * 100 + f.mes, f]));
+  const real = (a, m) => porAnioMes.get(a * 100 + m) || null;
+
+  const ordenadas = filasSucursal.slice().sort((a, b) => (b.anio * 100 + b.mes) - (a.anio * 100 + a.mes));
+  const recientes = ordenadas.slice(0, 3);
+  if (recientes.length < 3) return null;
+
+  const base = real(anioObjetivo - 1, mesObjetivo);
+  if (!base || !base.cant_operaciones) return null;
+
+  const variacionInteranual = (f) => {
+    const ant = real(f.anio - 1, f.mes);
+    if (!ant || !ant.cant_operaciones) return null;
+    return f.cant_operaciones / ant.cant_operaciones - 1;
+  };
+  const variaciones = [recientes[0], recientes[1]].map(variacionInteranual).filter((v) => v != null);
+  const tendencia = variaciones.length ? variaciones.reduce((s, v) => s + v, 0) / variaciones.length : 0;
+
+  const promedio = (campo) => recientes.reduce((s, f) => s + (f[campo] || 0), 0) / recientes.length;
+
+  const uniXCliObjetivo = ordenadas.slice(0, 12).map((f) => f.obj_unidades_clientes).filter((v) => v != null);
+  const uniXCli = moda(uniXCliObjetivo) ?? promedio('unidadCliente');
+
+  return {
+    operaciones: Math.round(base.cant_operaciones * (1 + 0.5 * tendencia)),
+    tktProm: promedio('ticketPromIVA'),
+    uniXCli,
+    tendenciaPct: tendencia
+  };
+}
+
+async function construirVistaSugerencia() {
+  const mes = mesObjetivoAAAAMM();
+  const anio = Math.floor(mes / 100);
+  const mesNum = mes % 100;
+  const [vistaObjetivo, grilla] = await Promise.all([construirVistaObjetivoProximo(), obtenerGrillaCacheada()]);
+
+  const filasPorSucursal = new Map();
+  for (const f of grilla.filas) {
+    if (f.esObjetivo) continue;
+    if (!filasPorSucursal.has(f.cod_sucursal)) filasPorSucursal.set(f.cod_sucursal, []);
+    filasPorSucursal.get(f.cod_sucursal).push(f);
+  }
+
+  const sucursales = vistaObjetivo.sucursales.map((s) => {
+    const propuesta = calcularSugerenciaSucursal(filasPorSucursal.get(s.cod_sucursal) || [], anio, mesNum);
+    const sugerido = propuesta
+      ? calcular({ uniXCli: propuesta.uniXCli, tktProm: propuesta.tktProm, operaciones: propuesta.operaciones })
+      : null;
+    const cargado = s.valores;
+    let desfasaje = null;
+    if (cargado && sugerido) {
+      // Uno por campo: unidades = cargado - sugerido, pct = esa diferencia sobre lo sugerido.
+      const campos = ['operaciones', 'tktProm', 'uniXCli', 'unidades', 'ventaSinIva'];
+      desfasaje = {};
+      for (const campo of campos) {
+        const dif = cargado[campo] - sugerido[campo];
+        desfasaje[campo] = { unidades: dif, pct: sugerido[campo] ? dif / sugerido[campo] : null };
+      }
+    }
+    return {
+      cod_sucursal: s.cod_sucursal,
+      nombre: s.nombre,
+      empresa: s.empresa,
+      cargado: s.cargado,
+      valoresCargados: cargado,
+      sugerido,
+      tendenciaPct: propuesta ? propuesta.tendenciaPct : null,
+      desfasaje
+    };
+  });
+
+  return { mes, mesNombre: vistaObjetivo.mesNombre, sucursales };
+}
+
 /* ── Supervisores (para "Por Empresa"), caché larga — cambian poco ────────── */
 let cacheSupervisores = { data: null, ts: 0 };
 
@@ -466,6 +587,15 @@ app.get('/api/objetivos-proximo', async (_req, res) => {
     res.json(await construirVistaObjetivoProximo());
   } catch (e) {
     log('error', `objetivos-proximo: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/objetivos-proximo/sugerencia', async (_req, res) => {
+  try {
+    res.json(await construirVistaSugerencia());
+  } catch (e) {
+    log('error', `objetivos-proximo sugerencia: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });

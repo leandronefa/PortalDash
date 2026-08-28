@@ -29,16 +29,16 @@
   .stat .val{font-size:13.5px;font-weight:600}
 
   .layout{flex:1;min-height:0;display:flex;gap:14px;padding:0 20px 12px;overflow:hidden}
-  .filtros{width:270px;flex:0 0 270px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:12px;margin-top:10px}
-  .filtros h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 6px;display:flex;justify-content:space-between;align-items:baseline}
-  .filtros h2 .contador{color:var(--accent);font-weight:600}
+  .filtros{width:270px;flex:0 0 270px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-top:10px}
+  .facet h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 6px;display:flex;justify-content:space-between;align-items:baseline}
+  .facet h2 .contador{color:var(--accent);font-weight:600}
   input[type=search]{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font:inherit;font-size:12.5px}
   .chip-row{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
   .chip{background:var(--accentBg);border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:2px 6px 2px 10px;font-size:11px;display:inline-flex;align-items:center;gap:4px;max-width:100%}
   .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
   .chip button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
   .chip button:hover{color:var(--bad)}
-  .lista{max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:6px;background:var(--panel2)}
+  .lista{max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:6px;background:var(--panel2)}
   .lista label{display:flex;align-items:center;gap:7px;padding:4px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)}
   .lista label:last-child{border-bottom:none}
   .lista label:hover{background:var(--panel)}
@@ -110,22 +110,7 @@
 <div class="stats" id="stats"></div>
 
 <div class="layout">
-  <div class="filtros">
-    <div>
-      <h2>Proveedor <span class="contador" id="contProveedor"></span></h2>
-      <input type="search" id="buscarProveedor" placeholder="Buscar proveedor...">
-      <div class="chip-row" id="chipsProveedor"></div>
-      <div class="lista" id="listaProveedor"></div>
-    </div>
-    <hr class="separador">
-    <div>
-      <h2>Marca <span class="contador" id="contMarca"></span></h2>
-      <input type="search" id="buscarMarca" placeholder="Buscar marca...">
-      <div class="chip-row" id="chipsMarca"></div>
-      <div class="lista" id="listaMarca"></div>
-    </div>
-    <button class="btn-limpiar" id="btnLimpiar">Limpiar filtros</button>
-  </div>
+  <div class="filtros" id="filtros"></div>
 
   <div class="contenido" id="contenido">
     <div class="estado" id="estadoInicial">Cargando...</div>
@@ -138,25 +123,43 @@ const NOMBRES_MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Se
 const fmtInt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
 const fmtMonedaCompleta = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 
+// El árbol de clase completo (fecha×proveedor×marca×sección×género×familia×
+// línea) tiene ~139.000 combinaciones — imposible de mandar entero al
+// cliente. En cambio: `dimensiones` trae sólo las combinaciones DISTINCT de
+// las 6 dimensiones (sin fecha ni números, ~6.200 filas) para armar las
+// listas de filtro relacionales en el cliente; los NÚMEROS (stock por
+// fecha) se piden al servidor YA agregados y filtrados en cada cambio.
+const FACETAS = [
+  { key: 'proveedores', campo: 'proveedor', label: 'Proveedor', sentinel: null },
+  { key: 'marcas', campo: 'marca', label: 'Marca', sentinel: '(sin marca)' },
+  { key: 'secciones', campo: 'seccion', label: 'Sección', sentinel: '(sin sección)' },
+  { key: 'generos', campo: 'genero', label: 'Género', sentinel: '(sin género)' },
+  { key: 'familias', campo: 'familia', label: 'Familia', sentinel: '(sin familia)' },
+  { key: 'lineas', campo: 'linea', label: 'Línea', sentinel: '(sin línea)' }
+];
+
 const estado = {
   empresa: 'TODAS',
   metrica: 'stock',
-  filas: [],
-  proveedoresSel: new Set(),
-  marcasSel: new Set(),
-  buscarProveedor: '',
-  buscarMarca: ''
+  dimensiones: [],
+  matrizFilas: [],
+  filtros: Object.fromEntries(FACETAS.map((f) => [f.key, new Set()])),
+  busqueda: Object.fromEntries(FACETAS.map((f) => [f.key, '']))
 };
 
 const $ = (id) => document.getElementById(id);
-const cacheDatosPorEmpresa = new Map();
+const cacheDimensionesPorEmpresa = new Map();
 
-async function cargarMatriz(empresa) {
-  if (cacheDatosPorEmpresa.has(empresa)) return cacheDatosPorEmpresa.get(empresa);
-  const r = await fetch(`/api/matriz?empresa=${encodeURIComponent(empresa)}`);
+function valorDe(row, faceta) {
+  return row[faceta.campo] || faceta.sentinel;
+}
+
+async function cargarDimensiones(empresa) {
+  if (cacheDimensionesPorEmpresa.has(empresa)) return cacheDimensionesPorEmpresa.get(empresa);
+  const r = await fetch(`/api/dimensiones?empresa=${encodeURIComponent(empresa)}`);
   const data = await r.json();
-  if (!r.ok) throw new Error(data.error || 'Error al cargar la matriz');
-  cacheDatosPorEmpresa.set(empresa, data);
+  if (!r.ok) throw new Error(data.error || 'Error al cargar los filtros');
+  cacheDimensionesPorEmpresa.set(empresa, data);
   return data;
 }
 
@@ -165,14 +168,12 @@ async function seleccionarEmpresa(empresa) {
   document.querySelectorAll('#empresaBtns .btn-opt').forEach((b) => b.classList.toggle('activo', b.dataset.empresa === empresa));
   mostrarEstado('Cargando...');
   try {
-    const data = await cargarMatriz(empresa);
-    estado.filas = data.filas;
-    // Al cambiar de empresa, los filtros elegidos que ya no existen en el
-    // nuevo universo se descartan (evita un filtro "fantasma" sin filas).
-    estado.proveedoresSel = new Set([...estado.proveedoresSel].filter((p) => data.proveedores.includes(p)));
-    estado.marcasSel = new Set([...estado.marcasSel].filter((m) => data.marcas.includes(m)));
-    $('sello').textContent = `Actualizado ${new Date(data.recarga).toLocaleString('es-AR')}`;
-    renderTodo();
+    const data = await cargarDimensiones(empresa);
+    estado.dimensiones = data.combos;
+    // Al cambiar de empresa, poda de filtros elegidos que ya no existen en
+    // el nuevo universo (evita un filtro "fantasma" sin filas).
+    podarTodasLasFacetas();
+    await aplicarFiltros();
   } catch (e) {
     mostrarEstado(e.message, true);
   }
@@ -182,32 +183,69 @@ function mostrarEstado(msg, esError) {
   $('contenido').innerHTML = `<div class="estado${esError ? ' error' : ''}">${msg}</div>`;
 }
 
-function filasFiltradas() {
-  const { proveedoresSel, marcasSel } = estado;
-  return estado.filas.filter((f) => {
-    if (proveedoresSel.size && !proveedoresSel.has(f.proveedor)) return false;
-    if (marcasSel.size && !marcasSel.has(f.marca || '(sin marca)')) return false;
-    return true;
-  });
+// Combinaciones del árbol de clase que matchean TODAS las facetas tildadas
+// (incluida la propia) — para las estadísticas ("cuántos proveedores/marcas
+// entran en la vista actual").
+function combosFiltrados() {
+  return estado.dimensiones.filter((row) =>
+    FACETAS.every((f) => {
+      const sel = estado.filtros[f.key];
+      return !sel.size || sel.has(valorDe(row, f));
+    })
+  );
 }
 
-function renderTodo() {
-  renderListas();
-  renderChips();
-  renderContadores();
-  renderMatriz();
-  renderStats();
+// Opciones disponibles para UNA faceta: combinaciones que matchean las
+// OTRAS 5 facetas tildadas (no la propia — si no, un ítem ya tildado
+// desaparecería de su propia lista al filtrar por sí mismo).
+function opcionesDisponibles(facetaKey) {
+  const otras = FACETAS.filter((f) => f.key !== facetaKey);
+  const fuente = estado.dimensiones.filter((row) =>
+    otras.every((f) => {
+      const sel = estado.filtros[f.key];
+      return !sel.size || sel.has(valorDe(row, f));
+    })
+  );
+  const faceta = FACETAS.find((f) => f.key === facetaKey);
+  return [...new Set(fuente.map((row) => valorDe(row, faceta)))].sort();
 }
 
-function renderContadores() {
-  $('contProveedor').textContent = estado.proveedoresSel.size ? `(${estado.proveedoresSel.size})` : '';
-  $('contMarca').textContent = estado.marcasSel.size ? `(${estado.marcasSel.size})` : '';
+// Poda selecciones que quedaron fuera del cruce relacional tras un cambio
+// (ej.: si ahora sólo queda seleccionado el proveedor Adidas, una marca
+// "Puma" tildada de antes ya no tiene sentido). Repite hasta que no cambie
+// nada más (como máximo 6 vueltas, una por faceta) para llegar a un punto
+// estable aunque la poda de una faceta habilite podar otra.
+function podarTodasLasFacetas() {
+  for (let vuelta = 0; vuelta < FACETAS.length; vuelta++) {
+    let cambio = false;
+    for (const f of FACETAS) {
+      const validos = new Set(opcionesDisponibles(f.key));
+      for (const v of [...estado.filtros[f.key]]) {
+        if (!validos.has(v)) { estado.filtros[f.key].delete(v); cambio = true; }
+      }
+    }
+    if (!cambio) break;
+  }
 }
 
-function renderListaFiltro(idLista, opciones, seleccionados, filtroTexto) {
-  const cont = $(idLista);
-  const q = filtroTexto.trim().toLowerCase();
+function construirFiltrosHtml() {
+  $('filtros').innerHTML = FACETAS.map((f, i) => `
+    ${i > 0 ? '<hr class="separador">' : ''}
+    <div class="facet" data-faceta="${f.key}">
+      <h2>${f.label} <span class="contador" id="cont-${f.key}"></span></h2>
+      <input type="search" class="buscar-faceta" data-faceta="${f.key}" placeholder="Buscar ${f.label.toLowerCase()}...">
+      <div class="chip-row" id="chips-${f.key}"></div>
+      <div class="lista" id="lista-${f.key}"></div>
+    </div>
+  `).join('') + '<button class="btn-limpiar" id="btnLimpiar">Limpiar filtros</button>';
+}
+
+function renderListaFiltro(facetaKey) {
+  const cont = $(`lista-${facetaKey}`);
+  const opciones = opcionesDisponibles(facetaKey);
+  const q = estado.busqueda[facetaKey].trim().toLowerCase();
   const visibles = q ? opciones.filter((o) => o.toLowerCase().includes(q)) : opciones;
+  const seleccionados = estado.filtros[facetaKey];
   if (!visibles.length) {
     cont.innerHTML = '<div class="vacio">Sin resultados</div>';
     return;
@@ -220,45 +258,25 @@ function renderListaFiltro(idLista, opciones, seleccionados, filtroTexto) {
   `).join('');
 }
 
-// Filtros relacionales: elegir un proveedor acota la lista de marcas a las
-// que ese proveedor realmente tiene (y viceversa) — cada lista ignora la
-// selección de SU PROPIO tipo (si no, un proveedor ya tildado desaparecería
-// de su propia lista) pero respeta la del otro tipo.
-function marcasDisponiblesRelacional() {
-  const fuente = estado.proveedoresSel.size
-    ? estado.filas.filter((f) => estado.proveedoresSel.has(f.proveedor))
-    : estado.filas;
-  return [...new Set(fuente.map((f) => f.marca || '(sin marca)'))].sort();
-}
-function proveedoresDisponiblesRelacional() {
-  const fuente = estado.marcasSel.size
-    ? estado.filas.filter((f) => estado.marcasSel.has(f.marca || '(sin marca)'))
-    : estado.filas;
-  return [...new Set(fuente.map((f) => f.proveedor))].sort();
+function renderFiltros() {
+  for (const f of FACETAS) {
+    renderListaFiltro(f.key);
+    const sel = estado.filtros[f.key];
+    $(`chips-${f.key}`).innerHTML = [...sel].map((v) => chipHtml(v, f.key)).join('');
+    $(`cont-${f.key}`).textContent = sel.size ? `(${sel.size})` : '';
+  }
 }
 
-function renderListas() {
-  renderListaFiltro('listaProveedor', proveedoresDisponiblesRelacional(), estado.proveedoresSel, estado.buscarProveedor);
-  renderListaFiltro('listaMarca', marcasDisponiblesRelacional(), estado.marcasSel, estado.buscarMarca);
-}
-
-function renderChips() {
-  $('chipsProveedor').innerHTML = [...estado.proveedoresSel].map((p) => chipHtml(p, 'proveedor')).join('');
-  $('chipsMarca').innerHTML = [...estado.marcasSel].map((m) => chipHtml(m, 'marca')).join('');
-}
-
-function chipHtml(valor, tipo) {
-  return `<span class="chip"><span>${escapeHtml(valor)}</span><button data-tipo="${tipo}" data-valor="${escapeAttr(valor)}">×</button></span>`;
+function chipHtml(valor, facetaKey) {
+  return `<span class="chip"><span>${escapeHtml(valor)}</span><button data-faceta="${facetaKey}" data-valor="${escapeAttr(valor)}">×</button></span>`;
 }
 
 function renderStats() {
-  const filas = filasFiltradas();
+  const combos = combosFiltrados();
+  const proveedores = new Set(combos.map((c) => c.proveedor));
+  const marcas = new Set(combos.map((c) => c.marca || '(sin marca)'));
   let stock = 0, stockPesos = 0;
-  const proveedores = new Set(), marcas = new Set();
-  for (const f of filas) {
-    stock += f.stock; stockPesos += f.stockPesos;
-    proveedores.add(f.proveedor); marcas.add(f.marca || '(sin marca)');
-  }
+  for (const f of estado.matrizFilas) { stock += f.stock; stockPesos += f.stockPesos; }
   $('stats').innerHTML = `
     <div class="stat"><div class="lbl">Stock (unidades)</div><div class="val">${fmtInt.format(stock)}</div></div>
     <div class="stat"><div class="lbl">Valorizado</div><div class="val">${fmtMonedaCompleta.format(stockPesos)}</div></div>
@@ -337,15 +355,13 @@ function renderCuadricula(el, aniosOrdenados, porAnioMes, celda, fmt, fmtComplet
 }
 
 function renderMatriz() {
-  const filas = filasFiltradas();
-  if (!filas.length) return mostrarEstado('No hay stock para este filtro.');
+  if (!estado.matrizFilas.length) return mostrarEstado('No hay stock para este filtro.');
 
   const porAnioMes = new Map();
   const anios = new Set();
-  for (const f of filas) {
+  for (const f of estado.matrizFilas) {
     anios.add(f.anio);
-    const clave = `${f.anio}-${f.mes}`;
-    porAnioMes.set(clave, (porAnioMes.get(clave) || 0) + f[estado.metrica]);
+    porAnioMes.set(`${f.anio}-${f.mes}`, f[estado.metrica]);
   }
   const aniosOrdenados = [...anios].sort((a, b) => b - a);
   const fmt = estado.metrica === 'stock' ? fmtInt : fmtMonedaCompleta;
@@ -403,6 +419,42 @@ function renderMatriz() {
     fmt, fmtCompleto, totalFilaPct);
 }
 
+// Cada cambio de filtro/empresa dispara un pedido nuevo al servidor (el
+// cruce completo es demasiado grande para calcularlo en el cliente). `solicitudId`
+// descarta una respuesta vieja que llegue después de una más nueva (dos
+// clicks seguidos, la primera consulta tarda más que la segunda).
+let solicitudId = 0;
+const cacheMatriz = new Map();
+
+async function aplicarFiltros() {
+  const miId = ++solicitudId;
+  renderFiltros();
+  mostrarEstado('Cargando...');
+  const body = { empresa: estado.empresa };
+  for (const f of FACETAS) body[f.key] = [...estado.filtros[f.key]];
+  const clave = JSON.stringify(body);
+  try {
+    let data = cacheMatriz.get(clave);
+    if (!data) {
+      const r = await fetch('/api/matriz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error al cargar la matriz');
+      cacheMatriz.set(clave, data);
+    }
+    if (miId !== solicitudId) return; // llegó una respuesta vieja, se descarta
+    estado.matrizFilas = data.filas;
+    $('sello').textContent = `Actualizado ${new Date(data.recarga).toLocaleString('es-AR')}`;
+    renderMatriz();
+    renderStats();
+  } catch (e) {
+    if (miId === solicitudId) mostrarEstado(e.message, true);
+  }
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -422,53 +474,41 @@ document.getElementById('metricaBtns').addEventListener('click', (e) => {
   renderMatriz();
 });
 
-function toggleSeleccion(tipo, valor) {
-  const set = tipo === 'proveedor' ? estado.proveedoresSel : estado.marcasSel;
+function toggleSeleccion(facetaKey, valor) {
+  const set = estado.filtros[facetaKey];
   if (set.has(valor)) set.delete(valor); else set.add(valor);
-
-  // Tras cambiar un lado, poda del otro lado lo que quedó fuera del cruce
-  // relacional (ej.: si ahora sólo queda seleccionado el proveedor Adidas,
-  // una marca "Puma" tildada de antes ya no tiene sentido — se destilda sola).
-  if (tipo === 'proveedor') {
-    const marcasValidas = new Set(marcasDisponiblesRelacional());
-    for (const m of [...estado.marcasSel]) if (!marcasValidas.has(m)) estado.marcasSel.delete(m);
-  } else {
-    const proveedoresValidos = new Set(proveedoresDisponiblesRelacional());
-    for (const p of [...estado.proveedoresSel]) if (!proveedoresValidos.has(p)) estado.proveedoresSel.delete(p);
-  }
-  renderTodo();
+  podarTodasLasFacetas();
+  aplicarFiltros();
 }
 
-$('listaProveedor').addEventListener('change', (e) => {
-  if (e.target.matches('input[type=checkbox]')) toggleSeleccion('proveedor', e.target.value);
+construirFiltrosHtml();
+
+$('filtros').addEventListener('change', (e) => {
+  const chk = e.target.closest('input[type=checkbox]');
+  if (!chk) return;
+  const facetaKey = chk.closest('.facet').dataset.faceta;
+  toggleSeleccion(facetaKey, chk.value);
 });
-$('listaMarca').addEventListener('change', (e) => {
-  if (e.target.matches('input[type=checkbox]')) toggleSeleccion('marca', e.target.value);
-});
-document.querySelector('.filtros').addEventListener('click', (e) => {
-  const btn = e.target.closest('.chip button');
-  if (!btn) return;
-  toggleSeleccion(btn.dataset.tipo, btn.dataset.valor);
+$('filtros').addEventListener('click', (e) => {
+  const btnChip = e.target.closest('.chip button');
+  if (btnChip) { toggleSeleccion(btnChip.dataset.faceta, btnChip.dataset.valor); return; }
+  if (e.target.id === 'btnLimpiar') {
+    for (const f of FACETAS) { estado.filtros[f.key].clear(); estado.busqueda[f.key] = ''; }
+    document.querySelectorAll('.buscar-faceta').forEach((inp) => { inp.value = ''; });
+    aplicarFiltros();
+  }
 });
 
 let debounceBusqueda;
-$('buscarProveedor').addEventListener('input', (e) => {
+$('filtros').addEventListener('input', (e) => {
+  const inp = e.target.closest('.buscar-faceta');
+  if (!inp) return;
+  const facetaKey = inp.dataset.faceta;
   clearTimeout(debounceBusqueda);
-  debounceBusqueda = setTimeout(() => { estado.buscarProveedor = e.target.value; renderListaFiltro('listaProveedor', proveedoresDisponiblesRelacional(), estado.proveedoresSel, estado.buscarProveedor); }, 120);
-});
-$('buscarMarca').addEventListener('input', (e) => {
-  clearTimeout(debounceBusqueda);
-  debounceBusqueda = setTimeout(() => { estado.buscarMarca = e.target.value; renderListaFiltro('listaMarca', marcasDisponiblesRelacional(), estado.marcasSel, estado.buscarMarca); }, 120);
-});
-
-$('btnLimpiar').addEventListener('click', () => {
-  estado.proveedoresSel.clear();
-  estado.marcasSel.clear();
-  $('buscarProveedor').value = '';
-  $('buscarMarca').value = '';
-  estado.buscarProveedor = '';
-  estado.buscarMarca = '';
-  renderTodo();
+  debounceBusqueda = setTimeout(() => {
+    estado.busqueda[facetaKey] = inp.value;
+    renderListaFiltro(facetaKey);
+  }, 120);
 });
 
 document.querySelector('#empresaBtns .btn-opt[data-empresa="TODAS"]').classList.add('activo');

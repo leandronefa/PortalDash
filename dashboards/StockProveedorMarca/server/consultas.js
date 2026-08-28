@@ -15,29 +15,23 @@ const T = {
   fotoStock: process.env.TBL_FOTOSTOCK || 'dbo.FotoStockMES2'
 };
 
-/* ── Períodos disponibles (fin de mes con foto tomada) ────────────────────── */
-const PERIODOS = `
-  SELECT DISTINCT fecha
-  FROM ${T.fotoStock}
-  ORDER BY fecha DESC;
-`;
-
-/* ── Stock sumado por proveedor y marca, para un período y empresa ────────── */
-function stockPorProveedorMarca(empresaFiltrada) {
-  const filtroEmpresa = empresaFiltrada ? 'AND fs.nomfilial = @empresa' : '';
+/* ── Matriz completa: TODOS los períodos, agrupado por fecha+proveedor+marca.
+   ~19.000 filas para el histórico completo (56 meses × ~340 combinaciones
+   proveedor/marca) — se trae entero de una y se filtra/suma en el cliente
+   (por año×mes, por proveedor y por marca) sin volver a pegarle a SQL. ────── */
+function matriz(empresaFiltrada) {
+  const filtroEmpresa = empresaFiltrada ? 'WHERE fs.nomfilial = @empresa' : '';
   return `
     SELECT
-        fs.nomprov               AS proveedor,
-        fs.nommarca               AS marca,
-        SUM(fs.stock)             AS stock,
-        SUM(fs.stockPesos)        AS stockPesos,
-        COUNT(DISTINCT fs.artprove) AS articulos
+        fs.fecha                  AS fecha,
+        fs.nomprov                AS proveedor,
+        fs.nommarca                AS marca,
+        SUM(fs.stock)              AS stock,
+        SUM(fs.stockPesos)         AS stockPesos
     FROM ${T.fotoStock} fs
-    WHERE fs.fecha = @fecha
-      ${filtroEmpresa}
-    GROUP BY fs.nomprov, fs.nommarca
-    ORDER BY stock DESC;
+    ${filtroEmpresa}
+    GROUP BY fs.fecha, fs.nomprov, fs.nommarca;
   `;
 }
 
-module.exports = { PERIODOS, stockPorProveedorMarca };
+module.exports = { matriz };

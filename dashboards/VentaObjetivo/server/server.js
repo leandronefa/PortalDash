@@ -630,8 +630,31 @@ async function construirVistaMargenes() {
   return { mes, mesNombre: vistaObjetivo.mesNombre, grupos };
 }
 
+/* Permisos por usuario (28/08/2026): el portal (DashboardProxy.cs) manda el
+   username logueado en el header X-Portal-User al reenviar la request. Sólo
+   puede editar quien tenga "vallejo" en el usuario, o el admin del portal —
+   el resto es sólo lectura. Sin el header (ej. pegándole directo al puerto
+   para diagnóstico local) se asume solo lectura, nunca edición. */
+function usuarioDe(req) {
+  return String(req.headers['x-portal-user'] || '').trim();
+}
+function puedeEditar(req) {
+  const u = usuarioDe(req).toLowerCase();
+  return u.includes('vallejo') || u === 'admin';
+}
+function exigirEdicion(req, res, next) {
+  if (!puedeEditar(req)) {
+    return res.status(403).json({ error: 'Este usuario es de sólo lectura — no puede cargar ni modificar objetivos.' });
+  }
+  next();
+}
+
 const app = express();
 app.use(express.json());
+
+app.get('/api/permisos', (req, res) => {
+  res.json({ usuario: usuarioDe(req), puedeEditar: puedeEditar(req) });
+});
 
 app.get('/api/salud', async (_req, res) => {
   try {
@@ -697,7 +720,7 @@ async function obtenerAjustesPorSucursal() {
    una empresa (PUEBLO/TESI) si se pasa {empresa} en el body — permite cargar
    Pueblo y guardarlo, y seguir con Tesi después sin esperar a la red
    completa. Sólo se borra del borrador local lo que efectivamente se guardó. */
-app.post('/api/objetivos-proximo/guardar', async (req, res) => {
+app.post('/api/objetivos-proximo/guardar', exigirEdicion, async (req, res) => {
   const mes = mesObjetivoAAAAMM();
   const empresa = req.body && req.body.empresa ? String(req.body.empresa) : null;
   try {
@@ -779,7 +802,7 @@ app.post('/api/objetivos-proximo/guardar', async (req, res) => {
   }
 });
 
-app.post('/api/objetivos-proximo/:cod', async (req, res) => {
+app.post('/api/objetivos-proximo/:cod', exigirEdicion, async (req, res) => {
   try {
     const { cod } = req.params;
     const { uniXCli, tktProm, operaciones } = req.body || {};
@@ -799,7 +822,7 @@ app.post('/api/objetivos-proximo/:cod', async (req, res) => {
 /* Borra el objetivo cargado de una sucursal: del borrador local si todavía no
    se guardó, y de dw_vallejo.f_objetivos si ya se había guardado antes
    (guardado parcial por empresa). */
-app.delete('/api/objetivos-proximo/:cod', async (req, res) => {
+app.delete('/api/objetivos-proximo/:cod', exigirEdicion, async (req, res) => {
   try {
     const { cod } = req.params;
     const mes = mesObjetivoAAAAMM();
@@ -830,7 +853,7 @@ app.get('/api/margenes-empresa', async (_req, res) => {
   }
 });
 
-app.post('/api/margenes-empresa/:cod', async (req, res) => {
+app.post('/api/margenes-empresa/:cod', exigirEdicion, async (req, res) => {
   try {
     const { cod } = req.params;
     const { diasVenta, margenPct } = req.body || {};
@@ -871,7 +894,7 @@ app.post('/api/margenes-empresa/:cod', async (req, res) => {
 
 /* Ajuste de margen personalizado por sucursal (sólo Digitales — Pueblo/Tesi
    usan el endpoint de grupo de abajo, un solo valor para todas). */
-app.post('/api/margenes-empresa/:cod/ajuste', async (req, res) => {
+app.post('/api/margenes-empresa/:cod/ajuste', exigirEdicion, async (req, res) => {
   try {
     const { cod } = req.params;
     const aj = Number(req.body && req.body.ajusteMargen);
@@ -890,7 +913,7 @@ app.post('/api/margenes-empresa/:cod/ajuste', async (req, res) => {
 
 /* Ajuste de margen a nivel grupo — un solo valor para Pueblo o Tesi (no
    por sucursal). Digitales no pasa por acá. */
-app.post('/api/margenes-empresa/grupo/:grupo/ajuste', async (req, res) => {
+app.post('/api/margenes-empresa/grupo/:grupo/ajuste', exigirEdicion, async (req, res) => {
   try {
     const { grupo } = req.params;
     if (grupo !== 'PUEBLO' && grupo !== 'TESI') {
@@ -909,7 +932,7 @@ app.post('/api/margenes-empresa/grupo/:grupo/ajuste', async (req, res) => {
   }
 });
 
-app.delete('/api/margenes-empresa/:cod', async (req, res) => {
+app.delete('/api/margenes-empresa/:cod', exigirEdicion, async (req, res) => {
   try {
     const { cod } = req.params;
     const mes = mesObjetivoAAAAMM();

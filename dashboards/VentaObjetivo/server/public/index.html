@@ -155,6 +155,7 @@
   <div class="tab" data-vista="porEmpresa">Totales</div>
   <div class="tab" data-vista="sugerencia" style="display:none">Sugerencia</div>
   <span class="sello" id="sello">cargando…</span>
+  <span class="chip" id="soloLecturaChip" style="display:none;color:var(--bad);border-color:var(--bad)">🔒 Solo lectura</span>
   <button class="btn-ayuda" id="btnAyuda" title="Ayuda">?</button>
   <button class="btn-guardar" id="btnGuardarTodo" disabled>GUARDAR OBJETIVOS</button>
 </div>
@@ -281,7 +282,40 @@ const ID_INPUT = { uniXCli: 'inCeldaUniXCli', tktProm: 'inCeldaTktProm', operaci
 const ID_INPUT_EMPRESA = { uniXCli: 'inEmpresaUniXCli', tktProm: 'inEmpresaTktProm', operaciones: 'inEmpresaOperaciones' };
 const ANIOS_POR_DEFECTO = 3;
 
-const state = { filas: [], anioMesActual: null, filtro: { empresa: '', sucursales: new Set(), anios: new Set() } };
+const state = { filas: [], anioMesActual: null, filtro: { empresa: '', sucursales: new Set(), anios: new Set() }, puedeEditar: false, usuario: '' };
+
+/* Solo-lectura por usuario (28/08/2026): el portal manda el username en el
+   header X-Portal-User, el server decide con la misma regla de siempre
+   (vallejo o admin = puede editar). Acá sólo se refleja esa decisión en la
+   UI — el server ya rechaza (403) cualquier POST/DELETE si no corresponde,
+   así que esto es sólo para no mostrar controles que van a fallar. */
+async function fetchPermisos(){
+  try {
+    const r = await fetch('api/permisos');
+    const data = await r.json();
+    state.puedeEditar = !!data.puedeEditar;
+    state.usuario = data.usuario || '';
+  } catch (e) {
+    state.puedeEditar = false; // ante la duda, solo lectura
+  }
+  const chip = document.getElementById('soloLecturaChip');
+  if (chip) {
+    chip.style.display = state.puedeEditar ? 'none' : '';
+    chip.title = state.usuario ? `Usuario: ${state.usuario}` : '';
+  }
+}
+
+/* Deshabilita todo input/select recién renderizado y oculta los botones que
+   modifican datos. Se llama al final de cada render dinámico (tablas,
+   sidebar de objetivos, Totales, Sugerencia) — más simple y robusto que
+   tocar cada función de armado de HTML una por una. */
+function aplicarModoSoloLectura(){
+  if (state.puedeEditar) return;
+  document.querySelectorAll('#tablas input, #peTablaCont input, #sugTablaCont input, .obj-sidebar-titulo ~ * input')
+    .forEach((el) => { el.disabled = true; el.title = 'Solo lectura' + (state.usuario ? ` (usuario: ${state.usuario})` : ''); });
+  const botonesSoloEdicion = ['btnGuardarTodo', 'btnBorrarObjetivoEmpresa', 'btnConfirmarSugerencia'];
+  botonesSoloEdicion.forEach((id) => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+}
 // Con una sola sucursal elegida se puede editar (carga puntual); con 0 o 2+
 // se trata como agregado de sólo lectura — evita la ambigüedad de a cuál de
 // las varias sucursales elegidas le pertenecería lo que se tipee.
@@ -1924,11 +1958,20 @@ function renderPorEmpresa(){
   renderPeTabla();
 }
 
+/* Envuelve los 4 render que crean inputs, para que siempre terminen
+   aplicando el modo solo-lectura sin tener que tocar cada uno por dentro
+   (son muchos los lugares que los llaman). */
+[['renderTablas', renderTablas], ['renderObjSidebar', renderObjSidebar],
+ ['renderPeTabla', renderPeTabla], ['renderSugerencia', renderSugerencia]]
+  .forEach(([nombre, fn]) => {
+    window[nombre] = function(...args){ const r = fn(...args); aplicarModoSoloLectura(); return r; };
+  });
+
 async function iniciar(){
   conectarFiltros();
   conectarTabs();
   try {
-    await Promise.all([fetchGrilla(), fetchObjetivos()]);
+    await Promise.all([fetchGrilla(), fetchObjetivos(), fetchPermisos()]);
     inicializarAniosPorDefecto();
     sincronizarFiltros();
     renderListaAnios();

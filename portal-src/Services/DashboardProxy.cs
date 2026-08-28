@@ -128,6 +128,12 @@ public static class DashboardProxy
         if (sizeFeature is { IsReadOnly: false })
             sizeFeature.MaxRequestBodySize = null;
 
+        // Identidad del usuario logueado, para que el dashboard destino pueda
+        // aplicar sus propios permisos (ej. solo-lectura según usuario). El
+        // transform por default de YARP reenvía los headers de ctx.Request tal
+        // cual, así que alcanza con setearlo acá antes del SendAsync.
+        ctx.Request.Headers["X-Portal-User"] = ctx.User.Identity?.Name ?? string.Empty;
+
         var host = string.IsNullOrWhiteSpace(dash.Host) ? "127.0.0.1" : dash.Host.Trim();
         var destination = $"http://{host}:{dash.Port}";
 

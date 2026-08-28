@@ -151,6 +151,23 @@ const OBJETIVOS_DEL_MES = `
   WHERE id_vendedor = 0 AND id_mes = @mes;
 `;
 
+/* Días Venta y Margen % ya guardados de verdad (GUARDAR OBJETIVOS ya corrió
+   para esa sucursal) — sin esto, la pestaña Totales quedaba en blanco para
+   Días/Margen apenas se guardaba, porque el borrador local (única fuente que
+   leía antes) se borra al guardar. obj_margen_por ya viene con el ajuste
+   sumado — se le resta obj_margen_ope_por (el ajuste real usado, desde el
+   28/08/2026) para recuperar el Margen % "crudo" que el dashboard edita. */
+const DIAS_MARGEN_DEL_MES = `
+  SELECT o.id_sucursal,
+         d.dias_habiles                          AS dias_venta,
+         o.obj_margen_por - o.obj_margen_ope_por  AS margen_pct,
+         o.obj_margen_ope_por                     AS ajuste_usado
+  FROM dw_vallejo.dbo.f_objetivos o
+  LEFT JOIN dw_vallejo.dbo.f_dias_habiles d
+    ON d.id_mes = o.id_mes AND d.id_sucursal = o.id_sucursal
+  WHERE o.id_vendedor = 0 AND o.id_mes = @mes;
+`;
+
 const INSERT_OBJETIVO = `
   INSERT INTO ${T.objetivos}
     (id_mes, id_sucursal, id_vendedor, obj_unidades_clientes, obj_ticket_promedio,
@@ -195,8 +212,12 @@ const INSERT_TEMP_BI_APP_FILA = `
      @margen, @unidades, @operaciones, @uniXOper, @mgPesos);
 `;
 
+/* @ajustes es un TVP (tipo db_Cegid.dbo.VentaObjetivo_AjusteMargenType) — el
+   ajuste de margen real por sucursal (28/08/2026, ver crear-sp-dashboard.sql).
+   Este EXEC tiene que correr con la conexión ya posicionada en db_Cegid
+   (getPoolCegid en server.js), si no SQL Server no resuelve el tipo del TVP. */
 const EXEC_SP_DASHBOARD = `
-  EXEC db_Cegid.dbo.SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD @anomes = @mes;
+  EXEC dbo.SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD @anomes = @mes, @ajustes = @ajustes;
 `;
 
 /* ── Supervisor por sucursal, para la pestaña "Por Empresa" ────────────────
@@ -254,6 +275,6 @@ const SUPERVISORES = `
 module.exports = {
   T, GRILLA, OBJETIVO_MES, CANAL_A_COD,
   SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
-  OBJETIVOS_DEL_MES, INSERT_OBJETIVO, UPDATE_OBJETIVO, DELETE_OBJETIVO,
+  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, INSERT_OBJETIVO, UPDATE_OBJETIVO, DELETE_OBJETIVO,
   SUPERVISORES, DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 };

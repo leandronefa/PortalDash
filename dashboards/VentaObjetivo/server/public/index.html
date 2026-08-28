@@ -62,8 +62,6 @@
   .obj-item.pendiente .punto{background:#f59e0b}
   .obj-item.cargada .punto{background:var(--good)}
   .obj-vacio{padding:10px;color:var(--muted);font-size:12px}
-  .btn-borrar{margin-left:auto;background:none;border:none;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;border-radius:4px}
-  .btn-borrar:hover{color:var(--bad);background:rgba(239,68,68,.12)}
 
   .contenido{flex:1;min-width:0;height:100%;overflow:hidden;display:flex;flex-direction:column}
   .tabla-card{flex:1;min-height:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
@@ -110,11 +108,11 @@
   .pe-stat .val{font-size:15px;font-weight:600}
   .pe-stat.ajustado{border-color:var(--accent);background:rgba(79,140,255,.09)}
   .pe-stat.parcial .val{color:#f59e0b}
+  .pe-stat .lbl input{width:42px;background:var(--panel2);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:1px 3px;text-align:right;font:inherit;font-size:10.5px}
   .pe-tabla-card{flex:1;min-height:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:auto}
   .pe-tabla-card table{width:100%}
   .pe-tabla-card input{width:64px;background:var(--panel2);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:3px 5px;text-align:right;font:inherit}
-  .pe-subtitulo{margin:14px 0 4px;padding:0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-  .pe-subtitulo:first-child{margin-top:0}
+  tr.pe-subtitulo-fila td{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--panel2);border-top:2px solid var(--border-fuerte)}
   tr.sug-pendiente{background:rgba(37,99,235,.06)}
   tr.sug-cargada{color:var(--muted)}
   #sugTablaCont tr.total{font-weight:600;border-top:2px solid var(--border-fuerte)}
@@ -155,7 +153,7 @@
 <div class="tabs">
   <div class="tab activo" data-vista="comparativas">Comparativas</div>
   <div class="tab" data-vista="porEmpresa">Totales</div>
-  <div class="tab" data-vista="sugerencia">Sugerencia</div>
+  <div class="tab" data-vista="sugerencia" style="display:none">Sugerencia</div>
   <span class="sello" id="sello">cargando…</span>
   <button class="btn-ayuda" id="btnAyuda" title="Ayuda">?</button>
   <button class="btn-guardar" id="btnGuardarTodo" disabled>GUARDAR OBJETIVOS</button>
@@ -216,8 +214,7 @@
       <button class="pe-grupo-btn" data-grupo="TESI">Tesi</button>
       <button class="pe-grupo-btn" data-grupo="WEB">Digitales</button>
     </div>
-    <button class="btn-limpiar" id="btnBorrarMargenesGrupo" style="width:auto;margin-left:auto;display:none"></button>
-    <span class="sello" id="peMes"></span>
+    <span class="sello" id="peMes" style="margin-left:auto"></span>
   </div>
   <div class="pe-contenido">
     <div class="pe-stats" id="peStats"></div>
@@ -244,12 +241,12 @@
     <p>La columna <b>morada</b> es el mes en curso: todavía no cerró, así que muestra el <b>objetivo</b> de la sucursal, no venta real. Se reemplaza sola por venta real cuando el mes cierra.</p>
     <p>La columna <b>azul</b> es el mes que viene. En <b>Operaciones</b>, <b>Tkt Prom</b> y <b>Uni x Cli</b> es editable: escribí ahí el objetivo de la sucursal elegida. <b>Ventas</b> y <b>Unidades</b> se calculan solos (Unidades = Uni x Cli × Operaciones; Venta $ sin IVA = Tkt Prom × Operaciones ÷ 1,21) y se guardan automáticamente al completar los tres campos.</p>
     <p>Si no elegís sucursal ("Todas"), esa misma columna azul muestra el total de lo ya cargado en la red hasta el momento (o de la empresa elegida).</p>
-    <p><b>Cargar Objetivos</b> / <b>Editar Objetivos</b>, en el panel izquierdo, listan las sucursales sin y con todo cargado — clic para pasar a esa sucursal. Una sucursal sólo pasa a "Editar" cuando tiene <b>las 5 cosas</b>: Operaciones, Tkt Prom, Uni x Cli (acá) y Días Venta, Margen % (pestaña Totales). La <b>×</b> junto a una sucursal cargada borra su objetivo (del borrador, o de la base si ya se había guardado).</p>
+    <p><b>Cargar Objetivos</b> / <b>Editar Objetivos</b>, en el panel izquierdo, listan las sucursales sin y con todo cargado — clic para pasar a esa sucursal y editarla. Una sucursal sólo pasa a "Editar" cuando tiene <b>las 5 cosas</b>: Operaciones, Tkt Prom, Uni x Cli (acá) y Días Venta, Margen % (pestaña Totales). No hay forma de borrar una sucursal cargada desde acá — sólo se puede desde <b>"Borrar objetivo de [Empresa]"</b>, con Empresa elegida en el filtro (pide confirmación).</p>
     <p><b>GUARDAR OBJETIVOS</b> ya no escribe la base directo: carga <code>db_Cegid.TEMP_BI_APP</code> y ejecuta el SP <code>SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD</code> (copia del que ya usa el proceso manual), que es quien mueve los datos a las tablas reales. Si hay una Empresa elegida en el filtro, guarda sólo esa empresa (podés guardar Pueblo y seguir cargando Tesi después); sin filtro de empresa, exige tener las sucursales completas.</p>
     <p>El filtro de <b>Años</b> controla cuántas filas se muestran (por defecto, las 5 más recientes) — sumá o sacá años según necesites.</p>
     <p>La última columna, <b>Total Año</b>, suma (o promedia, en Tkt Prom y Uni x Cli) los 12 meses de esa fila, incluyendo lo cargado en la columna azul si corresponde.</p>
     <p>Una sucursal marcada "No aplica" en la columna azul no carga objetivo (deshabilitada a pedido).</p>
-    <p><b>Totales</b> (otra pestaña): toma el Objetivo/Unidades/Operaciones ya cargado acá y les suma Días Venta y Margen % (a mano, por sucursal) para llegar al Margen Total y al "Objetivo Margen Total". En Pueblo y Tesi ese ajuste es fijo por grupo (0% Tesi, +1,5% Pueblo); en <b>Digitales</b> (canales MELI/WEB/Freekick, separados en bloques Tesi/Pueblo) el ajuste es editable por sucursal, con su propia columna de Margen Total Ajustado.</p>
+    <p><b>Totales</b> (otra pestaña): toma el Objetivo/Unidades/Operaciones ya cargado acá y les suma Días Venta y Margen % (a mano, por sucursal) para llegar al Margen Total y al "Objetivo Margen Total". En Pueblo y Tesi ese ajuste es un solo % editable arriba de todo, para todas las sucursales del grupo (0% Tesi, +1,5% Pueblo por defecto); en <b>Digitales</b> (canales MELI/WEB/Freekick, separados en bloques Tesi/Pueblo) el ajuste es editable por sucursal, con su propia columna de Margen Total Ajustado.</p>
     <p>Clic en cualquier celda con datos abre el <b>desglose por sucursal</b> de ese número, respetando los filtros de Empresa/Sucursal aplicados. La fila en cursiva arriba de cada bloque es la <b>variación interanual</b> del mes en curso contra el mismo mes del año pasado.</p>
     <p><b>Carga a nivel empresa</b> (celda verde): elegí una Empresa (Pueblo o Tesi) y dejá Sucursal en "Todas" — mientras ninguna de sus sucursales tenga el objetivo cargado, esa columna azul queda editable. Al completar los 3 campos se reparte solo entre las sucursales según su participación en la venta $ del mes en curso (real si ya cerró, objetivo si no) — Tkt Prom y Uni x Cli quedan iguales en todas, Operaciones se reparte proporcional. Una vez repartido (o si ya venías cargando por sucursal), la celda vuelve a ser de sólo lectura — los ajustes puntuales se hacen desde Editar Objetivos.</p>
   </div>
@@ -438,6 +435,7 @@ function aplicarMarcador(m){
 }
 function borrarMarcador(i){
   const lista = leerMarcadores();
+  if (!confirm(`¿Borrar el marcador "${lista[i].nombre}"?`)) return;
   lista.splice(i, 1);
   guardarMarcadores(lista);
   renderListaMarcadores();
@@ -1172,23 +1170,6 @@ async function guardarEdicionActual(){
   }
 }
 
-async function eliminarObjetivo(cod, nombre){
-  if (!confirm(`¿Borrar el objetivo de ${objState.datos.mesNombre} cargado para ${nombre}?`)) return;
-  try {
-    const r = await fetch(`api/objetivos-proximo/${encodeURIComponent(cod)}`, { method: 'DELETE' });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
-    const s = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
-    if (s) { s.valores = null; s.objetivoCargado = false; s.origen = null; actualizarFlagsCargado(s); }
-    recomputarTotalesObjetivo();
-    renderTablas();
-    renderObjSidebar();
-    mostrarToast('Borrado: ' + nombre);
-  } catch (e) {
-    mostrarToast('Error al borrar: ' + e.message);
-  }
-}
-
 async function borrarObjetivoEmpresa(){
   const empresa = state.filtro.empresa;
   if (!empresa) return;
@@ -1350,11 +1331,8 @@ function renderLista(idCont, lista, clase){
   for (const s of lista) {
     const div = document.createElement('div');
     div.className = 'obj-item ' + clase + (state.filtro.sucursales.has(s.cod_sucursal) ? ' activo' : '');
-    div.innerHTML = `<span class="punto"></span><span style="flex:1">${s.nombre}</span>` +
-      (clase === 'cargada' ? '<button class="btn-borrar" title="Borrar objetivo">✕</button>' : '');
+    div.innerHTML = `<span class="punto"></span><span style="flex:1">${s.nombre}</span>`;
     div.addEventListener('click', () => seleccionarSucursal(s.cod_sucursal));
-    const btnB = div.querySelector('.btn-borrar');
-    if (btnB) btnB.addEventListener('click', (e) => { e.stopPropagation(); eliminarObjetivo(s.cod_sucursal, s.nombre); });
     cont.appendChild(div);
   }
 }
@@ -1381,7 +1359,7 @@ document.getElementById('btnGuardarTodo').addEventListener('click', async () => 
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
-    mostrarToast(`Guardadas ${data.guardadas} sucursales en la base`);
+    mostrarToast(`✓ Guardadas ${data.guardadas} sucursales — ya quedaron en la base real, no hace falta volver a cargarlas`);
     await fetchObjetivos();
     renderTablas();
     renderObjSidebar();
@@ -1574,7 +1552,6 @@ function conectarTabs(){
     peState.grupo = b.dataset.grupo;
     renderPorEmpresa();
   }));
-  document.getElementById('btnBorrarMargenesGrupo').addEventListener('click', borrarMargenesGrupo);
   document.getElementById('btnConfirmarSugerencia').addEventListener('click', confirmarSugerenciaEnBloque);
 }
 
@@ -1593,7 +1570,15 @@ function renderPeStats(){
   const cont = document.getElementById('peStats');
   const t = g.total;
   const stat = (lbl, val, clases = '') => `<div class="pe-stat ${clases}"><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;
-  const etiquetaAjuste = g.ajuste == null ? 'Objetivo Margen Total (ajuste variable por sucursal)' : `Objetivo Margen Total (+${(g.ajuste * 100).toLocaleString('es-AR')}%)`;
+  // Pueblo/Tesi: un único % editable ahí mismo, para todas sus sucursales.
+  // Digitales sigue siendo por sucursal (columna Ajuste % de la tabla).
+  const claseAjustado = 'ajustado' + (t.completo ? '' : ' parcial');
+  const statAjuste = g.ajuste == null
+    ? stat('Objetivo Margen Total (ajuste variable por sucursal)', fmtPct(g.margenPctAjustado), claseAjustado)
+    : `<div class="pe-stat ${claseAjustado}">
+        <div class="lbl">Objetivo Margen Total (+<input type="number" step="0.1" id="peAjusteGrupo" value="${(g.ajuste * 100).toLocaleString('es-AR', { maximumFractionDigits: 2 })}">%)</div>
+        <div class="val" id="peAjusteGrupoVal">${fmtPct(g.margenPctAjustado)}</div>
+      </div>`;
   cont.innerHTML =
     stat('Objetivo sin IVA', fmt(t.objetivoSinIva, 'money')) +
     stat('Objetivo con IVA', fmt(t.objetivoConIva, 'money')) +
@@ -1602,54 +1587,44 @@ function renderPeStats(){
     stat('Operaciones', fmt(t.operaciones, 'int')) +
     stat('Uni/Oper', t.uniXOper.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) +
     stat('Margen Total' + (t.completo ? '' : ' (parcial)'), fmtPct(t.margenPct), t.completo ? '' : 'parcial') +
-    stat(etiquetaAjuste, fmtPct(g.margenPctAjustado), 'ajustado' + (t.completo ? '' : ' parcial'));
+    statAjuste;
 
-  const conMargen = g.sucursales.filter((s) => s.diasVenta != null || s.margenPct != null);
-  const btnBorrar = document.getElementById('btnBorrarMargenesGrupo');
-  if (conMargen.length) {
-    btnBorrar.style.display = '';
-    btnBorrar.textContent = `Borrar Días/Margen de ${peState.grupo} (${conMargen.length})`;
-  } else {
-    btnBorrar.style.display = 'none';
-  }
+  const elAjuste = document.getElementById('peAjusteGrupo');
+  if (elAjuste) elAjuste.addEventListener('input', () => onInputAjusteGrupo(peState.grupo));
 }
 
-async function borrarMargenesGrupo(){
-  const g = peState.datos.grupos[peState.grupo];
-  const conMargen = g.sucursales.filter((s) => s.diasVenta != null || s.margenPct != null);
-  if (!conMargen.length) return;
-  if (!confirm(`¿Borrar Días Venta y Margen % de las ${conMargen.length} sucursales de ${peState.grupo}?`)) return;
+function onInputAjusteGrupo(grupo){
+  const el = document.getElementById('peAjusteGrupo');
+  const valor = el.value === '' ? null : Number(el.value) / 100;
+  const g = peState.datos.grupos[grupo];
+  if (valor != null && Number.isFinite(valor)) {
+    setTxt('peAjusteGrupoVal', fmtPct(g.total.margenPct + valor));
+  }
+  clearTimeout(peTemporizadorGuardado['grupo_' + grupo]);
+  peTemporizadorGuardado['grupo_' + grupo] = setTimeout(() => guardarAjusteGrupo(grupo), 700);
+}
+
+async function guardarAjusteGrupo(grupo){
+  const el = document.getElementById('peAjusteGrupo');
+  if (!el || el.value === '') return;
+  const ajuste = Number(el.value) / 100;
+  if (!Number.isFinite(ajuste)) return;
 
   try {
-    await Promise.all(conMargen.map(async (s) => {
-      const r = await fetch(`api/margenes-empresa/${encodeURIComponent(s.cod_sucursal)}`, { method: 'DELETE' });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
-      s.diasVenta = null;
-      s.margenPct = null;
-      s.diarioSinIva = null;
-      s.diarioConIva = null;
-      s.margenPesos = null;
-      s.ajusteMargen = null;
-      s.margenPctAjustadoFila = null;
-      s.cargado = false;
+    const r = await fetch(`api/margenes-empresa/grupo/${encodeURIComponent(grupo)}/ajuste`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ajuste })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
 
-      if (objState.datos) {
-        const so = objState.datos.sucursales.find((x) => x.cod_sucursal === s.cod_sucursal);
-        if (so) {
-          so.diasVenta = null;
-          so.margenPct = null;
-          actualizarFlagsCargado(so);
-        }
-      }
-    }));
-    g.total = calcularTotalGrupoCliente(g.sucursales);
-    g.margenPctAjustado = g.ajuste == null ? g.total.margenPctAjustadoPorSucursal : g.total.margenPct + g.ajuste;
-    if (objState.datos) { recomputarTotalesObjetivo(); renderObjSidebar(); }
-    mostrarToast(`Borrado Días/Margen de ${conMargen.length} sucursales de ${peState.grupo}`);
-    renderPorEmpresa();
+    const g = peState.datos.grupos[grupo];
+    g.ajuste = ajuste;
+    g.margenPctAjustado = g.total.margenPct + ajuste;
+    if (peState.grupo === grupo) setTxt('peAjusteGrupoVal', fmtPct(g.margenPctAjustado));
   } catch (e) {
-    mostrarToast('Error al borrar: ' + e.message);
+    mostrarToast('Error al guardar el ajuste: ' + e.message);
   }
 }
 
@@ -1735,6 +1710,8 @@ function actualizarTotalesPeEnVivo(cod){
   }
 }
 
+const CANT_COLS_PE = { normal: 13, digital: 15 };
+
 function encabezadosPeHtml(esDigital){
   const colsAjuste = esDigital ? '<th>Ajuste %</th><th>Margen Total Ajustado</th>' : '';
   return `
@@ -1756,15 +1733,18 @@ function encabezadosPeHtml(esDigital){
     </tr>`;
 }
 
-function tablaPeHtml(sucursales, esDigital, titulo, idPrefix){
+/* Un <tbody> por bloque (fila de subtítulo + sucursales + subtotal) — todos
+   dentro de LA MISMA tabla (un solo <thead>), así las columnas quedan
+   alineadas entre bloques. Antes cada bloque era su propia <table>, y la
+   fila de Total Digitales al pie era otra tabla más sin encabezado — cada
+   una calculaba su propio ancho de columna y no quedaban alineadas. */
+function bloquePeHtml(sucursales, esDigital, titulo, idPrefix){
   if (!sucursales.length) return '';
   const filasHtml = sucursales.map((s) => filaPeHtml(s, esDigital)).join('');
   const totalSub = calcularTotalGrupoCliente(sucursales);
-  const tituloHtml = titulo ? `<h4 class="pe-subtitulo">${titulo} (${sucursales.length})</h4>` : '';
-  return `${tituloHtml}<table>
-    <thead>${encabezadosPeHtml(esDigital)}</thead>
-    <tbody>${filasHtml}${filaTotalPeHtml(totalSub, esDigital, 'Subtotal', idPrefix)}</tbody>
-  </table>`;
+  const colspan = esDigital ? CANT_COLS_PE.digital : CANT_COLS_PE.normal;
+  const tituloHtml = titulo ? `<tr class="pe-subtitulo-fila"><td colspan="${colspan}">${titulo} (${sucursales.length})</td></tr>` : '';
+  return `<tbody>${tituloHtml}${filasHtml}${filaTotalPeHtml(totalSub, esDigital, 'Subtotal', idPrefix)}</tbody>`;
 }
 
 function renderPeTabla(){
@@ -1779,10 +1759,12 @@ function renderPeTabla(){
     // subtotal, más un total general de Digitales al pie. Se filtra
     // siempre desde g.sucursales (no de una lista aparte) para que quede
     // al día con lo que guardarPe/guardarAjuste van mutando ahí.
-    cont.innerHTML =
-      tablaPeHtml(g.sucursales.filter((s) => s.empresaReal === 'TESI'), true, 'Tesi', 'peTotalTesi') +
-      tablaPeHtml(g.sucursales.filter((s) => s.empresaReal === 'PUEBLO'), true, 'Pueblo', 'peTotalPueblo') +
-      `<table><tbody>${filaTotalPeHtml(g.total, true, 'Total Digitales', 'peTotalDigital')}</tbody></table>`;
+    cont.innerHTML = `<table>
+      <thead>${encabezadosPeHtml(true)}</thead>
+      ${bloquePeHtml(g.sucursales.filter((s) => s.empresaReal === 'TESI'), true, 'Tesi', 'peTotalTesi')}
+      ${bloquePeHtml(g.sucursales.filter((s) => s.empresaReal === 'PUEBLO'), true, 'Pueblo', 'peTotalPueblo')}
+      <tbody>${filaTotalPeHtml(g.total, true, 'Total Digitales', 'peTotalDigital')}</tbody>
+    </table>`;
   } else {
     cont.innerHTML = `<table>
       <thead>${encabezadosPeHtml(false)}</thead>
@@ -1863,26 +1845,31 @@ async function guardarPe(cod){
   const margenEl = document.querySelector(`.pe-in-margen[data-cod="${cod}"]`);
   const diasVenta = diasEl.value;
   const margenPct = margenEl.value;
-  if (diasVenta === '' || margenPct === '') return; // sólo se guarda con los dos campos completos
+  if (diasVenta === '' && margenPct === '') return; // nada para guardar
 
   try {
+    const body = {};
+    if (diasVenta !== '') body.diasVenta = diasVenta;
+    if (margenPct !== '') body.margenPct = Number(margenPct) / 100;
     const r = await fetch(`api/margenes-empresa/${encodeURIComponent(cod)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ diasVenta, margenPct: Number(margenPct) / 100 })
+      body: JSON.stringify(body)
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
 
     const g = peState.datos.grupos[peState.grupo];
     const s = g.sucursales.find((x) => x.cod_sucursal === cod);
-    s.diasVenta = Number(diasVenta);
-    s.margenPct = Number(margenPct) / 100;
-    s.diarioSinIva = s.objetivoSinIva / s.diasVenta;
-    s.diarioConIva = s.diarioSinIva * 1.21;
-    s.margenPesos = s.margenPct * s.objetivoSinIva;
-    if (s.ajusteMargen != null) s.margenPctAjustadoFila = s.margenPct + s.ajusteMargen;
-    s.cargado = true;
+    if (diasVenta !== '') s.diasVenta = Number(diasVenta);
+    if (margenPct !== '') s.margenPct = Number(margenPct) / 100;
+    if (s.diasVenta != null) {
+      s.diarioSinIva = s.objetivoSinIva / s.diasVenta;
+      s.diarioConIva = s.diarioSinIva * 1.21;
+    }
+    if (s.margenPct != null) s.margenPesos = s.margenPct * s.objetivoSinIva;
+    if (s.ajusteMargen != null && s.margenPct != null) s.margenPctAjustadoFila = s.margenPct + s.ajusteMargen;
+    s.cargado = s.diasVenta != null && s.margenPct != null;
     g.total = calcularTotalGrupoCliente(g.sucursales);
     g.margenPctAjustado = g.ajuste == null ? g.total.margenPctAjustadoPorSucursal : g.total.margenPct + g.ajuste;
     renderPeStats();

@@ -4,7 +4,7 @@ const express = require('express');
 const sql = require('mssql');
 const {
   GRILLA, OBJETIVO_MES, SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
-  OBJETIVOS_DEL_MES, DELETE_OBJETIVO, SUPERVISORES,
+  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, DELETE_OBJETIVO, SUPERVISORES,
   DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 } = require('./consultas');
 const { crearStoreObjetivos } = require('./objetivos-store');
@@ -26,6 +26,10 @@ const SUCURSALES_SIN_OBJETIVO = new Set(['01']);
 
 const store = crearStoreObjetivos({ dir: path.join(__dirname, '..', 'data-store') });
 const storeMargenes = crearStoreObjetivos({ dir: path.join(__dirname, '..', 'data-store'), prefix: 'margenes' });
+// Ajuste de margen a nivel grupo (Pueblo/Tesi) — un solo valor para todas
+// sus sucursales, editable desde arriba de la pestaña Totales. Digitales
+// sigue con su ajuste por sucursal (storeMargenes, campo ajusteMargen).
+const storeAjusteGrupo = crearStoreObjetivos({ dir: path.join(__dirname, '..', 'data-store'), prefix: 'ajuste-grupo' });
 
 // Canales web/MeLi: grupo aparte "WEB", con su propio ajuste de margen — no
 // se cuentan dentro de PUEBLO/TESI aunque su empresa nominal sea esa.
@@ -67,6 +71,7 @@ const cfgBase = {
 
 let poolTableros = null;
 let poolDwVallejo = null;
+let poolCegid = null;
 
 async function getPoolTableros() {
   if (!poolTableros) {
@@ -80,6 +85,18 @@ async function getPoolDwVallejo() {
     poolDwVallejo = await new sql.ConnectionPool({ ...cfgBase, database: process.env.DB_DATABASE_DWVALLEJO }).connect();
   }
   return poolDwVallejo;
+}
+
+/* Sólo para EXEC_SP_DASHBOARD: el parámetro @ajustes es un tipo de tabla
+   (TVP) creado en db_Cegid — SQL Server resuelve ese tipo contra la base
+   "actual" de la conexión, así que el EXEC tiene que hacerse con la
+   conexión posicionada en db_Cegid (no alcanza con calificarlo como
+   "db_Cegid.dbo.SP_..." desde una conexión a dw_vallejo). */
+async function getPoolCegid() {
+  if (!poolCegid) {
+    poolCegid = await new sql.ConnectionPool({ ...cfgBase, database: 'db_Cegid' }).connect();
+  }
+  return poolCegid;
 }
 
 /* ── Sucursales (nombre real, mismo criterio que tablero-objetivos-web) ──── */
@@ -249,6 +266,17 @@ async function cargarObjetivosDelMesDb(mes) {
   return new Map(r.recordset.map((row) => [row.id_sucursal, row]));
 }
 
+/* Días Venta/Margen % ya guardados de verdad — se usa como fallback cuando
+   una sucursal ya se guardó (GUARDAR OBJETIVOS) y el borrador local, que es
+   lo único que leía Totales antes, ya se borró (ver construirVistaMargenes). */
+async function cargarDiasMargenDelMesDb(mes) {
+  const pool = await getPoolDwVallejo();
+  const req = pool.request();
+  req.input('mes', sql.Int, mes);
+  const r = await req.query(DIAS_MARGEN_DEL_MES);
+  return new Map(r.recordset.map((row) => [row.id_sucursal, row]));
+}
+
 function calcular(valores) {
   const uniXCli = Number(valores.uniXCli);
   const tktProm = Number(valores.tktProm);
@@ -266,11 +294,15 @@ function calcular(valores) {
    editable de Comparativas no debe vaciarse aunque falte el margen. */
 async function construirVistaObjetivoProximo() {
   const mes = mesObjetivoAAAAMM();
-  const [sucursales, draft, dbRows, draftMargenes, activasRecientes] = await Promise.all([
+  const [sucursales, draft, dbRows, draftMargenes, dbDiasMargen, activasRecientes] = await Promise.all([
     obtenerSucursalesCacheadas(),
     Promise.resolve(store.leer(mes)),
     cargarObjetivosDelMesDb(mes),
     Promise.resolve(storeMargenes.leer(mes)),
+    cargarDiasMargenDelMesDb(mes).catch((e) => {
+      log('warn', `días/margen guardados falló, no hay fallback a lo ya guardado: ${e.message}`);
+      return new Map();
+    }),
     obtenerSucursalesActivasRecientes().catch((e) => {
       log('warn', `sucursales activas recientes falló, no se filtra por eso: ${e.message}`);
       return null;
@@ -297,8 +329,13 @@ async function construirVistaObjetivoProximo() {
       origen = 'guardado';
     }
     const m = draftMargenes[s.cod_sucursal] || {};
-    const diasVenta = m.diasVenta != null ? Number(m.diasVenta) : null;
-    const margenPct = m.margenPct != null ? Number(m.margenPct) : null;
+    // Si ya se guardó de verdad y no queda nada en el borrador de márgenes,
+    // se recupera de la base — si no, "completo" se apagaba solo apenas se
+    // guardaba (GUARDAR OBJETIVOS borra el borrador), aunque las 5 cosas
+    // ya estaban bien guardadas (28/08/2026).
+    const guardadoDb = origen === 'guardado' ? dbDiasMargen.get(s.id_sucursal) : null;
+    const diasVenta = m.diasVenta != null ? Number(m.diasVenta) : (guardadoDb ? Number(guardadoDb.dias_venta) : null);
+    const margenPct = m.margenPct != null ? Number(m.margenPct) : (guardadoDb ? Number(guardadoDb.margen_pct) : null);
     return {
       cod_sucursal: s.cod_sucursal,
       id_sucursal: s.id_sucursal,
@@ -512,10 +549,14 @@ function calcularTotalGrupo(filas) {
 
 async function construirVistaMargenes() {
   const mes = mesObjetivoAAAAMM();
-  const [vistaObjetivo, supervisores] = await Promise.all([
+  const [vistaObjetivo, supervisores, dbDiasMargen] = await Promise.all([
     construirVistaObjetivoProximo(),
     obtenerSupervisoresCacheados().catch((e) => {
       log('warn', `supervisores falló: ${e.message}`);
+      return new Map();
+    }),
+    cargarDiasMargenDelMesDb(mes).catch((e) => {
+      log('warn', `días/margen guardados falló, no hay fallback a lo ya guardado: ${e.message}`);
       return new Map();
     })
   ]);
@@ -526,8 +567,13 @@ async function construirVistaMargenes() {
     .map((s) => {
       const grupo = CANALES_WEB.has(s.cod_sucursal) ? 'WEB' : s.empresa;
       const m = draft[s.cod_sucursal] || {};
-      const diasVenta = m.diasVenta != null ? Number(m.diasVenta) : null;
-      const margenPct = m.margenPct != null ? Number(m.margenPct) : null;
+      // Si ya se guardó de verdad (GUARDAR OBJETIVOS borra el borrador local)
+      // y no queda nada en el borrador, se recupera de la base — si no,
+      // Totales quedaba en blanco para Días/Margen apenas se guardaba, y
+      // parecía que no se había cargado nada (28/08/2026).
+      const guardadoDb = s.origen === 'guardado' ? dbDiasMargen.get(s.id_sucursal) : null;
+      const diasVenta = m.diasVenta != null ? Number(m.diasVenta) : (guardadoDb ? Number(guardadoDb.dias_venta) : null);
+      const margenPct = m.margenPct != null ? Number(m.margenPct) : (guardadoDb ? Number(guardadoDb.margen_pct) : null);
       const objetivoSinIva = s.valores.ventaSinIva;
       const objetivoConIva = s.valores.ventaConIva;
       const diarioSinIva = diasVenta ? objetivoSinIva / diasVenta : null;
@@ -535,7 +581,10 @@ async function construirVistaMargenes() {
       const margenPesos = margenPct != null ? margenPct * objetivoSinIva : null;
       // Sólo Digitales usa ajuste por sucursal (antes era +1% fijo de grupo);
       // Pueblo/Tesi siguen con el ajuste fijo a nivel grupo (AJUSTE_MARGEN).
-      const ajusteMargen = grupo === 'WEB' ? (m.ajusteMargen != null ? Number(m.ajusteMargen) : AJUSTE_MARGEN.WEB) : null;
+      const ajusteGuardado = guardadoDb && guardadoDb.ajuste_usado != null ? Number(guardadoDb.ajuste_usado) : null;
+      const ajusteMargen = grupo === 'WEB'
+        ? (m.ajusteMargen != null ? Number(m.ajusteMargen) : (ajusteGuardado != null ? ajusteGuardado : AJUSTE_MARGEN.WEB))
+        : null;
       const margenPctAjustadoFila = grupo === 'WEB' && margenPct != null ? margenPct + ajusteMargen : null;
       return {
         cod_sucursal: s.cod_sucursal,
@@ -560,17 +609,21 @@ async function construirVistaMargenes() {
       };
     });
 
+  const draftAjusteGrupo = storeAjusteGrupo.leer(mes);
   const grupos = {};
   for (const g of ['PUEBLO', 'TESI', 'WEB']) {
     const filasGrupo = filas.filter((f) => f.grupo === g);
     const total = calcularTotalGrupo(filasGrupo);
     const esDigital = g === 'WEB';
+    // Pueblo/Tesi: un solo % editable para todo el grupo (antes hardcodeado
+    // en AJUSTE_MARGEN, ahora persistido y con ese valor de fallback).
+    const ajusteGrupo = draftAjusteGrupo[g] != null ? Number(draftAjusteGrupo[g].valor) : AJUSTE_MARGEN[g];
     grupos[g] = {
       sucursales: filasGrupo,
       total,
       // Digitales: el ajuste es por sucursal, no hay un único % de grupo.
-      ajuste: esDigital ? null : AJUSTE_MARGEN[g],
-      margenPctAjustado: esDigital ? total.margenPctAjustadoPorSucursal : total.margenPct + AJUSTE_MARGEN[g]
+      ajuste: esDigital ? null : ajusteGrupo,
+      margenPctAjustado: esDigital ? total.margenPctAjustadoPorSucursal : total.margenPct + ajusteGrupo
     };
   }
 
@@ -618,6 +671,24 @@ app.get('/api/objetivos-proximo/sugerencia', async (_req, res) => {
 });
 
 
+/* Mapa cod_sucursal → ajuste real a aplicar, a partir de construirVistaMargenes()
+   (que ya sabe recuperar de la base el ajuste de una sucursal ya guardada
+   cuyo borrador se borró) — NO leer el borrador crudo acá: una sucursal de
+   Digitales que ya se guardó antes con un ajuste custom pierde ese valor de
+   su borrador (se borra al guardar), así que recalcularlo desde el
+   borrador puro la hacía caer al default apenas se volvía a guardar otra
+   cosa del mismo lote (28/08/2026, bug real reportado por el usuario). */
+async function obtenerAjustesPorSucursal() {
+  const vistaMargenes = await construirVistaMargenes();
+  const mapa = new Map();
+  for (const g of Object.values(vistaMargenes.grupos)) {
+    for (const fila of g.sucursales) {
+      mapa.set(fila.cod_sucursal, fila.grupo === 'WEB' ? fila.ajusteMargen : g.ajuste);
+    }
+  }
+  return mapa;
+}
+
 /* Guarda vía TEMP_BI_APP + SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD
    (db_Cegid) — ya NO escribe dw_vallejo.f_objetivos directo. El dashboard
    llena TEMP_BI_APP con lo cargado en las dos pestañas (Objetivo + Días/
@@ -646,7 +717,9 @@ app.post('/api/objetivos-proximo/guardar', async (req, res) => {
       return res.status(409).json({ error: 'Faltan sucursales sin cargar', faltan: detalle });
     }
 
-    const pool = await getPoolDwVallejo();
+    const ajustesPorSucursal = await obtenerAjustesPorSucursal();
+
+    const pool = await getPoolCegid();
     const tx = new sql.Transaction(pool);
     await tx.begin();
     try {
@@ -676,8 +749,17 @@ app.post('/api/objetivos-proximo/guardar', async (req, res) => {
         await reqIns.query(INSERT_TEMP_BI_APP_FILA);
       }
 
+      const tvpAjustes = new sql.Table('dbo.VentaObjetivo_AjusteMargenType');
+      tvpAjustes.columns.add('SUCURSAL', sql.VarChar(50));
+      tvpAjustes.columns.add('Ajuste', sql.Decimal(18, 4));
+      for (const s of universo) {
+        const ajuste = ajustesPorSucursal.get(s.cod_sucursal);
+        tvpAjustes.rows.add(s.cod_sucursal, ajuste != null ? ajuste : AJUSTE_MARGEN[s.empresa]);
+      }
+
       const reqExec = new sql.Request(tx);
       reqExec.input('mes', sql.Int, mes);
+      reqExec.input('ajustes', tvpAjustes);
       await reqExec.query(EXEC_SP_DASHBOARD);
 
       await tx.commit();
@@ -752,16 +834,34 @@ app.post('/api/margenes-empresa/:cod', async (req, res) => {
   try {
     const { cod } = req.params;
     const { diasVenta, margenPct } = req.body || {};
-    const dv = Number(diasVenta);
-    const mp = Number(margenPct);
-    if (!Number.isFinite(dv) || dv <= 0 || !Number.isFinite(mp) || mp < 0 || mp > 1) {
-      return res.status(400).json({ error: 'diasVenta debe ser > 0 y margenPct una fracción entre 0 y 1' });
-    }
     const mes = mesObjetivoAAAAMM();
-    // guardarUno pisa todo el registro — hay que preservar el ajuste de
-    // Digitales si ya tenía uno cargado, si no se pierde al tocar Días/Margen.
-    const actual = storeMargenes.leer(mes)[cod];
-    storeMargenes.guardarUno(mes, cod, { diasVenta: dv, margenPct: mp, ajusteMargen: actual ? actual.ajusteMargen : undefined });
+    // guardarUno pisa todo el registro — hay que partir de lo ya guardado
+    // (incluido el ajuste de Digitales) y sólo pisar los campos que vinieron
+    // en este POST. Días Venta y Margen% se guardan de forma independiente
+    // (uno puede llegar sin el otro si el usuario carga por columna en vez
+    // de por fila): antes se exigían los dos juntos y el primero en cargarse
+    // se perdía en silencio si el usuario cambiaba de fila/pestaña antes de
+    // completar el segundo.
+    const actual = storeMargenes.leer(mes)[cod] || {};
+    const nuevo = { ...actual };
+    if (diasVenta !== undefined && diasVenta !== null && diasVenta !== '') {
+      const dv = Number(diasVenta);
+      if (!Number.isFinite(dv) || dv <= 0) {
+        return res.status(400).json({ error: 'diasVenta debe ser > 0' });
+      }
+      nuevo.diasVenta = dv;
+    }
+    if (margenPct !== undefined && margenPct !== null && margenPct !== '') {
+      const mp = Number(margenPct);
+      if (!Number.isFinite(mp) || mp < 0 || mp > 1) {
+        return res.status(400).json({ error: 'margenPct debe ser una fracción entre 0 y 1' });
+      }
+      nuevo.margenPct = mp;
+    }
+    if (nuevo.diasVenta == null && nuevo.margenPct == null) {
+      return res.status(400).json({ error: 'nada para guardar' });
+    }
+    storeMargenes.guardarUno(mes, cod, nuevo);
     res.json({ ok: true, mes, cod_sucursal: cod });
   } catch (e) {
     log('error', `margenes-empresa POST: ${e.message}`);
@@ -769,8 +869,8 @@ app.post('/api/margenes-empresa/:cod', async (req, res) => {
   }
 });
 
-/* Ajuste de margen personalizado por sucursal (sólo tiene sentido en
-   Digitales — Pueblo/Tesi siguen con el % fijo por grupo). */
+/* Ajuste de margen personalizado por sucursal (sólo Digitales — Pueblo/Tesi
+   usan el endpoint de grupo de abajo, un solo valor para todas). */
 app.post('/api/margenes-empresa/:cod/ajuste', async (req, res) => {
   try {
     const { cod } = req.params;
@@ -784,6 +884,27 @@ app.post('/api/margenes-empresa/:cod/ajuste', async (req, res) => {
     res.json({ ok: true, mes, cod_sucursal: cod });
   } catch (e) {
     log('error', `margenes-empresa ajuste POST: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* Ajuste de margen a nivel grupo — un solo valor para Pueblo o Tesi (no
+   por sucursal). Digitales no pasa por acá. */
+app.post('/api/margenes-empresa/grupo/:grupo/ajuste', async (req, res) => {
+  try {
+    const { grupo } = req.params;
+    if (grupo !== 'PUEBLO' && grupo !== 'TESI') {
+      return res.status(400).json({ error: 'grupo debe ser PUEBLO o TESI' });
+    }
+    const aj = Number(req.body && req.body.ajuste);
+    if (!Number.isFinite(aj) || aj < -1 || aj > 1) {
+      return res.status(400).json({ error: 'ajuste debe ser una fracción entre -1 y 1' });
+    }
+    const mes = mesObjetivoAAAAMM();
+    storeAjusteGrupo.guardarUno(mes, grupo, { valor: aj });
+    res.json({ ok: true, mes, grupo });
+  } catch (e) {
+    log('error', `margenes-empresa grupo ajuste POST: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });

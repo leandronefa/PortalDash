@@ -11,16 +11,32 @@
 --      f_objetivos_TEMP / f_dias_habiles_TEMP para @anomes) antes de cada
 --      INSERT a la tabla real, para poder re-ejecutar el SP sin duplicar
 --      filas (ej. guardar Pueblo y más tarde guardar Tesi para el mismo mes).
+--   4) (28/08/2026) El ajuste de margen (0% Tesi, +1,5% Pueblo, +1% Digitales
+--      en el original) dejó de ser fijo en el dashboard VentaObjetivo — ahora
+--      se carga un solo % editable por grupo (Pueblo/Tesi) o por sucursal
+--      (Digitales). El SP recibe ese ajuste real por sucursal en el
+--      parámetro @ajustes (tipo de tabla nuevo, sólo para este dashboard) y
+--      lo usa en vez del valor fijo — con el mismo valor de siempre como
+--      fallback si no se manda nada para esa sucursal (por si el SP se
+--      llama a mano sin pasar @ajustes).
 --
--- Resto de la lógica (traducción de siglas viejas, cálculo de obj_margen_por/
--- obj_margen_ope_por con el ajuste fijo por empresa/canal, etc.) es idéntica
--- al original.
+-- Resto de la lógica (traducción de siglas viejas, etc.) es idéntica al
+-- original.
+
+IF TYPE_ID(N'dbo.VentaObjetivo_AjusteMargenType') IS NULL
+    CREATE TYPE dbo.VentaObjetivo_AjusteMargenType AS TABLE (
+        SUCURSAL VARCHAR(50)  NOT NULL,
+        Ajuste   DECIMAL(18,4) NOT NULL
+    );
+GO
 
 IF OBJECT_ID('dbo.SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD', 'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD;
 GO
 
-CREATE PROCEDURE [dbo].[SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD] @anomes INT
+CREATE PROCEDURE [dbo].[SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD]
+    @anomes  INT,
+    @ajustes dbo.VentaObjetivo_AjusteMargenType READONLY
 AS
 
 UPDATE dbo.TEMP_BI_APP
@@ -97,45 +113,13 @@ SELECT @anomes,
                   / CONVERT(DECIMAL(18, 2), REPLACE(tba.Operaciones, ',', '.'))
               ),
        CONVERT(DECIMAL(18, 2), REPLACE(tba.UnidadesOperacion, ',', '.')),
-       CASE
-           WHEN ls.id_empresa = 1
-                AND ls.id_sucursal NOT IN ( 37, 38, 63, 64 ) THEN
-               '0.015' -- pueblo
-           WHEN ls.id_sucursal IN ( 37, 38, 63, 64, 74 ) THEN
-               '0.01'  -- ecommerce
-           ELSE
-               '0.00'  -- tesi
-       END,
-       CASE
-           WHEN ls.id_empresa = 1
-                AND ls.id_sucursal NOT IN ( 37, 38, 63, 64 ) THEN
-               CONVERT(DECIMAL(18, 4), REPLACE(tba.Margen, ',', '.')) + '0.015'
-           WHEN ls.id_sucursal IN ( 37, 38, 63, 64, 74 ) THEN
-               CONVERT(DECIMAL(18, 4), REPLACE(tba.Margen, ',', '.')) + '0.01'
-           ELSE
-               CONVERT(DECIMAL(18, 4), REPLACE(tba.Margen, ',', '.'))
-       END,
-       CASE
-           WHEN ls.id_empresa = 1
-                AND ls.id_sucursal NOT IN ( 37, 38, 63, 64 ) THEN
-               CONVERT(
-                          DECIMAL(18, 2),
-                          CONVERT(DECIMAL(18, 2), REPLACE(tba.[Obj sin IVA], ',', '.'))
-                          * (CONVERT(DECIMAL(18, 4), REPLACE(tba.Margen, ',', '.')) + '0.015')
-                      )
-           WHEN ls.id_sucursal IN ( 37, 38, 63, 64, 74 ) THEN
-               CONVERT(
-                          DECIMAL(18, 2),
-                          CONVERT(DECIMAL(18, 2), REPLACE(tba.[Obj sin IVA], ',', '.'))
-                          * (CONVERT(DECIMAL(18, 4), REPLACE(tba.Margen, ',', '.')) + '0.01')
-                      )
-           ELSE
-               CONVERT(
-                          DECIMAL(18, 2),
-                          CONVERT(DECIMAL(18, 2), REPLACE(tba.[Obj sin IVA], ',', '.'))
-                          * CONVERT(DECIMAL(18, 4), REPLACE(tba.Margen, ',', '.'))
-                      )
-       END,
+       ajusteEfectivo.valor,
+       CONVERT(DECIMAL(18, 4), REPLACE(tba.Margen, ',', '.')) + ajusteEfectivo.valor,
+       CONVERT(
+                  DECIMAL(18, 2),
+                  CONVERT(DECIMAL(18, 2), REPLACE(tba.[Obj sin IVA], ',', '.'))
+                  * (CONVERT(DECIMAL(18, 4), REPLACE(tba.Margen, ',', '.')) + ajusteEfectivo.valor)
+              ),
        '0.00',
        CONVERT(DECIMAL(18, 2), REPLACE(ISNULL(tba.GMROS, 0), ',', '.')),
        '0.00',
@@ -149,6 +133,19 @@ FROM dbo.TEMP_BI_APP AS tba
     INNER JOIN dw_vallejo.dbo.l_sucursal AS ls
         ON ls.cod_sucursal = tba.SUCURSAL COLLATE SQL_Latin1_General_CP1_CI_AS
            OR ls.cod_sucursal = '0' + tba.SUCURSAL COLLATE SQL_Latin1_General_CP1_CI_AS
+    LEFT JOIN @ajustes AS aj
+        ON aj.SUCURSAL = tba.SUCURSAL COLLATE SQL_Latin1_General_CP1_CI_AS
+    CROSS APPLY (
+        SELECT valor = COALESCE(aj.Ajuste,
+            -- Fallback: los mismos valores fijos de siempre, sólo por si el
+            -- SP se llama sin pasar @ajustes para esa sucursal.
+            CASE
+                WHEN ls.id_empresa = 1
+                     AND ls.id_sucursal NOT IN ( 37, 38, 63, 64 ) THEN 0.015 -- pueblo
+                WHEN ls.id_sucursal IN ( 37, 38, 63, 64, 74 ) THEN 0.01      -- ecommerce
+                ELSE 0.00                                                    -- tesi
+            END)
+    ) AS ajusteEfectivo
 WHERE tba.anomes = @anomes;
 
 DELETE FROM dbo.f_dias_habiles_TEMP

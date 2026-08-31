@@ -48,11 +48,15 @@ function mesActualAAAAMM() {
 }
 
 /* El mes editable es SIEMPRE el siguiente al actual — nunca el mes en curso,
-   nunca uno pasado, nunca dos meses adelante. Sigue el reloj del servidor. */
+   nunca uno pasado, nunca dos meses adelante. Sigue el reloj del servidor.
+   OJO: d.setMonth(d.getMonth()+1) sobre un Date de hoy se rompe el último
+   día de cualquier mes de 31 cuyo mes siguiente tenga menos días (ej. 31 de
+   agosto → intenta "31 de septiembre", que no existe, y JS lo desborda a 1
+   de octubre) — construir con día 1 evita el desborde. */
 function mesObjetivoAAAAMM() {
   const d = new Date();
-  d.setMonth(d.getMonth() + 1);
-  return d.getFullYear() * 100 + (d.getMonth() + 1);
+  const siguiente = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  return siguiente.getFullYear() * 100 + (siguiente.getMonth() + 1);
 }
 
 const cfgBase = {

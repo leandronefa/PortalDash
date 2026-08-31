@@ -6,6 +6,8 @@ Guía operativa de este proyecto. Léela antes de actuar. Para detalle profundo:
 
 **Portal de Dashboards**: app **ASP.NET Core 9 / Razor Pages** que centraliza el acceso a dashboards Node.js alojados en distintos puertos del mismo server. Login corporativo vía Stored Procedure de SQL Server + usuario Master local. BD propia en **SQLite** (`App_Data/portal.db`).
 
+**El login NO valida contra usuarios de Windows/AD** (31/08/2026, corrección de un supuesto previo): `CorporateAuthService` llama a `db_Cegid.dbo.SP_VALIDAR_INICIO_SESION_APPS` (ver `appsettings.json` → `CorporateAuth`), que a su vez valida contra una tabla mantenida a mano, **`USUARIOS_APPS`** — no se confirmó en qué base vive exactamente (no está en `db_Cegid`; un intento de buscarla en todas las bases fue bloqueado por el clasificador de seguridad de Claude Code). Dar de alta a alguien nuevo en `portal.db` (`Users`/`Permissions`, vía Administración o script) **no alcanza** para que pueda loguearse si no tiene ya una fila en `USUARIOS_APPS` — eso se carga aparte, a mano, directo por SQL.
+
 - Código: `Program.cs`, `Services/`, `Pages/`, `Data/`, `Models/`.
 - Docs: `README.md`, `ARCHITECTURE.md`, `INSTALL-SERVER.md`, `DEPLOY.md`, `CONTEXT.md`.
 - Despliegue: `deploy/` (portal) y `deploy/dashboards/` (dashboards Node como servicios).

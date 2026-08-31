@@ -47,6 +47,18 @@ function mesActualAAAAMM() {
   return d.getFullYear() * 100 + (d.getMonth() + 1);
 }
 
+/* Histórico limitado a 2 años atrás (31/08/2026, pedido del usuario) —
+   sólo en este tablero (VentaObjetivo original no tiene este límite).
+   Aplica a Comparativas (filtrarGrilla) y a Totales (mes pedido por
+   /api/margenes-empresa?mes=): un mes anterior a este límite no se
+   devuelve. Rolling, no una fecha fija — se recalcula solo con el tiempo. */
+const HISTORICO_MAX_ANIOS = 2;
+function mesLimiteHistorico() {
+  const d = new Date();
+  const limite = new Date(d.getFullYear() - HISTORICO_MAX_ANIOS, d.getMonth(), 1);
+  return limite.getFullYear() * 100 + (limite.getMonth() + 1);
+}
+
 /* El mes editable es SIEMPRE el siguiente al actual — nunca el mes en curso,
    nunca uno pasado, nunca dos meses adelante. Sigue el reloj del servidor.
    OJO: d.setMonth(d.getMonth()+1) sobre un Date de hoy se rompe el último
@@ -789,7 +801,8 @@ function exigirEdicion(req, res, next) {
    SIEMPRE devuelve un Set (0 o 1 elemento) — nunca null — así que estos 4
    filtros se aplican siempre, a diferencia de VentaObjetivo. */
 function filtrarGrilla(data, permitidas) {
-  return { ...data, filas: data.filas.filter((f) => permitidas.has(f.cod_sucursal)) };
+  const limite = mesLimiteHistorico();
+  return { ...data, filas: data.filas.filter((f) => permitidas.has(f.cod_sucursal) && Number(f.AñoMes) >= limite) };
 }
 function filtrarObjetivoProximo(data, permitidas) {
   const sucursales = data.sucursales.filter((s) => permitidas.has(s.cod_sucursal));
@@ -1030,6 +1043,9 @@ app.delete('/api/objetivos-proximo/:cod', exigirEdicion, async (req, res) => {
 app.get('/api/margenes-empresa', async (req, res) => {
   try {
     const mesPedido = req.query.mes ? Number(req.query.mes) : null;
+    if (mesPedido && mesPedido < mesLimiteHistorico()) {
+      return res.status(400).json({ error: 'Mes fuera del histórico permitido (2 años atrás).' });
+    }
     const data = (mesPedido && mesPedido !== mesObjetivoAAAAMM())
       ? await construirVistaMargenesParaMes(mesPedido)
       : await construirVistaMargenes();

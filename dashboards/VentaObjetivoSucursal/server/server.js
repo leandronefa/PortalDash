@@ -4,7 +4,7 @@ const express = require('express');
 const sql = require('mssql');
 const {
   GRILLA, OBJETIVO_MES, SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
-  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, DELETE_OBJETIVO, SUPERVISORES, SUCURSALES_DE_ENCARGADO,
+  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, DELETE_OBJETIVO, SUPERVISORES, SUCURSAL_UNICA_DE_USUARIO,
   DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 } = require('./consultas');
 const { crearStoreObjetivos } = require('./objetivos-store');
@@ -37,21 +37,6 @@ const CANALES_WEB = new Set(['E1', 'E2', 'WE1', 'WE2', 'FK1']);
 // Ajuste fijo (Total → Total ajustado), mismos valores ya validados en
 // tablero-objetivos-web para este tipo de corrección de margen.
 const AJUSTE_MARGEN = { PUEBLO: 0.015, TESI: 0, WEB: 0.01 };
-
-/* Supervisores (28/08/2026): estos 6 usuarios del portal ven SOLO sus
-   sucursales asignadas (TABLEROS.EncargadosSucursalObjetivos) — el resto
-   de los usuarios sigue la lógica de siempre (vallejo/admin edita, el
-   resto ve todo). El username del portal coincide (case-insensitive) con
-   el NombreApellido real de la tabla — confirmado con el usuario, no es
-   una convención general. */
-const SUPERVISORES_RESTRINGIDOS = {
-  lejarque: 'LEjarque',
-  hmoran: 'HMoran',
-  bjorda: 'BJorda',
-  eelizondo: 'EElizondo',
-  jrusnak: 'JRusnak',
-  gastong: 'GastonG'
-};
 
 function log(nivel, msg) {
   console.log(`${new Date().toISOString()} [${nivel}] ${msg}`);
@@ -163,29 +148,38 @@ async function obtenerSucursalesActivasRecientes() {
   return data;
 }
 
-/* ── Sucursales de un supervisor puntual (caché por nombre, cambia poco) ──── */
-const cacheSucursalesSupervisor = new Map();
+/* ── Sucursal única del usuario logueado (caché por usuario, cambia poco) ──
+   VentaObjetivoSucursal (31/08/2026): a diferencia de VentaObjetivo (mapa
+   hardcodeado de supervisores restringidos), este tablero es 100% dinámico
+   — CUALQUIER usuario del portal cuyo username matchee (case-insensitive)
+   la columna Usuario de TABLEROS.EncargadosSucursalObjetivos, Y que tenga
+   EXACTAMENTE una fila ahí, ve sólo esa sucursal. Fail-closed: sin match
+   (no está en la tabla, o tiene más de una fila — esos ya usan el
+   VentaObjetivo original), el Set queda vacío y no ve ninguna sucursal. */
+const cacheSucursalUnica = new Map();
 
-async function obtenerSucursalesDeSupervisor(nombreEncargado) {
-  const cacheado = cacheSucursalesSupervisor.get(nombreEncargado);
+async function sucursalUnicaDelUsuario(usuario) {
+  const key = usuario.toLowerCase();
+  const cacheado = cacheSucursalUnica.get(key);
   if (cacheado && Date.now() - cacheado.ts < TTL_SUCURSALES_MS) return cacheado.data;
 
   const pool = await getPoolTableros();
   const req = pool.request();
-  req.input('nombre', sql.VarChar(200), nombreEncargado);
-  const r = await req.query(SUCURSALES_DE_ENCARGADO);
-  const data = new Set(r.recordset.map((row) => row.cod_sucursal));
-  cacheSucursalesSupervisor.set(nombreEncargado, { data, ts: Date.now() });
-  return data;
+  req.input('usuario', sql.VarChar(200), usuario);
+  const r = await req.query(SUCURSAL_UNICA_DE_USUARIO);
+  const cod = r.recordset.length === 1 ? r.recordset[0].cod_sucursal : null;
+  cacheSucursalUnica.set(key, { data: cod, ts: Date.now() });
+  return cod;
 }
 
-/* Devuelve null (sin restricción) o el Set de cod_sucursal permitidas para
-   el usuario de esta request — sólo los 6 supervisores de arriba tienen
-   restricción; todos los demás (incluido vallejo/admin) ven todo. */
+/* Siempre devuelve un Set (nunca null) — a diferencia del sucursalesPermitidas
+   de VentaObjetivo, acá TODOS los usuarios están restringidos a su única
+   sucursal (o a ninguna, si no matchean). */
 async function sucursalesPermitidas(req) {
-  const nombreEncargado = SUPERVISORES_RESTRINGIDOS[usuarioDe(req).toLowerCase()];
-  if (!nombreEncargado) return null;
-  return obtenerSucursalesDeSupervisor(nombreEncargado);
+  const usuario = usuarioDe(req);
+  if (!usuario) return new Set();
+  const cod = await sucursalUnicaDelUsuario(usuario);
+  return new Set(cod ? [cod] : []);
 }
 
 /* ── Caché en memoria de /api/grilla ──────────────────────────────────────── */
@@ -602,8 +596,9 @@ function calcularTotalGrupo(filas) {
    todavía no cerró). Días Venta/Margen % salen de dw_vallejo — ya están
    guardados ahí de cuando ese mes SÍ era "el mes que viene" y alguien lo
    cargó, así que no hay nada nuevo que calcular, sólo leer. 100% solo
-   lectura: no hay borrador, no hay ajuste editable, no hay guardado — un
-   mes cerrado no se edita nunca, ni para vallejo/admin. */
+   lectura como el resto de este tablero (no hay borrador, no hay ajuste
+   editable, no hay guardado). El filtro por sucursal única (sucursalesPermitidas)
+   se aplica después, igual que en el resto de los endpoints. */
 async function construirVistaMargenesParaMes(anioMes) {
   const [grilla, sucursales, supervisores, dbDiasMargen] = await Promise.all([
     obtenerGrillaCacheada(),
@@ -771,17 +766,15 @@ async function construirVistaMargenes() {
   return { mes, mesNombre: vistaObjetivo.mesNombre, grupos };
 }
 
-/* Permisos por usuario (28/08/2026): el portal (DashboardProxy.cs) manda el
-   username logueado en el header X-Portal-User al reenviar la request. Sólo
-   puede editar quien tenga "vallejo" en el usuario, o el admin del portal —
-   el resto es sólo lectura. Sin el header (ej. pegándole directo al puerto
-   para diagnóstico local) se asume solo lectura, nunca edición. */
+/* VentaObjetivoSucursal es 100% solo lectura — ningún usuario puede cargar
+   ni guardar objetivos acá (el portal (DashboardProxy.cs) manda el username
+   logueado en el header X-Portal-User, se usa sólo para resolver la
+   sucursal única, nunca para habilitar edición). */
 function usuarioDe(req) {
   return String(req.headers['x-portal-user'] || '').trim();
 }
-function puedeEditar(req) {
-  const u = usuarioDe(req).toLowerCase();
-  return u.includes('vallejo') || u === 'admin';
+function puedeEditar(_req) {
+  return false;
 }
 function exigirEdicion(req, res, next) {
   if (!puedeEditar(req)) {
@@ -792,8 +785,9 @@ function exigirEdicion(req, res, next) {
 
 /* Recortan la respuesta ya armada a las sucursales permitidas — nunca
    mutan el objeto original (las 4 vistas de acá salen de cachés
-   compartidas entre requests/usuarios). Se aplican sólo si
-   sucursalesPermitidas(req) devolvió un Set (supervisor restringido). */
+   compartidas entre requests/usuarios). Acá sucursalesPermitidas(req)
+   SIEMPRE devuelve un Set (0 o 1 elemento) — nunca null — así que estos 4
+   filtros se aplican siempre, a diferencia de VentaObjetivo. */
 function filtrarGrilla(data, permitidas) {
   return { ...data, filas: data.filas.filter((f) => permitidas.has(f.cod_sucursal)) };
 }
@@ -828,8 +822,15 @@ function filtrarMargenes(data, permitidas) {
 const app = express();
 app.use(express.json());
 
-app.get('/api/permisos', (req, res) => {
-  res.json({ usuario: usuarioDe(req), puedeEditar: puedeEditar(req) });
+app.get('/api/permisos', async (req, res) => {
+  try {
+    const usuario = usuarioDe(req);
+    const cod_sucursal = usuario ? await sucursalUnicaDelUsuario(usuario) : null;
+    res.json({ usuario, puedeEditar: puedeEditar(req), cod_sucursal });
+  } catch (e) {
+    log('error', `permisos: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/api/salud', async (_req, res) => {

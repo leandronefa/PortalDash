@@ -24,7 +24,8 @@ C:\apps\
     ├── APCWeb\                      ASP.NET Core 9 → servicio "dashapcweb",                  puerto 3013
     ├── ControlCaja\                 Node/Express  → servicio "dashcontrolcaja.exe",          puerto 3014
     ├── VentaObjetivo\server\        Node/Express  → servicio "dashventaobjetivo.exe",        puerto 3016
-    └── StockProveedorMarca\server\  Node/Express  → servicio "dashstockproveedormarca.exe",  puerto 3017
+    ├── StockProveedorMarca\server\  Node/Express  → servicio "dashstockproveedormarca.exe",  puerto 3017
+    └── VentaObjetivoSucursal\server\ Node/Express → servicio "dashventaobjetivosucursal.exe", puerto 3018
 ```
 
 > `\\10.0.0.118\apps` es el recurso compartido que apunta a `C:\apps`. En el server SIEMPRE usar la ruta **local `C:\apps\...`** (los servicios no deben referenciar rutas UNC).
@@ -45,6 +46,7 @@ C:\apps\
 | `dashcontrolcaja.exe` | Dash-ControlCaja | ControlCaja / **3014** | `server.js` |
 | `dashventaobjetivo.exe` | Dash-VentaObjetivo | VentaObjetivo\server / **3016** | `server.js` |
 | `dashstockproveedormarca.exe` | Dash-StockProveedorMarca | StockProveedorMarca\server / **3017** | `server.js` |
+| `dashventaobjetivosucursal.exe` | Dash-VentaObjetivoSucursal | VentaObjetivoSucursal\server / **3018** | `server.js` |
 
 ⚠️ **node-windows registra los servicios con sufijo `.exe`** en el Name real. `Get-Service Dash-*` **no** los encuentra. Usar:
 ```powershell
@@ -59,7 +61,7 @@ Restart-Service dashpromociones.exe
 ```powershell
 # Estado de todo
 Get-Service DashboardPortal, dash* | Format-Table Name, Status
-Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012,3013,3014,3016,3017 | Format-Table LocalPort, OwningProcess
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012,3013,3014,3016,3017,3018 | Format-Table LocalPort, OwningProcess
 
 # Reiniciar / detener (nombre real con .exe)
 Restart-Service dashcomisiones.exe
@@ -256,3 +258,29 @@ Fix: se copió la contraseña real de `sa` desde `dashboards\tablero-objetivos-w
 (el archivo tenía fecha 03/07/2026). Si vuelve a pasar tras un `publish.ps1`/redeploy, revisar que
 el script de publicación no esté pisando el `appsettings.json` de producción con el template del
 repo.
+
+## VentaObjetivoSucursal — clon de solo lectura para encargados de una sucursal (31/08/2026)
+
+Servicio `dashventaobjetivosucursal.exe`, puerto **3018** (solo loopback), carpeta
+`C:\apps\dashboards\VentaObjetivoSucursal\server` — clon de VentaObjetivo (Id 18).
+Registrado en el portal el 31/08/2026 (Dashboard Id **20**); URL vía proxy `/d/20/`.
+
+- 100% solo lectura (`puedeEditar` fijo en `false` en el server, no hay mapa
+  hardcodeado como en VentaObjetivo). Cada usuario ve **sólo su propia
+  sucursal**, resuelta dinámicamente contra `TABLEROS.dbo.EncargadosSucursalObjetivos`
+  (columna `Usuario`, case-insensitive) — sólo si tiene EXACTAMENTE una fila
+  ahí (`HAVING COUNT(*) = 1`); si no matchea, no ve ninguna sucursal
+  (fail-closed). Ver `SUCURSAL_UNICA_DE_USUARIO` en `consultas.js`.
+- Sidebar de Filtros (Empresa/Sucursal) y de Cargar/Editar Objetivos ocultos
+  (la sucursal ya viene fija); en "Totales" se ocultan los botones de grupo
+  (Pueblo/Tesi/Digitales) que no correspondan a la sucursal del usuario.
+- Alta de usuarios+permisos (31/08/2026): se ejecutó una vez un script C#
+  standalone (`Microsoft.Data.Sqlite` directo sobre `App_Data\portal.db`,
+  fuera del repo) que dio de alta el Dashboard y 40 usuarios (encargados de
+  sucursal única según la query de arriba) con permiso SOLO a este
+  dashboard. Se excluyó `JIA` (fila con `Sucursal="*"`, no bridgea a
+  ninguna sucursal real). Se hizo backup de `portal.db`/`-wal`/`-shm` antes
+  de escribir, en `App_Data\backup-antes-ventaobjetivosucursal-<fecha>\`.
+  Si aparecen nuevos encargados de sucursal única más adelante, no hay
+  automatización — hay que repetir el alta a mano (UI de Administración) o
+  un script similar.

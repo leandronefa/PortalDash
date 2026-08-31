@@ -75,7 +75,7 @@
   th:first-child{z-index:3}
   tbody tr:hover td{background:var(--panel2)}
   td.vacio{color:var(--muted)}
-  td.celda-clickable{cursor:pointer}
+  td.celda-clickable{cursor:default}
   td.celda-clickable:hover{outline:1px solid var(--accent);outline-offset:-1px}
   td.obj{color:var(--obj);background:rgba(168,85,247,.08)}
   th.obj{color:var(--obj)}
@@ -156,7 +156,6 @@
   <div class="tab" data-vista="sugerencia" style="display:none">Sugerencia</div>
   <span class="sello" id="sello">cargando…</span>
   <span class="chip" id="soloLecturaChip" style="display:none;color:var(--bad);border-color:var(--bad)">🔒 Solo lectura</span>
-  <button class="btn-ayuda" id="btnAyuda" title="Ayuda">?</button>
   <button class="btn-guardar" id="btnGuardarTodo" disabled>GUARDAR OBJETIVOS</button>
 </div>
 
@@ -165,11 +164,11 @@
     <aside class="filtros">
       <div>
         <h2>Filtros</h2>
-        <div class="grupo" style="margin-bottom:12px">
+        <div class="grupo" id="grupoFiltroEmpresa" style="margin-bottom:12px">
           <label>Empresa</label>
           <select id="fEmpresa"><option value="">Todas</option></select>
         </div>
-        <div class="grupo" style="margin-bottom:12px">
+        <div class="grupo" id="grupoFiltroSucursal" style="margin-bottom:12px">
           <label>Sucursal <span style="font-weight:400;color:var(--muted)">(Ctrl/Cmd+clic para elegir varias)</span></label>
           <select id="fSucursal" multiple size="6"><option value="">Todas</option></select>
         </div>
@@ -185,9 +184,9 @@
         </div>
       </div>
 
-      <hr class="separador">
+      <hr class="separador" id="separadorObjetivo">
 
-      <div>
+      <div id="sidebarObjetivo">
         <div class="obj-sidebar-titulo">
           <h2 style="margin:0">Objetivo <span id="objMesTitulo"></span></h2>
           <span class="progreso" id="objProgreso"></span>
@@ -235,25 +234,6 @@
   </div>
 </section>
 
-<div class="modal-fondo" id="modalAyuda">
-  <div class="modal">
-    <button class="cerrar" id="cerrarAyuda">✕</button>
-    <h2>Cómo leer este tablero</h2>
-    <p>Cada cuadro compara <b>Año</b> (filas) × <b>Mes</b> (columnas) para la sucursal o el grupo elegido en los filtros.</p>
-    <p>La columna <b>morada</b> es el mes en curso: todavía no cerró, así que muestra el <b>objetivo</b> de la sucursal, no venta real. Se reemplaza sola por venta real cuando el mes cierra.</p>
-    <p>La columna <b>azul</b> es el mes que viene. En <b>Operaciones</b>, <b>Tkt Prom</b> y <b>Uni x Cli</b> es editable: escribí ahí el objetivo de la sucursal elegida. <b>Ventas</b> y <b>Unidades</b> se calculan solos (Unidades = Uni x Cli × Operaciones; Venta $ sin IVA = Tkt Prom × Operaciones ÷ 1,21) y se guardan automáticamente al completar los tres campos.</p>
-    <p>Si no elegís sucursal ("Todas"), esa misma columna azul muestra el total de lo ya cargado en la red hasta el momento (o de la empresa elegida).</p>
-    <p><b>Cargar Objetivos</b> / <b>Editar Objetivos</b>, en el panel izquierdo, listan las sucursales sin y con todo cargado — clic para pasar a esa sucursal y editarla. Una sucursal sólo pasa a "Editar" cuando tiene <b>las 5 cosas</b>: Operaciones, Tkt Prom, Uni x Cli (acá) y Días Venta, Margen % (pestaña Totales). No hay forma de borrar una sucursal cargada desde acá — sólo se puede desde <b>"Borrar objetivo de [Empresa]"</b>, con Empresa elegida en el filtro (pide confirmación).</p>
-    <p><b>GUARDAR OBJETIVOS</b> ya no escribe la base directo: carga <code>db_Cegid.TEMP_BI_APP</code> y ejecuta el SP <code>SP_INSERTAR_TEMP_BI_EN_OBJ_PUEBLO_TESI_DASHBOARD</code> (copia del que ya usa el proceso manual), que es quien mueve los datos a las tablas reales. Si hay una Empresa elegida en el filtro, guarda sólo esa empresa (podés guardar Pueblo y seguir cargando Tesi después); sin filtro de empresa, exige tener las sucursales completas.</p>
-    <p>El filtro de <b>Años</b> controla cuántas filas se muestran (por defecto, las 5 más recientes) — sumá o sacá años según necesites.</p>
-    <p>La última columna, <b>Total Año</b>, suma (o promedia, en Tkt Prom y Uni x Cli) los 12 meses de esa fila, incluyendo lo cargado en la columna azul si corresponde.</p>
-    <p>Una sucursal marcada "No aplica" en la columna azul no carga objetivo (deshabilitada a pedido).</p>
-    <p><b>Totales</b> (otra pestaña): toma el Objetivo/Unidades/Operaciones ya cargado acá y les suma Días Venta y Margen % (a mano, por sucursal) para llegar al Margen Total y al "Objetivo Margen Total". En Pueblo y Tesi ese ajuste es un solo % editable arriba de todo, para todas las sucursales del grupo (0% Tesi, +1,5% Pueblo por defecto); en <b>Digitales</b> (canales MELI/WEB/Freekick, separados en bloques Tesi/Pueblo) el ajuste es editable por sucursal, con su propia columna de Margen Total Ajustado.</p>
-    <p>Clic en cualquier celda con datos abre el <b>desglose por sucursal</b> de ese número, respetando los filtros de Empresa/Sucursal aplicados. La fila en cursiva arriba de cada bloque es la <b>variación interanual</b> del mes en curso contra el mismo mes del año pasado.</p>
-    <p><b>Carga a nivel empresa</b> (celda verde): elegí una Empresa (Pueblo o Tesi) y dejá Sucursal en "Todas" — mientras ninguna de sus sucursales tenga el objetivo cargado, esa columna azul queda editable. Al completar los 3 campos se reparte solo entre las sucursales según su participación en la venta $ del mes en curso (real si ya cerró, objetivo si no) — Tkt Prom y Uni x Cli quedan iguales en todas, Operaciones se reparte proporcional. Una vez repartido (o si ya venías cargando por sucursal), la celda vuelve a ser de sólo lectura — los ajustes puntuales se hacen desde Editar Objetivos.</p>
-  </div>
-</div>
-
 <div class="modal-fondo" id="modalDesglose">
   <div class="modal">
     <button class="cerrar" id="cerrarDesglose">✕</button>
@@ -283,19 +263,20 @@ const ID_INPUT = { uniXCli: 'inCeldaUniXCli', tktProm: 'inCeldaTktProm', operaci
 const ID_INPUT_EMPRESA = { uniXCli: 'inEmpresaUniXCli', tktProm: 'inEmpresaTktProm', operaciones: 'inEmpresaOperaciones' };
 const ANIOS_POR_DEFECTO = 3;
 
-const state = { filas: [], anioMesActual: null, filtro: { empresa: '', sucursales: new Set(), anios: new Set() }, puedeEditar: false, usuario: '' };
+const state = { filas: [], anioMesActual: null, filtro: { empresa: '', sucursales: new Set(), anios: new Set() }, puedeEditar: false, usuario: '', cod_sucursal: null };
 
-/* Solo-lectura por usuario (28/08/2026): el portal manda el username en el
-   header X-Portal-User, el server decide con la misma regla de siempre
-   (vallejo o admin = puede editar). Acá sólo se refleja esa decisión en la
-   UI — el server ya rechaza (403) cualquier POST/DELETE si no corresponde,
-   así que esto es sólo para no mostrar controles que van a fallar. */
+/* VentaObjetivoSucursal: 100% solo lectura, siempre — el server (puedeEditar
+   fijo en false) ya rechaza (403) cualquier POST/DELETE, así que esto es
+   sólo para no mostrar controles que van a fallar. `cod_sucursal` es la
+   única sucursal del usuario logueado (resuelta en el server contra
+   TABLEROS.EncargadosSucursalObjetivos), null si no matcheó a nadie. */
 async function fetchPermisos(){
   try {
     const r = await fetch('api/permisos');
     const data = await r.json();
     state.puedeEditar = !!data.puedeEditar;
     state.usuario = data.usuario || '';
+    state.cod_sucursal = data.cod_sucursal || null;
   } catch (e) {
     state.puedeEditar = false; // ante la duda, solo lectura
   }
@@ -306,13 +287,22 @@ async function fetchPermisos(){
   }
 }
 
+/* Este tablero es siempre "una sola sucursal fija" — no tiene sentido dejar
+   elegir Empresa/Sucursal ni mostrar el sidebar de carga de objetivos (son
+   para moverse entre muchas sucursales). Se llama una sola vez, al iniciar. */
+function aplicarModoSucursalUnica(){
+  ['grupoFiltroEmpresa', 'grupoFiltroSucursal', 'separadorObjetivo', 'sidebarObjetivo']
+    .forEach((id) => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  if (state.cod_sucursal) state.filtro.sucursales = new Set([state.cod_sucursal]);
+}
+
 /* Deshabilita todo input/select recién renderizado y oculta los botones que
    modifican datos. Se llama al final de cada render dinámico (tablas,
    sidebar de objetivos, Totales, Sugerencia) — más simple y robusto que
    tocar cada función de armado de HTML una por una. */
 function aplicarModoSoloLectura(){
   if (state.puedeEditar) return;
-  document.querySelectorAll('#tablas input, #peTablaCont input, #sugTablaCont input, .obj-sidebar-titulo ~ * input')
+  document.querySelectorAll('#tablas input, #peStats input, #peTablaCont input, #sugTablaCont input, .obj-sidebar-titulo ~ * input')
     .forEach((el) => { el.disabled = true; el.title = 'Solo lectura' + (state.usuario ? ` (usuario: ${state.usuario})` : ''); });
   const botonesSoloEdicion = ['btnGuardarTodo', 'btnBorrarObjetivoEmpresa', 'btnConfirmarSugerencia'];
   botonesSoloEdicion.forEach((id) => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
@@ -1262,36 +1252,16 @@ function conectarFiltros(){
   });
   document.getElementById('btnGuardarMarcador').addEventListener('click', guardarFiltroComoMarcador);
   document.getElementById('btnBorrarObjetivoEmpresa').addEventListener('click', borrarObjetivoEmpresa);
-  document.getElementById('btnAyuda').addEventListener('click', () => {
-    document.getElementById('modalAyuda').classList.add('abierto');
-  });
-  document.getElementById('cerrarAyuda').addEventListener('click', () => {
-    document.getElementById('modalAyuda').classList.remove('abierto');
-  });
-  document.getElementById('modalAyuda').addEventListener('click', (e) => {
-    if (e.target.id === 'modalAyuda') e.target.classList.remove('abierto');
-  });
   document.getElementById('cerrarDesglose').addEventListener('click', () => {
     document.getElementById('modalDesglose').classList.remove('abierto');
   });
   document.getElementById('modalDesglose').addEventListener('click', (e) => {
     if (e.target.id === 'modalDesglose') e.target.classList.remove('abierto');
   });
-  document.getElementById('tablas').addEventListener('click', (e) => {
-    const td = e.target.closest('td[data-metrica]');
-    if (!td) return;
-    if (modoComparacion) {
-      if (!esCeldaElegibleParaComparar(td)) return; // grisada, no debería llegar acá
-      const anio2 = Number(td.dataset.anio);
-      const mes2 = td.dataset.mes === 'total' ? 'total' : Number(td.dataset.mes);
-      const p1 = { anio: modoComparacion.anio, mes: modoComparacion.mes };
-      const metricaKey = modoComparacion.metricaKey;
-      cancelarModoComparacion();
-      abrirComparacion(metricaKey, p1, { anio: anio2, mes: mes2 });
-      return;
-    }
-    abrirDesglose(td.dataset.metrica, Number(td.dataset.anio), td.dataset.mes);
-  });
+  // El desglose por sucursal no aplica acá: cada usuario ve UNA sola
+  // sucursal, así que el modal no aportaría nada (a diferencia de
+  // VentaObjetivo, donde desglosa la red o un grupo entero). Las celdas
+  // quedan sin click ni cursor de "clickeable" (ver CSS td.celda-clickable).
   document.getElementById('btnCompararPeriodo').addEventListener('click', activarModoComparacion);
   document.getElementById('btnCancelarComparacion').addEventListener('click', cancelarModoComparacion);
   document.addEventListener('keydown', (e) => {
@@ -1404,8 +1374,9 @@ document.getElementById('btnGuardarTodo').addEventListener('click', async () => 
 });
 
 /* ── Pestaña "Por Empresa" ─────────────────────────────────────────────── */
-// mesSeleccionado null = "mes que viene" (editable, comportamiento de
-// siempre); un AAAAMM puntual = mes cerrado, sólo lectura (venta real).
+// mesSeleccionado null = "mes que viene"; un AAAAMM puntual = mes cerrado.
+// Acá da igual para la edición (siempre solo lectura), pero igual se
+// necesita para saber qué mes pedirle al server.
 const peState = { datos: null, grupo: 'PUEBLO', mesSeleccionado: null };
 let peTemporizadorGuardado = {};
 
@@ -1418,32 +1389,21 @@ async function fetchMargenes(){
   peState.datos = await r.json();
 }
 
-/* Selector de mes de "Totales": "mes que viene" (siempre primero, valor
-   vacío) + los meses CERRADOS con venta real en state.filas (ya cargados
-   para Comparativas, no hace falta pedirlos de nuevo), más recientes
-   primero. Se puebla una sola vez — la lista de meses no cambia en la
-   sesión del usuario. */
+/* Mismo selector que VentaObjetivo: "mes que viene" + meses cerrados con
+   venta real en state.filas (ya cargados para Comparativas). */
 function poblarSelectMesPe(){
   const sel = document.getElementById('peSelectMes');
   if (sel.dataset.poblado === '1') return;
   const mesesCerrados = [...new Set(state.filas.filter((f) => !f.esObjetivo).map((f) => f.AñoMes))]
     .sort((a, b) => Number(b) - Number(a));
   const nombreProximo = objState.datos ? objState.datos.mesNombre : 'Mes que viene';
-  sel.innerHTML = `<option value="">${nombreProximo} (editable)</option>` +
+  sel.innerHTML = `<option value="">${nombreProximo}</option>` +
     mesesCerrados.map((m) => `<option value="${m}">${nombreMesAAAAMM(m)}</option>`).join('');
   sel.dataset.poblado = '1';
 }
 function nombreMesAAAAMM(aaaamm){
   const n = Number(aaaamm);
   return `${NOMBRES_MES[(n % 100) - 1]} ${Math.floor(n / 100)}`;
-}
-/* Un mes cerrado (mesSeleccionado != null) es SIEMPRE sólo lectura, sin
-   excepción para vallejo/admin — nunca se edita venta real ya cerrada. */
-function pePuedeEditar(){ return state.puedeEditar && !peState.mesSeleccionado; }
-function aplicarSoloLecturaPorMes(){
-  if (!peState.mesSeleccionado) return; // mes que viene: lo maneja aplicarModoSoloLectura()
-  document.querySelectorAll('#peStats input, #peTablaCont input')
-    .forEach((el) => { el.disabled = true; el.title = 'Mes cerrado — sólo lectura'; });
 }
 
 /* ── Pestaña "Sugerencia" ──────────────────────────────────────────────── */
@@ -1625,11 +1585,32 @@ function conectarTabs(){
   document.getElementById('btnConfirmarSugerencia').addEventListener('click', confirmarSugerenciaEnBloque);
 }
 
+/* Oculta los botones de grupo (Pueblo/Tesi/Digitales) que no tengan la
+   sucursal del usuario, y fija peState.grupo al que sí la tiene — con una
+   sola sucursal en juego no tiene sentido dejar elegir entre grupos vacíos. */
+function ajustarGruposSucursalUnica(){
+  const grupos = peState.datos && peState.datos.grupos;
+  if (!grupos) return;
+  let grupoConDatos = null;
+  document.querySelectorAll('.pe-grupo-btn').forEach((b) => {
+    const g = grupos[b.dataset.grupo];
+    const tieneDatos = !!(g && g.sucursales && g.sucursales.length);
+    b.style.display = tieneDatos ? '' : 'none';
+    if (tieneDatos) grupoConDatos = b.dataset.grupo;
+  });
+  if (grupoConDatos) {
+    peState.grupo = grupoConDatos;
+    document.querySelectorAll('.pe-grupo-btn').forEach((b) =>
+      b.classList.toggle('activo', b.dataset.grupo === grupoConDatos));
+  }
+}
+
 async function cargarPorEmpresa(){
   poblarSelectMesPe();
   try {
     await fetchMargenes();
     document.getElementById('peMes').textContent = peState.datos.mesNombre;
+    ajustarGruposSucursalUnica();
     renderPorEmpresa();
   } catch (e) {
     document.getElementById('peTablaCont').innerHTML = `<p style="padding:16px;color:var(--muted)">Error: ${e.message}</p>`;
@@ -1720,9 +1701,9 @@ function filaPeHtml(s, esDigital){
       <td id="peMargenPesos_${s.cod_sucursal}">${s.margenPesos != null ? fmt(s.margenPesos, 'money') : '—'}</td>
       ${colsAjuste}
       <td>${fmt(s.unidades, 'int')}</td>
-      <td id="peUnidadesDiarias_${s.cod_sucursal}">${s.unidadesDiarias != null ? fmt(s.unidadesDiarias, 'dec2') : '—'}</td>
+      <td>${s.unidadesDiarias != null ? fmt(s.unidadesDiarias, 'dec2') : '—'}</td>
       <td>${fmt(s.operaciones, 'int')}</td>
-      <td id="peOperacionesDiarias_${s.cod_sucursal}">${s.operacionesDiarias != null ? fmt(s.operacionesDiarias, 'dec2') : '—'}</td>
+      <td>${s.operacionesDiarias != null ? fmt(s.operacionesDiarias, 'dec2') : '—'}</td>
       <td>${s.uniXOper.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
     </tr>`;
 }
@@ -1869,8 +1850,6 @@ function onInputPe(cod){
     const diarioSin = s.objetivoSinIva / dias;
     setTxt(`peDiarioSin_${cod}`, fmt(diarioSin, 'money'));
     setTxt(`peDiarioCon_${cod}`, fmt(diarioSin * 1.21, 'money'));
-    setTxt(`peUnidadesDiarias_${cod}`, fmt(s.unidades / dias, 'dec2'));
-    setTxt(`peOperacionesDiarias_${cod}`, fmt(s.operaciones / dias, 'dec2'));
   }
   if (margenPct != null && Number.isFinite(margenPct)) {
     setTxt(`peMargenPesos_${cod}`, fmt(margenPct * s.objetivoSinIva, 'money'));
@@ -1947,8 +1926,6 @@ async function guardarPe(cod){
     if (s.diasVenta != null) {
       s.diarioSinIva = s.objetivoSinIva / s.diasVenta;
       s.diarioConIva = s.diarioSinIva * 1.21;
-      s.unidadesDiarias = s.unidades / s.diasVenta;
-      s.operacionesDiarias = s.operaciones / s.diasVenta;
     }
     if (s.margenPct != null) s.margenPesos = s.margenPct * s.objetivoSinIva;
     if (s.ajusteMargen != null && s.margenPct != null) s.margenPctAjustadoFila = s.margenPct + s.ajusteMargen;
@@ -2009,7 +1986,6 @@ function calcularTotalGrupoCliente(filas){
 function renderPorEmpresa(){
   renderPeStats();
   renderPeTabla();
-  aplicarSoloLecturaPorMes();
 }
 
 /* Envuelve los 4 render que crean inputs, para que siempre terminen
@@ -2026,6 +2002,7 @@ async function iniciar(){
   conectarTabs();
   try {
     await Promise.all([fetchGrilla(), fetchObjetivos(), fetchPermisos()]);
+    aplicarModoSucursalUnica();
     inicializarAniosPorDefecto();
     sincronizarFiltros();
     renderListaAnios();

@@ -4,7 +4,7 @@ const express = require('express');
 const sql = require('mssql');
 const {
   GRILLA, OBJETIVO_MES, SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
-  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, DELETE_OBJETIVO, SUPERVISORES,
+  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, DELETE_OBJETIVO, SUPERVISORES, SUCURSALES_DE_ENCARGADO,
   DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 } = require('./consultas');
 const { crearStoreObjetivos } = require('./objetivos-store');
@@ -37,6 +37,21 @@ const CANALES_WEB = new Set(['E1', 'E2', 'WE1', 'WE2', 'FK1']);
 // Ajuste fijo (Total → Total ajustado), mismos valores ya validados en
 // tablero-objetivos-web para este tipo de corrección de margen.
 const AJUSTE_MARGEN = { PUEBLO: 0.015, TESI: 0, WEB: 0.01 };
+
+/* Supervisores (28/08/2026): estos 6 usuarios del portal ven SOLO sus
+   sucursales asignadas (TABLEROS.EncargadosSucursalObjetivos) — el resto
+   de los usuarios sigue la lógica de siempre (vallejo/admin edita, el
+   resto ve todo). El username del portal coincide (case-insensitive) con
+   el NombreApellido real de la tabla — confirmado con el usuario, no es
+   una convención general. */
+const SUPERVISORES_RESTRINGIDOS = {
+  lejarque: 'LEjarque',
+  hmoran: 'HMoran',
+  bjorda: 'BJorda',
+  eelizondo: 'EElizondo',
+  jrusnak: 'JRusnak',
+  gastong: 'GastonG'
+};
 
 function log(nivel, msg) {
   console.log(`${new Date().toISOString()} [${nivel}] ${msg}`);
@@ -146,6 +161,31 @@ async function obtenerSucursalesActivasRecientes() {
   const data = await cargarSucursalesActivasRecientes();
   cacheSucursalesActivas = { data, ts: Date.now() };
   return data;
+}
+
+/* ── Sucursales de un supervisor puntual (caché por nombre, cambia poco) ──── */
+const cacheSucursalesSupervisor = new Map();
+
+async function obtenerSucursalesDeSupervisor(nombreEncargado) {
+  const cacheado = cacheSucursalesSupervisor.get(nombreEncargado);
+  if (cacheado && Date.now() - cacheado.ts < TTL_SUCURSALES_MS) return cacheado.data;
+
+  const pool = await getPoolTableros();
+  const req = pool.request();
+  req.input('nombre', sql.VarChar(200), nombreEncargado);
+  const r = await req.query(SUCURSALES_DE_ENCARGADO);
+  const data = new Set(r.recordset.map((row) => row.cod_sucursal));
+  cacheSucursalesSupervisor.set(nombreEncargado, { data, ts: Date.now() });
+  return data;
+}
+
+/* Devuelve null (sin restricción) o el Set de cod_sucursal permitidas para
+   el usuario de esta request — sólo los 6 supervisores de arriba tienen
+   restricción; todos los demás (incluido vallejo/admin) ven todo. */
+async function sucursalesPermitidas(req) {
+  const nombreEncargado = SUPERVISORES_RESTRINGIDOS[usuarioDe(req).toLowerCase()];
+  if (!nombreEncargado) return null;
+  return obtenerSucursalesDeSupervisor(nombreEncargado);
 }
 
 /* ── Caché en memoria de /api/grilla ──────────────────────────────────────── */
@@ -653,6 +693,41 @@ function exigirEdicion(req, res, next) {
   next();
 }
 
+/* Recortan la respuesta ya armada a las sucursales permitidas — nunca
+   mutan el objeto original (las 4 vistas de acá salen de cachés
+   compartidas entre requests/usuarios). Se aplican sólo si
+   sucursalesPermitidas(req) devolvió un Set (supervisor restringido). */
+function filtrarGrilla(data, permitidas) {
+  return { ...data, filas: data.filas.filter((f) => permitidas.has(f.cod_sucursal)) };
+}
+function filtrarObjetivoProximo(data, permitidas) {
+  const sucursales = data.sucursales.filter((s) => permitidas.has(s.cod_sucursal));
+  const totalUniverso = sucursales.length;
+  const totalCargadas = sucursales.filter((s) => s.cargado).length;
+  const totalCompletas = sucursales.filter((s) => s.completo).length;
+  return {
+    ...data, sucursales, totalUniverso, totalCargadas, totalCompletas,
+    listoParaGuardar: totalUniverso > 0 && totalCompletas === totalUniverso
+  };
+}
+function filtrarSugerencia(data, permitidas) {
+  return { ...data, sucursales: data.sucursales.filter((s) => permitidas.has(s.cod_sucursal)) };
+}
+function filtrarMargenes(data, permitidas) {
+  const grupos = {};
+  for (const [g, val] of Object.entries(data.grupos)) {
+    const sucursales = val.sucursales.filter((s) => permitidas.has(s.cod_sucursal));
+    const total = calcularTotalGrupo(sucursales);
+    const esDigital = g === 'WEB';
+    grupos[g] = {
+      sucursales, total,
+      ajuste: val.ajuste,
+      margenPctAjustado: esDigital ? total.margenPctAjustadoPorSucursal : total.margenPct + val.ajuste
+    };
+  }
+  return { ...data, grupos };
+}
+
 const app = express();
 app.use(express.json());
 
@@ -670,27 +745,33 @@ app.get('/api/salud', async (_req, res) => {
   }
 });
 
-app.get('/api/grilla', async (_req, res) => {
+app.get('/api/grilla', async (req, res) => {
   try {
-    res.json(await obtenerGrillaCacheada());
+    const data = await obtenerGrillaCacheada();
+    const permitidas = await sucursalesPermitidas(req);
+    res.json(permitidas ? filtrarGrilla(data, permitidas) : data);
   } catch (e) {
     log('error', `grilla: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });
 
-app.get('/api/objetivos-proximo', async (_req, res) => {
+app.get('/api/objetivos-proximo', async (req, res) => {
   try {
-    res.json(await construirVistaObjetivoProximo());
+    const data = await construirVistaObjetivoProximo();
+    const permitidas = await sucursalesPermitidas(req);
+    res.json(permitidas ? filtrarObjetivoProximo(data, permitidas) : data);
   } catch (e) {
     log('error', `objetivos-proximo: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });
 
-app.get('/api/objetivos-proximo/sugerencia', async (_req, res) => {
+app.get('/api/objetivos-proximo/sugerencia', async (req, res) => {
   try {
-    res.json(await construirVistaSugerencia());
+    const data = await construirVistaSugerencia();
+    const permitidas = await sucursalesPermitidas(req);
+    res.json(permitidas ? filtrarSugerencia(data, permitidas) : data);
   } catch (e) {
     log('error', `objetivos-proximo sugerencia: ${e.message}`);
     res.status(500).json({ error: e.message });
@@ -848,9 +929,11 @@ app.delete('/api/objetivos-proximo/:cod', exigirEdicion, async (req, res) => {
   }
 });
 
-app.get('/api/margenes-empresa', async (_req, res) => {
+app.get('/api/margenes-empresa', async (req, res) => {
   try {
-    res.json(await construirVistaMargenes());
+    const data = await construirVistaMargenes();
+    const permitidas = await sucursalesPermitidas(req);
+    res.json(permitidas ? filtrarMargenes(data, permitidas) : data);
   } catch (e) {
     log('error', `margenes-empresa: ${e.message}`);
     res.status(500).json({ error: e.message });

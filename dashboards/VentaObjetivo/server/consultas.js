@@ -272,9 +272,39 @@ const SUPERVISORES = `
   GROUP BY cod_sucursal;
 `;
 
+/* Sucursales de UN encargado puntual (28/08/2026) — para el modo
+   "supervisor" que sólo ve sus propias sucursales. Mismo bridge físicas +
+   canales que SUPERVISORES, pero filtrado por @nombre en vez de agrupar
+   todos los encargados de >2 sucursales. */
+const SUCURSALES_DE_ENCARGADO = `
+  WITH raw AS (
+    SELECT NombreApellido AS Encargado, Sucursal AS Codsuc
+    FROM TABLEROS.dbo.EncargadosSucursalObjetivos
+    WHERE NombreApellido = @nombre
+  ),
+  fisicas AS (
+    SELECT ls.cod_sucursal
+    FROM raw r
+    JOIN ${T.puenteId} ls
+      ON  r.Codsuc NOT LIKE '%[^0-9]%'
+      AND ls.cod_sucursal NOT LIKE '%[^0-9]%'
+      AND CASE WHEN r.Codsuc NOT LIKE '%[^0-9]%' THEN CAST(r.Codsuc AS INT) END
+        = CASE WHEN ls.cod_sucursal NOT LIKE '%[^0-9]%' THEN CAST(ls.cod_sucursal AS INT) END
+  ),
+  canales AS (
+    SELECT
+      CASE Codsuc WHEN 'ML1' THEN 'E1' WHEN 'ML2' THEN 'E2' WHEN 'WEB' THEN 'WE1' WHEN 'WEB2' THEN 'WE2' WHEN 'FK' THEN 'FK1' END AS cod_sucursal
+    FROM raw
+    WHERE Codsuc IN ('ML1','ML2','WEB','WEB2','FK')
+  )
+  SELECT cod_sucursal FROM fisicas WHERE cod_sucursal IS NOT NULL
+  UNION
+  SELECT cod_sucursal FROM canales WHERE cod_sucursal IS NOT NULL;
+`;
+
 module.exports = {
   T, GRILLA, OBJETIVO_MES, CANAL_A_COD,
   SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
   OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, INSERT_OBJETIVO, UPDATE_OBJETIVO, DELETE_OBJETIVO,
-  SUPERVISORES, DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
+  SUPERVISORES, SUCURSALES_DE_ENCARGADO, DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 };

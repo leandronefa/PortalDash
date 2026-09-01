@@ -22,6 +22,7 @@ C:\apps\
 - `C:\apps\portal-src\CLAUDE.md` → guía del proyecto portal (build/run, gotchas).
 - `C:\apps\portal-src\CONTEXT.md` → contexto completo del portal.
 - `C:\apps\dashboards\CLAUDE.md` → operación y particularidades de cada dashboard.
+- `C:\apps\NUEVO-TABLERO.md` → **guía paso a paso para agregar un dashboard nuevo** (estructura de la app, puerto, servicio, alta en el portal, permisos, gotchas ya vividos).
 
 ## Acceso a los dashboards: SOLO vía el portal
 

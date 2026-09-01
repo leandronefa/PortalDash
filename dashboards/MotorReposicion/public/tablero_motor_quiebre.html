@@ -2246,8 +2246,10 @@ function calcularRangoVirtual({ scrollTop, altoViewport, altoFila, totalFilas, o
   if (totalFilas <= 0 || altoFila <= 0) return { desde: 0, hasta: 0, paddingArriba: 0, paddingAbajo: 0 };
   const primeraVisible = Math.floor(scrollTop / altoFila);
   const filasVisibles = Math.ceil(altoViewport / altoFila) + 1; // +1: la fila parcialmente visible al fondo
-  const desde = Math.max(0, primeraVisible - overscan);
   const hasta = Math.min(totalFilas, primeraVisible + filasVisibles + overscan);
+  // clamp extra a totalFilas/hasta (ademas del piso en 0): con un scrollTop fuera de rango (p.ej.
+  // tras reducirse totalFilas) desde nunca deberia poder superar el techo ni cruzarse con hasta.
+  const desde = Math.max(0, Math.min(primeraVisible - overscan, totalFilas, hasta));
   return {
     desde,
     hasta,
@@ -3426,17 +3428,26 @@ function renderVentanaComprar(modelo, color){
 }
 
 // Alto real de una fila de "Ver en detalle", medido EN VIVO (nunca adivinado -- mismo criterio ya
-// usado para --modal-hd-alto/--tpv-detheader-alto en otras partes de este archivo). Es constante
-// mientras dure la apertura del modal (mismo CSS/contenido de fila siempre, sin wrap de texto) --
-// se remide solo al reabrir el modal (ver abrirVerDetalle), por si cambio el zoom/fuente entre
-// aperturas.
+// usado para --modal-hd-alto/--tpv-detheader-alto en otras partes de este archivo). Se ASUME
+// constante mientras dure la apertura del modal (no está garantizado por el CSS: .pcg-suc/.pcg-rot/
+// .pcg-cant tienen overflow-wrap:break-word en columnas de ancho fijo y podrian ocasionalmente
+// pasar a dos lineas con un valor largo) -- si una fila puntual llegara a wrappear, la consecuencia
+// es un corrimiento acotado (en pixeles) de la ventana virtual, nunca filas perdidas o mal
+// calculadas. Se remide solo al reabrir el modal (ver abrirVerDetalle), por si cambio el
+// zoom/fuente entre aperturas.
+// Incluye el gap entre filas (.prio-grid es un flex column con gap -- ver CSS), leido en vivo
+// (nunca hardcodeado), porque el paso real entre el techo de una fila y la siguiente es
+// alto-de-fila + gap, no solo el alto de la fila.
 let altoFilaDetalleCache = null;
 function medirAltoFilaDetalle(primeraFila, listaEl) {
   if (altoFilaDetalleCache != null) return altoFilaDetalleCache;
   if (!primeraFila) return 0;
   listaEl.innerHTML = filaBarraHtml(primeraFila, primeraFila.estadoFinal);
-  altoFilaDetalleCache = listaEl.firstElementChild.getBoundingClientRect().height;
-  return altoFilaDetalleCache;
+  const alto = listaEl.firstElementChild.getBoundingClientRect().height;
+  const gap = parseFloat(getComputedStyle(listaEl).rowGap) || 0;
+  const pitch = alto + gap;
+  if (pitch > 0) altoFilaDetalleCache = pitch; // solo cachear una medicion valida (0/negativo no es un alto real)
+  return pitch;
 }
 
 function renderVerDetalle(){
@@ -3499,6 +3510,26 @@ function renderVerDetalle(){
   // simula con padding para que la scrollbar se comporte igual que con todas las filas reales.
   const altoFila = medirAltoFilaDetalle(ordenado[0], listaEl);
   function repintarVentana(){
+    // El mensaje "Sin artículos" depende SOLO de que ordenado (la lista real, ya filtrada) este
+    // vacia -- nunca de que la porcion pintada (el slice virtual) salga vacia, porque eso tambien
+    // puede pasar por un bug de medicion (ver mas abajo) y mostraria "no hay nada" con miles de
+    // filas reales esperando pintarse.
+    if (ordenado.length === 0) {
+      listaEl.style.paddingTop = '0px';
+      listaEl.style.paddingBottom = '0px';
+      listaEl.innerHTML = `<div style="padding:28px;text-align:center;color:#9aa7ad">Sin artículos ${sinFiltroTxt}.</div>`;
+      return;
+    }
+    if (!(altoFila > 0)) {
+      // altoFila invalido (0 o negativo) -- deberia ser rarisimo, solo si medirAltoFilaDetalle no
+      // pudo medir un alto real. Calcular el rango virtual con un alto inventado rompe la ventana
+      // (potencialmente un slice vacio con filas reales existentes), asi que en este caso se pinta
+      // TODA la lista de una vez (mismo comportamiento que antes de virtualizar) en vez de adivinar.
+      listaEl.style.paddingTop = '0px';
+      listaEl.style.paddingBottom = '0px';
+      listaEl.innerHTML = ordenado.map(r=>filaBarraHtml(r, r.estadoFinal)).join("");
+      return;
+    }
     const { desde, hasta, paddingArriba, paddingAbajo } = calcularRangoVirtual({
       scrollTop: listaEl.scrollTop,
       altoViewport: listaEl.clientHeight,
@@ -3507,8 +3538,7 @@ function renderVerDetalle(){
     });
     listaEl.style.paddingTop = paddingArriba + 'px';
     listaEl.style.paddingBottom = paddingAbajo + 'px';
-    listaEl.innerHTML = ordenado.slice(desde, hasta).map(r=>filaBarraHtml(r, r.estadoFinal)).join("")
-      || `<div style="padding:28px;text-align:center;color:#9aa7ad">Sin artículos ${sinFiltroTxt}.</div>`;
+    listaEl.innerHTML = ordenado.slice(desde, hasta).map(r=>filaBarraHtml(r, r.estadoFinal)).join("");
   }
   repintarVentana();
   // requestAnimationFrame: evita repintar mas de una vez por frame si el navegador dispara varios

@@ -1202,65 +1202,81 @@ const cacheQuiebre = new Map();
 // precalentado del combo default (ver precalentarComboDefaultSiHaceFalta, mas abajo) sin duplicar
 // la logica de cache/consulta pesada. Comportamiento IDENTICO al que tenia inline: mismo cache,
 // misma clave, misma consulta.
+// claveCache -> Promise<dataPesada> mientras esa consulta esta en curso -- evita que dos llamadas
+// concurrentes con la misma clave (ej. el precalentado y un usuario real pidiendo lo mismo al
+// mismo tiempo, o dos usuarios en simultaneo) disparen la consulta pesada dos veces.
+const enVueloQuiebre = new Map();
+
 async function obtenerDataPesadaQuiebre({ fechaDesde, fechaHasta, riesgoDias, ucFechaDesde, ucFechaHasta }) {
   const claveCache = `${fechaDesde.toISOString().slice(0, 10)}|${fechaHasta.toISOString().slice(0, 10)}|${riesgoDias}|${ucFechaDesde.toISOString().slice(0, 10)}|${ucFechaHasta.toISOString().slice(0, 10)}`;
   const refrescoQ = ultimoRefrescoEsperado();
   const cacheado = cacheQuiebre.get(claveCache);
   if (cacheado && cacheado.computedAt >= refrescoQ) return cacheado.data;
 
-  const pool = await poolPromise;
-  const fechaDesdePedidos = new Date();
-  fechaDesdePedidos.setMonth(fechaDesdePedidos.getMonth() - PEDIDOS_ANTIGUEDAD_MESES);
-  const fechaDesdeTransito = new Date();
-  fechaDesdeTransito.setDate(fechaDesdeTransito.getDate() - TRANSITO_VIGENCIA_DIAS);
+  if (enVueloQuiebre.has(claveCache)) return enVueloQuiebre.get(claveCache);
 
-  const result = await pool
-    .request()
-    .input('fechaDesde', sql.Date, fechaDesde)
-    .input('fechaHasta', sql.Date, fechaHasta)
-    .input('fechaDesdePedidos', sql.Date, fechaDesdePedidos)
-    .input('fechaDesdeTransito', sql.Date, fechaDesdeTransito)
-    .input('riesgoDias', sql.Int, riesgoDias)
-    .input('ucFechaDesde', sql.Date, ucFechaDesde)
-    .input('ucFechaHasta', sql.Date, ucFechaHasta)
-    .query(QUERY_QUIEBRE_DETALLE);
+  const promesa = (async () => {
+    const pool = await poolPromise;
+    const fechaDesdePedidos = new Date();
+    fechaDesdePedidos.setMonth(fechaDesdePedidos.getMonth() - PEDIDOS_ANTIGUEDAD_MESES);
+    const fechaDesdeTransito = new Date();
+    fechaDesdeTransito.setDate(fechaDesdeTransito.getDate() - TRANSITO_VIGENCIA_DIAS);
 
-  const resumenRows = result.recordsets[0] || [];
-  const detalleRows = result.recordsets[1] || [];
-  const porArticuloRows = result.recordsets[2] || [];
-  const catalogoRows = result.recordsets[3] || [];
+    const result = await pool
+      .request()
+      .input('fechaDesde', sql.Date, fechaDesde)
+      .input('fechaHasta', sql.Date, fechaHasta)
+      .input('fechaDesdePedidos', sql.Date, fechaDesdePedidos)
+      .input('fechaDesdeTransito', sql.Date, fechaDesdeTransito)
+      .input('riesgoDias', sql.Int, riesgoDias)
+      .input('ucFechaDesde', sql.Date, ucFechaDesde)
+      .input('ucFechaHasta', sql.Date, ucFechaHasta)
+      .query(QUERY_QUIEBRE_DETALLE);
 
-  const resumenTotal = {};
-  resumenRows.forEach((r) => {
-    resumenTotal[r.Empresa] = {
+    const resumenRows = result.recordsets[0] || [];
+    const detalleRows = result.recordsets[1] || [];
+    const porArticuloRows = result.recordsets[2] || [];
+    const catalogoRows = result.recordsets[3] || [];
+
+    const resumenTotal = {};
+    resumenRows.forEach((r) => {
+      resumenTotal[r.Empresa] = {
+        quiebres: r.Quiebres,
+        riesgos: r.Riesgos,
+        ok: r.Ok,
+        impactoQuiebre: r.ImpactoQuiebre,
+        nroSucursales: r.NroSucursales,
+      };
+    });
+
+    const catalogo = construirCatalogoDesdeFilas(catalogoRows);
+    const detalle = construirDetalleDesdeFilas(detalleRows);
+    const porArticulo = porArticuloRows.map((r) => ({
+      empresa: r.Empresa,
+      codArticulo: r.CodArticulo,
+      color: r.COLOR,
+      sku: r.Sku,
       quiebres: r.Quiebres,
       riesgos: r.Riesgos,
       ok: r.Ok,
       impactoQuiebre: r.ImpactoQuiebre,
-      nroSucursales: r.NroSucursales,
-    };
-  });
+    }));
 
-  const catalogo = construirCatalogoDesdeFilas(catalogoRows);
-  const detalle = construirDetalleDesdeFilas(detalleRows);
-  const porArticulo = porArticuloRows.map((r) => ({
-    empresa: r.Empresa,
-    codArticulo: r.CodArticulo,
-    color: r.COLOR,
-    sku: r.Sku,
-    quiebres: r.Quiebres,
-    riesgos: r.Riesgos,
-    ok: r.Ok,
-    impactoQuiebre: r.ImpactoQuiebre,
-  }));
+    const dataPesada = { resumenTotal, catalogo, detalleColumnas: DETALLE_COLUMNAS, detalle, porArticulo, fechaDesde, fechaHasta, riesgoDias, ucFechaDesde, ucFechaHasta };
 
-  const dataPesada = { resumenTotal, catalogo, detalleColumnas: DETALLE_COLUMNAS, detalle, porArticulo, fechaDesde, fechaHasta, riesgoDias, ucFechaDesde, ucFechaHasta };
+    for (const [clave, valor] of cacheQuiebre) {
+      if (valor.computedAt < refrescoQ) cacheQuiebre.delete(clave);
+    }
+    cacheQuiebre.set(claveCache, { data: dataPesada, computedAt: new Date() });
+    return dataPesada;
+  })();
 
-  for (const [clave, valor] of cacheQuiebre) {
-    if (valor.computedAt < refrescoQ) cacheQuiebre.delete(clave);
+  enVueloQuiebre.set(claveCache, promesa);
+  try {
+    return await promesa;
+  } finally {
+    enVueloQuiebre.delete(claveCache);
   }
-  cacheQuiebre.set(claveCache, { data: dataPesada, computedAt: new Date() });
-  return dataPesada;
 }
 
 app.get('/api/tablero/quiebre', async (req, res) => {
@@ -1633,42 +1649,50 @@ function ultimoRefrescoEsperado() {
 }
 
 // Precalentado del combo de fechas por defecto (2026-09-01, a pedido explicito -- ver spec
-// docs/superpowers/specs/2026-09-01-rendimiento-tablero-design.md): el default del frontend es
-// Periodo de ventas = ultimos 90 dias terminando ayer, Fecha de ultima compra = ultimos 365 dias
-// (mismos defaults que ya usa el handler cuando no vienen esos parametros en el query). Sin esto,
-// la PRIMERA carga del dia de cualquier usuario paga la consulta pesada en frio (~15-25s, ver
-// comentario junto a QUERY_QUIEBRE_DETALLE). obtenerDataPesadaQuiebre ya es idempotente (si ya hay
-// cache tibia, no vuelve a pegarle a SQL Server), asi que llamarla de mas acá adentro no tiene
-// costo una vez que ya se precalento.
-const RIESGO_DIAS_DEFAULT = 3; // mismo default que usa el handler cuando no viene riesgoDias en el query
-let precalentandoDefault = false;
+// docs/superpowers/specs/2026-09-01-rendimiento-tablero-design.md): el combo que hay que
+// precalentar es el que el FRONTEND realmente pide en su primera carga (tablero_motor_quiebre.html),
+// no el fallback interno del handler para cuando el query viene sin parametros (ese fallback es
+// codigo practicamente muerto desde un navegador real -- solo se pisa con un curl manual sin
+// parametros). El frontend SIEMPRE manda desde/hasta/riesgoDias explicitos:
+//   - horizIHasta = HIST_DIAS-2 -> Periodo de ventas termina AYER, nunca hoy (el dia en curso tiene
+//     ventas todavia sin cerrar -- ver el comentario junto a horizIHasta y a maxFechaVenta).
+//   - horizIDesde = HIST_DIAS-91 -> 90 dias terminando ayer (no terminando hoy).
+//   - CFG.diasAlertaRiesgo = 15 -> default y minimo de "Alertar RIESGO si cobertura <", a pedido
+//     explicito (2026-09-01).
+// Fecha de ultima compra (ucDesde/ucHasta) SI coincide con el fallback del handler (365 dias
+// terminando hoy), no hace falta tocar esa parte. Sin este precalentado con la clave correcta, la
+// PRIMERA carga del dia de cualquier usuario paga la consulta pesada en frio (~15-25s, ver
+// comentario junto a QUERY_QUIEBRE_DETALLE) -- obtenerDataPesadaQuiebre ya es idempotente (si ya
+// hay cache tibia, no vuelve a pegarle a SQL Server), asi que llamarla de mas aca adentro no tiene
+// costo una vez que ya se precalento. El de-dup en vuelo (enVueloQuiebre, mas arriba) cubre el
+// caso de que esta funcion y un usuario real pidan la misma clave al mismo tiempo, asi que no hace
+// falta un flag propio aca para evitar solapamiento.
+const RIESGO_DIAS_DEFAULT_FRONTEND = 15; // CFG.diasAlertaRiesgo en tablero_motor_quiebre.html
 async function precalentarComboDefaultSiHaceFalta() {
-  if (USE_MOCK || precalentandoDefault) return;
+  if (USE_MOCK) return;
   const ahora = new Date();
   const hoyRefresco = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), HORA_REFRESCO, MINUTO_REFRESCO, 0, 0);
   if (ahora < hoyRefresco) return; // el precalculo nocturno de HOY todavia no corrio -- esperar
 
   const hastaDefault = new Date();
+  hastaDefault.setDate(hastaDefault.getDate() - 1); // ayer -- el frontend nunca pide "hoy" (ventas del dia en curso sin cerrar, ver tablero_motor_quiebre.html)
   const desdeDefault = new Date();
-  desdeDefault.setDate(desdeDefault.getDate() - 89);
+  desdeDefault.setDate(desdeDefault.getDate() - 90); // 90 dias terminando ayer, igual que horizIDesde/horizIHasta del frontend
   const ucHastaDefault = new Date();
   const ucDesdeDefault = new Date();
   ucDesdeDefault.setDate(ucDesdeDefault.getDate() - 364);
 
-  precalentandoDefault = true;
   try {
     await obtenerDataPesadaQuiebre({
       fechaDesde: desdeDefault,
       fechaHasta: hastaDefault,
-      riesgoDias: RIESGO_DIAS_DEFAULT,
+      riesgoDias: RIESGO_DIAS_DEFAULT_FRONTEND,
       ucFechaDesde: ucDesdeDefault,
       ucFechaHasta: ucHastaDefault,
     });
     console.log('Precalentado combo default de /api/tablero/quiebre OK -', new Date().toISOString());
   } catch (err) {
     console.error('Error al precalentar combo default de /api/tablero/quiebre:', err);
-  } finally {
-    precalentandoDefault = false;
   }
 }
 setInterval(precalentarComboDefaultSiHaceFalta, 5 * 60 * 1000);

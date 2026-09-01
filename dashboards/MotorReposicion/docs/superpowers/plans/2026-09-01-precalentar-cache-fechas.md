@@ -204,7 +204,7 @@ Este chequeo solo tiene efecto observable si se corre después de las 06:30 hora
 
 1. Temporalmente, cambiar `if (ahora < hoyRefresco) return;` por `if (false) return;` en una copia de trabajo, para forzar la corrida sin importar la hora.
 2. Arrancar el servidor (`npm start`) y observar la consola: debe aparecer `Precalentado combo default de /api/tablero/quiebre OK - <timestamp>` unos segundos después de arrancar (el tiempo que tarde la consulta real si era cache-miss).
-3. Confirmar que una llamada inmediatamente después con el combo default (`curl` sin parámetros de fecha, o con los valores default) responde rápido (cache-hit, ver el log de que NO se repite "Precalentado..." dos veces seguidas para el mismo combo).
+3. Confirmar que una llamada inmediatamente después con el combo default responde rápido (cache-hit, ver el log de que NO se repite "Precalentado..." dos veces seguidas para el mismo combo) — pero OJO: esa llamada debe usar la URL EXACTA que manda el navegador (copiarla de DevTools → pestaña Network al hacer una carga fresca de `tablero_motor_quiebre.html`, o construirla a mano con `hasta` = ayer, `desde` = ayer−89 días y `riesgoDias=15`). Un `curl` SIN parámetros de fecha pega contra el fallback interno del propio handler (`hastaDefault`/`desdeDefault`/`riesgoDias=3` cuando no vienen en el query), que es una clave de caché DISTINTA a la que precalienta esta función — probar así daría un falso OK aunque el precalentado esté escribiendo la clave equivocada.
 4. Revertir el cambio temporal del paso 1 antes de continuar (dejar `if (ahora < hoyRefresco) return;` como está en el Step 1 real).
 
 - [ ] **Step 3: Verificación manual — no rompe el arranque si SQL Server no responde**

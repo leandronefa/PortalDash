@@ -1269,8 +1269,6 @@ app.get('/api/tablero/quiebre', async (req, res) => {
   }
 
   try {
-    const pool = await poolPromise;
-
     const hastaDefault = new Date();
     const desdeDefault = new Date();
     desdeDefault.setDate(desdeDefault.getDate() - 89); // ultimos 90 dias, mismo default que el simulador

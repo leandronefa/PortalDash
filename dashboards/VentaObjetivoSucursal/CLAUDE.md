@@ -26,9 +26,15 @@ diferencias puntuales respecto al original:
 - **Histórico limitado a 2 años atrás** (`HISTORICO_MAX_ANIOS`/`mesLimiteHistorico()` en
   `server.js`, rolling — no una fecha fija), aplica a TODO el tablero: `filtrarGrilla`
   (Comparativas) y el endpoint de "Totales" (`GET /api/margenes-empresa?mes=` rechaza con
-  400 un mes anterior al límite). El selector de Años y el selector de mes de Totales se
-  arman en el cliente a partir de lo que ya vino filtrado del server, así que no hace falta
-  tocar nada del frontend para que respeten el límite.
+  400 un mes anterior al límite; `GET /api/margenes-empresa/meses`, que arma el selector,
+  lo respeta también). El selector de Años se arma en el cliente a partir de lo que ya vino
+  filtrado del server.
+- **Totales SIEMPRE muestra objetivo, nunca venta real** (30/08/2026, portado de
+  VentaObjetivo): cualquier mes que no sea el editable sale 100% de `dw_vallejo`
+  (`f_objetivos`+`f_dias_habiles`), no de `GrillaVentasComparativas` — un mes recién cerrado
+  (objetivo guardado, todavía sin fila real por el ETL) también aparece. A diferencia de
+  VentaObjetivo, acá **no** hay ajuste puntual del mes en curso — sigue siendo 100% sólo
+  lectura para cualquier mes (no hay usuario vallejo/admin en este tablero).
 
 Para todo lo demás (flujo de datos, dependencias SQL, columnas "x Día", selector de mes
 histórico en Totales, gotchas de despliegue) es idéntico a

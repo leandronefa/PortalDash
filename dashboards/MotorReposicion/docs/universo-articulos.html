@@ -1,0 +1,517 @@
+<title>Universo de Artículos</title>
+<style>
+  :root{
+    --paper:#f7f5f0;
+    --paper-raised:#ffffff;
+    --ink:#20241f;
+    --ink-soft:#585d54;
+    --ink-faint:#8b9086;
+    --rule:#dcd8cc;
+    --rule-soft:#e9e6db;
+    --accent:#0e5a6b;
+    --accent-soft:#e4eef0;
+    --accent-border:#c3dbe0;
+    --warn:#9a5b00;
+    --warn-soft:#fdf3e4;
+    --warn-border:#f0deb8;
+    --danger:#8f1a12;
+    --danger-soft:#fbeae8;
+    --danger-border:#f0c4bd;
+    --ok:#1e7d4f;
+    --ok-soft:#eaf5ef;
+    --ok-border:#c7e4d4;
+    --mono-bg:#eeece2;
+    --shadow:0 1px 2px rgba(32,36,31,.06), 0 6px 20px rgba(32,36,31,.05);
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){
+      --paper:#1a1d19;
+      --paper-raised:#22261f;
+      --ink:#e9e7de;
+      --ink-soft:#b3b7ab;
+      --ink-faint:#787d72;
+      --rule:#3a3d35;
+      --rule-soft:#2c2f28;
+      --accent:#5fb8ce;
+      --accent-soft:#1c2f33;
+      --accent-border:#2c4b52;
+      --warn:#e0ab5c;
+      --warn-soft:#332a17;
+      --warn-border:#4d3d1e;
+      --danger:#e08579;
+      --danger-soft:#332019;
+      --danger-border:#4d2b22;
+      --ok:#7ecba3;
+      --ok-soft:#182b21;
+      --ok-border:#254536;
+      --mono-bg:#262a22;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#1a1d19;
+    --paper-raised:#22261f;
+    --ink:#e9e7de;
+    --ink-soft:#b3b7ab;
+    --ink-faint:#787d72;
+    --rule:#3a3d35;
+    --rule-soft:#2c2f28;
+    --accent:#5fb8ce;
+    --accent-soft:#1c2f33;
+    --accent-border:#2c4b52;
+    --warn:#e0ab5c;
+    --warn-soft:#332a17;
+    --warn-border:#4d3d1e;
+    --danger:#e08579;
+    --danger-soft:#332019;
+    --danger-border:#4d2b22;
+    --ok:#7ecba3;
+    --ok-soft:#182b21;
+    --ok-border:#254536;
+    --mono-bg:#262a22;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    line-height:1.6;
+  }
+  ::selection{ background:var(--accent-border); }
+
+  .page{
+    display:grid;
+    grid-template-columns:240px minmax(0,760px);
+    gap:56px;
+    max-width:1100px;
+    margin:0 auto;
+    padding:56px 32px 120px;
+    justify-content:center;
+  }
+  @media (max-width:880px){
+    .page{ grid-template-columns:minmax(0,1fr); padding:32px 20px 80px; }
+    nav.toc{ display:none; }
+  }
+
+  nav.toc{
+    position:sticky;
+    top:56px;
+    align-self:start;
+    font-size:13px;
+  }
+  nav.toc .eyebrow{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:14px;
+  }
+  nav.toc ol{
+    list-style:none;
+    margin:0;
+    padding:0;
+    border-left:1px solid var(--rule);
+  }
+  nav.toc li{ margin:0; }
+  nav.toc a{
+    display:block;
+    padding:7px 0 7px 16px;
+    margin-left:-1px;
+    border-left:1px solid transparent;
+    color:var(--ink-soft);
+    text-decoration:none;
+  }
+  nav.toc a:hover{ color:var(--accent); border-left-color:var(--accent); }
+
+  header.hero{ margin-bottom:48px; }
+  header.hero .eyebrow{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:Iowan Old Style,"Source Serif 4",Georgia,"Times New Roman",serif;
+    font-size:34px;
+    font-weight:600;
+    letter-spacing:-.01em;
+    margin:0 0 14px;
+    text-wrap:balance;
+  }
+  header.hero p{
+    font-size:16px;
+    color:var(--ink-soft);
+    max-width:56ch;
+    margin:0;
+  }
+
+  h2{
+    font-family:Iowan Old Style,"Source Serif 4",Georgia,"Times New Roman",serif;
+    font-size:23px;
+    font-weight:600;
+    letter-spacing:-.005em;
+    margin:0 0 6px;
+    padding-top:4px;
+    scroll-margin-top:32px;
+  }
+  .section-num{
+    display:inline-block;
+    font-family:ui-monospace,"SF Mono",Consolas,monospace;
+    font-size:12px;
+    font-weight:600;
+    color:var(--accent);
+    background:var(--accent-soft);
+    border:1px solid var(--accent-border);
+    border-radius:5px;
+    padding:2px 7px;
+    margin-right:10px;
+    vertical-align:2px;
+  }
+  section{ margin-bottom:52px; }
+  section > .dek{
+    color:var(--ink-soft);
+    font-size:14.5px;
+    margin:0 0 24px;
+    max-width:60ch;
+  }
+  h3{
+    font-size:15px;
+    font-weight:700;
+    margin:28px 0 10px;
+    color:var(--ink);
+  }
+  p{ margin:0 0 14px; font-size:15px; }
+  p.tight{ margin-bottom:8px; }
+  code{
+    font-family:ui-monospace,"SF Mono",Consolas,monospace;
+    font-size:.88em;
+    background:var(--mono-bg);
+    padding:.15em .4em;
+    border-radius:4px;
+  }
+  strong{ font-weight:650; }
+
+  /* Criterio cards */
+  .criterios{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin:20px 0 8px;
+  }
+  .criterio{
+    display:grid;
+    grid-template-columns:34px 1fr;
+    gap:14px;
+    background:var(--paper-raised);
+    border:1px solid var(--rule);
+    border-radius:10px;
+    padding:16px 18px;
+    box-shadow:var(--shadow);
+  }
+  .criterio .num{
+    font-family:Iowan Old Style,Georgia,serif;
+    font-size:20px;
+    font-weight:600;
+    color:var(--accent);
+    line-height:1.3;
+  }
+  .criterio h4{
+    margin:0 0 4px;
+    font-size:14.5px;
+    font-weight:700;
+  }
+  .criterio p{ margin:0; font-size:13.5px; color:var(--ink-soft); }
+  .criterio .fuente{
+    display:inline-block;
+    margin-top:8px;
+    font-family:ui-monospace,"SF Mono",Consolas,monospace;
+    font-size:11.5px;
+    color:var(--ink-faint);
+  }
+
+  /* Callout boxes */
+  .callout{
+    border-radius:10px;
+    border:1px solid var(--rule);
+    padding:16px 18px;
+    margin:18px 0;
+    font-size:13.5px;
+  }
+  .callout p:last-child{ margin-bottom:0; }
+  .callout .lbl{
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .callout.evidencia{ background:var(--accent-soft); border-color:var(--accent-border); }
+  .callout.evidencia .lbl{ color:var(--accent); }
+  .callout.abierto{ background:var(--warn-soft); border-color:var(--warn-border); }
+  .callout.abierto .lbl{ color:var(--warn); }
+  .callout.historia{ background:var(--rule-soft); border-color:var(--rule); }
+  .callout.historia .lbl{ color:var(--ink-faint); }
+
+  .num-real{
+    font-variant-numeric:tabular-nums;
+    font-weight:700;
+  }
+
+  /* Comparison table (dos instancias) */
+  table.compara{
+    width:100%;
+    border-collapse:collapse;
+    margin:18px 0 8px;
+    font-size:13.5px;
+  }
+  table.compara th, table.compara td{
+    text-align:left;
+    padding:9px 12px;
+    border-bottom:1px solid var(--rule-soft);
+    vertical-align:top;
+  }
+  table.compara thead th{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    border-bottom:1px solid var(--rule);
+  }
+  table.compara tbody th{ font-weight:600; white-space:nowrap; }
+  table.compara td code{ font-size:.82em; }
+
+  /* Mapa de pantallas */
+  .mapa-wrap{ overflow-x:auto; margin:20px 0 8px; border-radius:10px; border:1px solid var(--rule); }
+  table.mapa{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13.5px;
+    background:var(--paper-raised);
+  }
+  table.mapa th, table.mapa td{
+    text-align:left;
+    padding:11px 14px;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  table.mapa thead th{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    background:var(--rule-soft);
+    border-bottom:1px solid var(--rule);
+  }
+  table.mapa tbody tr:last-child td{ border-bottom:none; }
+  table.mapa td.pantalla{ font-weight:650; }
+  .pill{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+  .pill.red{ background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-border); }
+  .pill.puntual{ background:var(--ok-soft); color:var(--ok); border:1px solid var(--ok-border); }
+  .estados-incl{ font-size:12.5px; color:var(--ink-soft); }
+
+  hr.div{ border:none; border-top:1px solid var(--rule); margin:52px 0; }
+
+  footer{
+    margin-top:60px;
+    padding-top:20px;
+    border-top:1px solid var(--rule);
+    font-size:12px;
+    color:var(--ink-faint);
+  }
+</style>
+
+<div class="page">
+
+<nav class="toc">
+  <div class="eyebrow">En esta página</div>
+  <ol>
+    <li><a href="#criterios">1. Los 3 criterios del universo</a></li>
+    <li><a href="#estable">2. Por qué es estable</a></li>
+    <li><a href="#instancias">3. Dos instancias del universo</a></li>
+    <li><a href="#mapa">4. Mapa por pantalla</a></li>
+    <li><a href="#periodo">5. Qué hace el Período de ventas</a></li>
+    <li><a href="#abierto">6. Nota abierta: Favoritos</a></li>
+  </ol>
+</nav>
+
+<div>
+
+<header class="hero">
+  <div class="eyebrow">Motor de Reposición — referencia interna</div>
+  <h1>Universo de artículos</h1>
+  <p>Qué combinación de sucursal+artículo+color+talle "existe" para el tablero, quién decide eso, y qué NO lo decide. Para repasar cuando la pregunta vuelva a aparecer.</p>
+</header>
+
+<section id="criterios">
+  <h2><span class="section-num">1</span>Los 3 criterios del universo</h2>
+  <p class="dek">Una combinación sucursal×artículo×color×talle entra al universo — existe para el tablero — si cumple <strong>cualquiera</strong> de estos tres hechos. Los tres son permanentes: ninguno depende de una fecha que el usuario elija.</p>
+
+  <div class="criterios">
+    <div class="criterio">
+      <div class="num">1</div>
+      <div>
+        <h4>Stock hoy</h4>
+        <p>Tiene stock actual, sea cero o positivo, según la foto diaria de stock.</p>
+        <span class="fuente">dbo.MotorReposicion_UniversoHoy (precalculada de noche)</span>
+      </div>
+    </div>
+    <div class="criterio">
+      <div class="num">2</div>
+      <div>
+        <h4>Recibió alguna vez por transferencia real</h4>
+        <p>No importa cuándo — ni si hoy tiene stock. Si en algún momento llegó una transferencia real a esa sucursal, cuenta.</p>
+        <span class="fuente">dis_transf_recibidas — sin acotar fecha</span>
+      </div>
+    </div>
+    <div class="criterio">
+      <div class="num">3</div>
+      <div>
+        <h4>Tuvo una venta real alguna vez</h4>
+        <p>Agregado el 2026-09-08. La venta en sí es evidencia de que el artículo estuvo ahí, aunque haya llegado por una vía que el sistema no registra como "transferencia" (stock viejo, carga manual, etc.).</p>
+        <span class="fuente">Vta_detalle — sin acotar fecha</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout evidencia">
+    <span class="lbl">Caso real que motivó el criterio 3</span>
+    <p><strong>DINK-6128 / NEGRO</strong>, julio: la venta real del mes fue de <span class="num-real">8</span> unidades, repartidas en 8 sucursales (1 cada una). El tablero mostraba <span class="num-real">5</span> — las 3 sucursales faltantes (Calzados 02, 04 y 34) habían vendido la unidad, pero nunca tuvieron stock hoy ni una recepción real registrada. Sin el criterio 3, esa venta real quedaba invisible para siempre.</p>
+  </div>
+
+  <p class="tight" style="font-size:13px;color:var(--ink-faint)">El criterio 2 tiene un antecedente parecido: se agregó (2026-09-04) tras un caso real de KJ1736-1074 mostrando quiebre fantasma — sin stock, sin venta, sin recepción real detectada con la fuente que se usaba entonces.</p>
+</section>
+
+<hr class="div">
+
+<section id="estable">
+  <h2><span class="section-num">2</span>Por qué es estable</h2>
+  <p class="dek">Los tres criterios de arriba tienen algo en común a propósito: ninguno usa el <strong>Período de ventas</strong> que se elige arriba del tablero. El universo es siempre el mismo, sin importar qué ventana de fechas esté seleccionada en un momento dado.</p>
+
+  <div class="callout historia">
+    <span class="lbl">Por qué se decidió así</span>
+    <p>Hubo una versión intermedia (2026-09-05, revertida el mismo día) donde el universo era "solo lo que vendió en el Período de ventas elegido". Resolvía el caso de un artículo estacional, pero causaba algo peor: la grilla de Stock de un mismo artículo mostraba <strong>sucursales distintas</strong> según qué período se eligiera — inestable e inconsistente, porque una decisión que en realidad solo debería afectar la <em>demanda</em> (velocidad, GAP) estaba decidiendo qué filas existen.</p>
+  </div>
+</section>
+
+<hr class="div">
+
+<section id="instancias">
+  <h2><span class="section-num">3</span>Dos instancias del universo</h2>
+  <p class="dek">Los mismos 3 criterios se aplican dos veces, con alcance distinto según si se está mirando toda la red o un artículo puntual.</p>
+
+  <table class="compara">
+    <thead>
+      <tr><th></th><th>Universo de toda la red</th><th>Universo de un artículo puntual</th></tr>
+    </thead>
+    <tbody>
+      <tr><th>Se pide</th><td>Una vez al entrar, y al cambiar los filtros de arriba</td><td>Bajo demanda, al abrir el detalle de un artículo</td></tr>
+      <tr><th>Endpoint</th><td><code>/api/tablero/quiebre</code></td><td><code>/api/tablero/articulo?modelo=...</code></td></tr>
+      <tr><th>Alcance</th><td>Todo el catálogo, todas las sucursales</td><td>Un <code>CodArticulo</code> puntual, todas sus sucursales/talles</td></tr>
+      <tr><th>Estados que llegan al navegador</th><td>Solo <strong>Quiebre</strong> y <strong>Riesgo</strong> (OK se cuenta pero no se lista — son ~220K filas de más)</td><td>Los <strong>3 estados</strong>, incluido OK</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<hr class="div">
+
+<section id="mapa">
+  <h2><span class="section-num">4</span>Mapa por pantalla</h2>
+  <p class="dek">Qué universo alimenta cada pantalla, y qué estados puede llegar a mostrar.</p>
+
+  <div class="mapa-wrap">
+    <table class="mapa">
+      <thead>
+        <tr><th>Pantalla</th><th>Universo</th><th>Estados incluidos</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="pantalla">Atención Prioritaria</td>
+          <td><span class="pill red">Toda la red</span></td>
+          <td class="estados-incl">Quiebre, Riesgo</td>
+        </tr>
+        <tr>
+          <td class="pantalla">Ver en detalle</td>
+          <td><span class="pill red">Toda la red</span></td>
+          <td class="estados-incl">Quiebre, Riesgo</td>
+        </tr>
+        <tr>
+          <td class="pantalla">KPI — TESI SA / PUEBLO SA / Toda la red</td>
+          <td><span class="pill red">Toda la red</span></td>
+          <td class="estados-incl">Quiebre, Riesgo <strong>y OK</strong> (conteo agregado en el servidor)</td>
+        </tr>
+        <tr>
+          <td class="pantalla">Favoritos — buscador de catálogo</td>
+          <td><span class="pill red">Toda la red</span></td>
+          <td class="estados-incl">Quiebre, Riesgo — <a href="#abierto" style="color:inherit">ver nota abierta ↓</a></td>
+        </tr>
+        <tr>
+          <td class="pantalla">Stock actual</td>
+          <td><span class="pill puntual">Artículo puntual</span></td>
+          <td class="estados-incl">Quiebre, Riesgo y OK</td>
+        </tr>
+        <tr>
+          <td class="pantalla">Propuesta de compra / A comprar</td>
+          <td><span class="pill puntual">Artículo puntual</span></td>
+          <td class="estados-incl">Quiebre, Riesgo y OK</td>
+        </tr>
+        <tr>
+          <td class="pantalla">Edición de recompra</td>
+          <td><span class="pill puntual">Artículo puntual</span></td>
+          <td class="estados-incl">Quiebre, Riesgo y OK</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="div">
+
+<section id="periodo">
+  <h2><span class="section-num">5</span>Qué hace (y qué no) el Período de ventas</h2>
+  <p class="dek">El filtro de fechas de arriba del tablero es real y afecta números reales — pero nunca decide qué filas existen.</p>
+
+  <h3>Lo que SÍ hace</h3>
+  <p>Calcula la <strong>velocidad de venta</strong> (unidades vendidas ÷ días con stock, dentro de esa ventana) para cada fila que <em>ya existe</em> en el universo. Esa velocidad es la base de la demanda: Objetivo, GAP bruto, y unidades sugeridas a comprar salen de ahí. Un artículo sin ninguna venta en el período elegido simplemente muestra velocidad 0 — sigue en la lista si está en quiebre por stock.</p>
+
+  <h3>Lo que NO hace</h3>
+  <p>No filtra qué artículos aparecen. El universo (los 3 criterios de la sección 1) es el mismo sin importar qué período esté elegido.</p>
+
+  <div class="callout evidencia">
+    <span class="lbl">Confirmado con datos reales — 2026-08-27</span>
+    <p>Con el período por defecto (90 días, 30/05 al 27/08): de <span class="num-real">476.210</span> filas en Quiebre, <span class="num-real">420.177</span> — el <span class="num-real">88%</span> — tienen <strong>cero ventas y cero días con venta</strong> en ese mismo período, y aun así aparecen. Ejemplo puntual: <code>0001-09-13150-NEGRO-40</code> en Calzados 33, 0 ventas en 90 días, sigue en Quiebre.</p>
+  </div>
+</section>
+
+<hr class="div">
+
+<section id="abierto">
+  <h2><span class="section-num">6</span>Nota abierta: Favoritos</h2>
+  <p class="dek">No es un bug confirmado ni corregido — una inconsistencia detectada al armar este documento, pendiente de revisar si hace falta.</p>
+
+  <div class="callout abierto">
+    <span class="lbl">Pendiente de revisión</span>
+    <p>El buscador de catálogo de Favoritos arma su lista a partir del universo de <strong>toda la red</strong>, que solo trae filas en Quiebre o Riesgo (ver sección 3). Un artículo+color <strong>100% sano</strong> — sin quiebre ni riesgo en ninguna sucursal — hoy no puede aparecer en ese buscador, aunque el texto de esa pantalla dice "todos los artículos, no solo los que están en quiebre/riesgo/necesitan compra".</p>
+  </div>
+</section>
+
+<footer>
+  Motor de Reposición · documento de referencia interna, armado a partir de investigación directa contra la base real (10.0.0.115 / db_Cegid) y del código actual de <code>server.js</code>.
+</footer>
+
+</div>
+</div>

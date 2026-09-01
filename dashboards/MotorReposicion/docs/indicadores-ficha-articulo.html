@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lectura de los indicadores de artículo</title>
+<style>
+:root{
+  --ink:#1a2730; --muted:#5f7079; --muted2:#7c8a92; --border:#e3e9ec; --border2:#eef2f3;
+  --page:#f4f6f7; --card:#ffffff; --card-alt:#f8fafb;
+  --teal:#0e5a6b; --teal-soft:#eaf4f5; --teal-border:#cfe4e6;
+  --quiebre:#b3261e; --quiebre-soft:#fdecea; --quiebre-border:#f6c9c5;
+  --riesgo:#9a6700; --riesgo-soft:#fef6e7; --riesgo-border:#f3dba3;
+  --ok:#1e7d4f; --ok-soft:#eaf5ef;
+  --mono-bg:#f4f6f7; --mono-border:#dde5e9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e8edf0; --muted:#9aabb2; --muted2:#7f939b; --border:#2a3841; --border2:#25323b;
+    --page:#0f1720; --card:#161f28; --card-alt:#1b2530;
+    --teal:#5cc4dd; --teal-soft:#132a30; --teal-border:#204652;
+    --quiebre:#f28b83; --quiebre-soft:#2e1917; --quiebre-border:#4a2622;
+    --riesgo:#e8b563; --riesgo-soft:#2c2311; --riesgo-border:#4a3a18;
+    --ok:#6fcf9a; --ok-soft:#12261c;
+    --mono-bg:#111820; --mono-border:#2a3841;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e8edf0; --muted:#9aabb2; --muted2:#7f939b; --border:#2a3841; --border2:#25323b;
+  --page:#0f1720; --card:#161f28; --card-alt:#1b2530;
+  --teal:#5cc4dd; --teal-soft:#132a30; --teal-border:#204652;
+  --quiebre:#f28b83; --quiebre-soft:#2e1917; --quiebre-border:#4a2622;
+  --riesgo:#e8b563; --riesgo-soft:#2c2311; --riesgo-border:#4a3a18;
+  --ok:#6fcf9a; --ok-soft:#12261c;
+  --mono-bg:#111820; --mono-border:#2a3841;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--page); color:var(--ink);
+  font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px; margin:0 auto; padding:40px 24px 64px;}
+
+.doc-head{margin-bottom:28px;}
+.doc-eyebrow{font-size:11.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--teal); margin-bottom:8px;}
+.doc-title{font-size:26px; font-weight:800; letter-spacing:-.3px; margin:0 0 6px; text-wrap:balance;}
+.doc-sub{font-size:14px; color:var(--muted); line-height:1.5;}
+.doc-sub b{color:var(--ink);}
+
+.stat-row-demo{
+  display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center;
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:14px 18px; margin:20px 0 32px; font-size:13.5px; font-weight:700;
+}
+.stat-row-demo .d1{color:var(--quiebre);}
+.stat-row-demo .d2{color:var(--muted);}
+.stat-row-demo .d3{color:var(--muted);}
+.stat-row-demo .tag{
+  margin-left:auto; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--muted2); background:var(--card-alt); border:1px solid var(--border); border-radius:20px; padding:4px 10px;
+}
+
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:22px 24px; margin-bottom:18px;
+}
+.card-hd{display:flex; align-items:baseline; gap:12px; margin-bottom:4px; flex-wrap:wrap;}
+.card-num{font-size:22px; font-weight:800; font-variant-numeric:tabular-nums;}
+.card-num.quiebre{color:var(--quiebre);}
+.card-num.riesgo{color:var(--riesgo);}
+.card-num.teal{color:var(--teal);}
+.card-label{font-size:13px; font-weight:700; color:var(--muted);}
+.card-plain{font-size:14.5px; line-height:1.6; color:var(--ink); margin:12px 0;}
+.card-plain b{font-weight:700;}
+
+.def-line{
+  display:flex; gap:12px; align-items:flex-start; margin:14px 0 4px;
+  padding:12px 16px; border-left:3px solid var(--teal); background:var(--card-alt); border-radius:0 8px 8px 0;
+}
+.def-line .def-tag{
+  flex:none; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--teal); padding-top:2px;
+}
+.def-line p{margin:0; font-size:13.5px; line-height:1.6; color:var(--ink); font-weight:600;}
+
+.formula{
+  background:var(--mono-bg); border:1px solid var(--mono-border); border-radius:10px;
+  padding:14px 16px; margin:14px 0; font-size:13px; line-height:1.7;
+  font-family:ui-monospace,"SF Mono",Consolas,monospace; color:var(--ink); overflow-x:auto;
+}
+.formula .op{color:var(--muted2); padding:0 4px;}
+.formula .comment{color:var(--muted2); font-family:-apple-system,"Segoe UI",Roboto,sans-serif; font-size:12.5px; font-style:italic; display:block; margin-top:8px;}
+
+.detail-list{margin:12px 0 0; padding:0; list-style:none;}
+.detail-list li{
+  display:flex; gap:10px; padding:9px 0; border-top:1px solid var(--border2); font-size:13.5px; line-height:1.55;
+}
+.detail-list li:first-child{border-top:none;}
+.detail-list .bullet{flex:none; width:6px; height:6px; border-radius:50%; background:var(--teal); margin-top:7px;}
+.detail-list b{font-weight:700;}
+
+.callout{
+  border-radius:10px; padding:13px 16px; margin-top:16px; font-size:13px; line-height:1.6;
+  border:1px solid var(--riesgo-border); background:var(--riesgo-soft); color:var(--ink);
+}
+.callout b{color:var(--riesgo); font-weight:700;}
+
+.footer-note{
+  margin-top:36px; padding-top:20px; border-top:1px solid var(--border);
+  font-size:12px; color:var(--muted2); line-height:1.7;
+}
+
+.table-wrap{overflow-x:auto; margin:14px 0; border:1px solid var(--border); border-radius:10px;}
+table.data{width:100%; border-collapse:collapse; font-size:12.5px; min-width:480px;}
+table.data th{
+  text-align:right; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+  color:var(--muted2); background:var(--card-alt); padding:9px 12px; border-bottom:1px solid var(--border);
+  white-space:nowrap; position:sticky; top:0;
+}
+table.data th:first-child, table.data td:first-child{text-align:left;}
+table.data td{padding:7px 12px; border-bottom:1px solid var(--border2); text-align:right; font-variant-numeric:tabular-nums;}
+table.data tbody tr:last-child td{border-bottom:none;}
+table.data td.talle{font-weight:700;}
+table.data tfoot td{
+  padding:10px 12px; font-weight:800; background:var(--card-alt); border-top:1.5px solid var(--border);
+  font-variant-numeric:tabular-nums;
+}
+.table-caption{font-size:11.5px; color:var(--muted2); padding:8px 12px 0; font-style:italic;}
+
+.chip-row{display:flex; flex-wrap:wrap; gap:7px; margin:14px 0;}
+.chip{
+  font-size:12px; font-weight:700; padding:5px 11px; border-radius:20px;
+  background:var(--riesgo-soft); color:var(--riesgo); border:1px solid var(--riesgo-border);
+  font-variant-numeric:tabular-nums;
+}
+
+.const-note{
+  display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700;
+  background:var(--teal-soft); color:var(--teal); border:1px solid var(--teal-border);
+  border-radius:8px; padding:6px 12px; margin:4px 0 2px;
+}
+
+@media (max-width:520px){
+  .doc-title{font-size:22px;}
+  .card{padding:18px;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="doc-head">
+    <div class="doc-eyebrow">Motor de Reposición — cómo se calcula</div>
+    <h1 class="doc-title">Los tres indicadores de la ficha de artículo</h1>
+    <div class="doc-sub">
+      Artículo <b>KJ1736-1074</b> — ZAPATILLAS ADIDAS UNISEX RESPONSE RUNNER 2 — color <b>CORE BLACK-CLOUD WHITE-SILVER METAL</b>.
+      Estos tres números aparecen arriba de la grilla cada vez que abrís "Stock actual" de un artículo — acá está la cuenta exacta detrás de cada uno.
+    </div>
+  </div>
+
+  <div class="stat-row-demo">
+    <span class="d1">▲ $4.095.652/día</span>
+    <span class="d2">⚠ 19/19 SKU en quiebre/riesgo</span>
+    <span class="d3">⟳ 2,73 unidades/día prom.</span>
+    <span class="tag">Tal como se ve en pantalla</span>
+  </div>
+
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-num quiebre">▲ $4.095.652/día</span>
+      <span class="card-label">Margen que se pierde por día, solo por lo que hoy está en QUIEBRE</span>
+    </div>
+    <div class="def-line">
+      <span class="def-tag">Definición</span>
+      <p>Margen perdido: sumando (velocidad de venta × margen unitario) de cada talle+sucursal que hoy está en QUIEBRE (stock 0). Riesgo no suma acá, porque todavía se está vendiendo.</p>
+    </div>
+    <div class="card-plain">
+      Es la plata que dejamos de ganar cada día porque hay talles de este color con <b>stock 0</b> en alguna sucursal. Se calcula así, sucursal por sucursal:
+    </div>
+    <div class="formula">
+      margen perdido = <span class="op">Σ</span> (velocidad de venta del talle <span class="op">×</span> margen unitario)
+      <span class="comment">Σ = suma sobre las 384 combinaciones talle+sucursal que hoy están en QUIEBRE de este color</span>
+    </div>
+    <div class="const-note">🔒 Margen unitario (constante, mismo para todo el artículo): PVP $99.999 − Costo $49.908,27 = <b>$50.090,73</b> por unidad</div>
+    <div class="card-plain">
+      Agrupando esas 384 filas por talle (sumando las sucursales de cada uno), así se arma el total real:
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Talle</th><th>Sucursales en quiebre</th><th>Σ velocidad (u/día)</th><th>Aporte al margen ($/día)</th></tr></thead>
+        <tbody>
+          <tr><td class="talle">8</td><td>29</td><td>10,76</td><td>538.757</td></tr>
+          <tr><td class="talle">8.5</td><td>27</td><td>8,29</td><td>415.261</td></tr>
+          <tr><td class="talle">7.5</td><td>30</td><td>7,95</td><td>398.019</td></tr>
+          <tr><td class="talle">6</td><td>30</td><td>7,15</td><td>357.988</td></tr>
+          <tr><td class="talle">9.5</td><td>28</td><td>6,73</td><td>336.902</td></tr>
+          <tr><td class="talle">5</td><td>30</td><td>6,71</td><td>336.038</td></tr>
+          <tr><td class="talle">7</td><td>29</td><td>6,63</td><td>332.100</td></tr>
+          <tr><td class="talle">9</td><td>26</td><td>5,07</td><td>253.865</td></tr>
+          <tr><td class="talle">10</td><td>24</td><td>4,35</td><td>217.844</td></tr>
+          <tr><td class="talle">11</td><td>27</td><td>3,35</td><td>167.790</td></tr>
+          <tr><td class="talle">10.5</td><td>21</td><td>2,76</td><td>138.176</td></tr>
+          <tr><td class="talle">5.5</td><td>7</td><td>2,44</td><td>122.126</td></tr>
+          <tr><td class="talle">4</td><td>20</td><td>2,41</td><td>120.614</td></tr>
+          <tr><td class="talle">13</td><td>18</td><td>2,01</td><td>100.678</td></tr>
+          <tr><td class="talle">12</td><td>17</td><td>1,72</td><td>85.981</td></tr>
+          <tr><td class="talle">6.5</td><td>6</td><td>1,56</td><td>78.316</td></tr>
+          <tr><td class="talle">4.5</td><td>5</td><td>0,76</td><td>38.056</td></tr>
+          <tr><td class="talle">3.5</td><td>4</td><td>0,57</td><td>28.623</td></tr>
+          <tr><td class="talle">11.5</td><td>6</td><td>0,57</td><td>28.518</td></tr>
+        </tbody>
+        <tfoot><tr><td>Total</td><td>384</td><td>81,76</td><td>$4.095.652</td></tr></tfoot>
+      </table>
+      <div class="table-caption">"Sucursales en quiebre" no es una sola cifra de red: es cuántas de las sucursales que venden este talle están hoy en 0 — por eso el talle 8 (29 sucursales rotas, alta rotación) es el que más pesa en el total, aunque el talle 5.5 tenga menos sucursales rotas.</div>
+    </div>
+    <div class="callout">
+      <b>Ojo:</b> este número solo cuenta QUIEBRE (stock 0). Los talles en RIESGO (poco stock, a punto de quebrar) no suman acá — todavía se están vendiendo, así que no hay margen perdido, solo alerta.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-num riesgo">⚠ 19/19</span>
+      <span class="card-label">SKU en quiebre o riesgo, sobre el total de talles de la curva</span>
+    </div>
+    <div class="def-line">
+      <span class="def-tag">Definición</span>
+      <p>Cuenta talles distintos (no combinaciones talle+sucursal): de los 19 talles que tiene la curva de este color, los 19 tienen problema en al menos una sucursal. Alcanza con romperse en una sola sucursal para contar acá.</p>
+    </div>
+    <div class="card-plain">
+      Compara <b>cuántos talles distintos</b> de este color están complicados (en quiebre o riesgo, en <i>al menos una</i> sucursal) contra <b>cuántos talles tiene la curva completa</b> del artículo+color.
+    </div>
+    <div class="formula">
+      19 / 19  <span class="op">=</span>  talles con problema  <span class="op">÷</span>  talles totales de la curva
+      <span class="comment">"SKU" acá = un talle puntual (ej. talle 8.5), no una combinación talle+sucursal</span>
+    </div>
+    <div class="card-plain">Estos son, literalmente, los 19 talles de la curva de este color — la lista completa que sale del catálogo:</div>
+    <div class="chip-row">
+      <span class="chip">3.5</span><span class="chip">4</span><span class="chip">4.5</span><span class="chip">5</span>
+      <span class="chip">5.5</span><span class="chip">6</span><span class="chip">6.5</span><span class="chip">7</span>
+      <span class="chip">7.5</span><span class="chip">8</span><span class="chip">8.5</span><span class="chip">9</span>
+      <span class="chip">9.5</span><span class="chip">10</span><span class="chip">10.5</span><span class="chip">11</span>
+      <span class="chip">11.5</span><span class="chip">12</span><span class="chip">13</span>
+    </div>
+    <ul class="detail-list">
+      <li><span class="bullet"></span><div><b>19 talles totales</b>: todos los talles que existen para este artículo+color según el catálogo (de 3.5 a 13, con medios números).</div></li>
+      <li><span class="bullet"></span><div><b>19 con problema</b>: los mismos 19 de la lista de arriba — ninguno está sano, todos tienen quiebre en alguna sucursal (la tabla del recuadro anterior ya los muestra a los 19). Un "10/19" significaría que 9 de esos talles están OK en todas las sucursales donde se vende.</div></li>
+    </ul>
+    <div class="callout">
+      <b>Ojo:</b> alcanza con que un talle esté roto en <i>una sola</i> sucursal para contar como "en problema" acá — este número no distingue si está mal en 1 sucursal o en las 30.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-num teal">⟳ 2,73</span>
+      <span class="card-label">Unidades por día que se venderían, en promedio, en una sucursal típica en quiebre</span>
+    </div>
+    <div class="def-line">
+      <span class="def-tag">Definición</span>
+      <p>La suma de velocidades de todos los talles rotos, dividida por cantidad de sucursales involucradas (no por cantidad de talles) — para que una sucursal con muchos talles rotos no infle el promedio artificialmente.</p>
+    </div>
+    <div class="card-plain">
+      Es la velocidad de venta promedio, pero calculada <b>por sucursal</b>, no por cada fila talle+sucursal — así una sucursal con muchos talles rotos no infla artificialmente el promedio.
+    </div>
+    <div class="formula">
+      2,73  <span class="op">=</span>  81,76  <span class="op">÷</span>  30
+      <span class="comment">81,76 = la columna "Σ velocidad" del recuadro de arriba, sumada entera (las 384 filas) · 30 = sucursales DISTINTAS con algo en quiebre (no 384)</span>
+    </div>
+    <ul class="detail-list">
+      <li><span class="bullet"></span><div>Se suman las velocidades de <b>todos</b> los talles en quiebre, en todas las sucursales — es la misma columna "Σ velocidad (u/día)" de la tabla de más arriba: 10,76 + 8,29 + 7,95 + ... = <b>81,76</b> unidades/día en total.</div></li>
+      <li><span class="bullet"></span><div>Se divide por la <b>cantidad de sucursales</b> involucradas (<b>30</b>, no las 384 filas talle+sucursal) — si dividiéramos por filas, una sucursal con 10 talles rotos pesaría 10 veces más que una con 1 solo talle roto.</div></li>
+    </ul>
+    <div class="callout">
+      <b>Por qué importa dividir así:</b> antes de este ajuste, el promedio salía distorsionado — una sola sucursal con la curva entera rota podía mostrar una velocidad promedio artificialmente baja, tapando que en el resto de la red el artículo rota bien.
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Los tres números se recalculan en vivo con el <b>Período de ventas</b> y la <b>Fecha de última compra</b> que tengas elegidos arriba del tablero — si cambiás esos filtros, estos valores cambian con ellos. "SKU" en esta pantalla siempre significa artículo + color + talle, sin la sucursal (por eso "19/19" cuenta talles, no combinaciones talle-sucursal).
+  </div>
+
+</div>
+
+</body>
+</html>

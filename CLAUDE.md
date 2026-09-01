@@ -49,6 +49,7 @@ Desde jul 2026 el portal es **proxy inverso** (YARP): los usuarios entran por `h
 | `dashventaobjetivo.exe` | 3016 | `C:\apps\dashboards\VentaObjetivo` |
 | `dashstockproveedormarca.exe` | 3017 | `C:\apps\dashboards\StockProveedorMarca` |
 | `dashventaobjetivosucursal.exe` | 3018 | `C:\apps\dashboards\VentaObjetivoSucursal` |
+| `dashmotorreposicion.exe` | 3019 | `C:\apps\dashboards\MotorReposicion` |
 
 ```powershell
 Get-Service | Where-Object DisplayName -like 'Dash-*' | ft Name,DisplayName,Status

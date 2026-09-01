@@ -54,3 +54,4 @@ dashboards/ComisionesINDO/tmp*.cjs
 *.user
 .DS_Store
 Thumbs.db
+dashboards/MotorReposicion/public/~$*

@@ -93,11 +93,15 @@ sólo importa mientras alguien está cargando el mes que viene y no guardó toda
   `dw_vallejo` (`f_objetivos` + `f_dias_habiles`), no de `GrillaVentasComparativas`, así un
   mes recién cerrado (objetivo guardado, todavía sin fila real por el retraso del ETL)
   también aparece. **Siempre de sólo lectura**, con UNA excepción: el **mes en curso**
-  admite ajuste puntual de Días Venta/Margen %/Ajuste para vallejo/admin — escritura
-  DIRECTA a `dw_vallejo` (endpoints `POST /api/objetivo-actual/:cod/margen` y
-  `POST /api/objetivo-actual/grupo/:grupo/ajuste` en `server.js`), sin borrador ni SP: ese
-  mes ya se guardó de verdad, esto es corregirlo. Cualquier OTRO mes (pasado) sigue siendo
-  siempre sólo lectura, sin excepción (`construirVistaMargenesParaMes(anioMes)`, endpoint
+  admite ajuste puntual de Operaciones/Tkt Prom/Uni x Cli/Días Venta/Margen %/Ajuste para
+  vallejo/admin — escritura DIRECTA a `dw_vallejo` (endpoints `POST /api/objetivo-actual/:cod`,
+  `POST /api/objetivo-actual/:cod/margen` y `POST /api/objetivo-actual/grupo/:grupo/ajuste`
+  en `server.js`), sin borrador ni SP: ese mes ya se guardó de verdad, esto es corregirlo.
+  Requiere confirmar el botón "Editar objetivos del mes en curso" (`peState.
+  mesActualDesbloqueado`, se resetea al cambiar de mes) antes de habilitar los inputs — no
+  queda editable por accidente. **Comparativas sigue siendo sólo para el mes que viene**,
+  a propósito, esto no lo cambia. Cualquier OTRO mes (pasado) sigue siendo siempre sólo
+  lectura, sin excepción (`construirVistaMargenesParaMes(anioMes)`, endpoint
   `GET /api/margenes-empresa?mes=AAAAMM`).
 
 ## Permisos por usuario

@@ -1391,14 +1391,23 @@ async function fetchMargenes(){
 
 /* Mismo selector que VentaObjetivo: "mes que viene" + meses cerrados con
    venta real en state.filas (ya cargados para Comparativas). */
-function poblarSelectMesPe(){
+/* 30/08/2026, portado de VentaObjetivo: la lista de meses sale de los que
+   tienen objetivo cargado en dw_vallejo (no de qué cerró
+   GrillaVentasComparativas) — así un mes recién cerrado, con objetivo
+   guardado pero todavía sin venta real por el ETL, también aparece. */
+async function poblarSelectMesPe(){
   const sel = document.getElementById('peSelectMes');
   if (sel.dataset.poblado === '1') return;
-  const mesesCerrados = [...new Set(state.filas.filter((f) => !f.esObjetivo).map((f) => f.AñoMes))]
-    .sort((a, b) => Number(b) - Number(a));
+  const mesEditable = objState.datos ? objState.datos.mes : null;
+  let meses = [];
+  try {
+    const r = await fetch('api/margenes-empresa/meses');
+    const data = await r.json();
+    meses = (data.meses || []).filter((m) => m !== mesEditable);
+  } catch (e) { /* si falla, queda sólo la opción del mes editable */ }
   const nombreProximo = objState.datos ? objState.datos.mesNombre : 'Mes que viene';
   sel.innerHTML = `<option value="">${nombreProximo}</option>` +
-    mesesCerrados.map((m) => `<option value="${m}">${nombreMesAAAAMM(m)}</option>`).join('');
+    meses.map((m) => `<option value="${m}">${nombreMesAAAAMM(m)}</option>`).join('');
   sel.dataset.poblado = '1';
 }
 function nombreMesAAAAMM(aaaamm){
@@ -1606,7 +1615,7 @@ function ajustarGruposSucursalUnica(){
 }
 
 async function cargarPorEmpresa(){
-  poblarSelectMesPe();
+  await poblarSelectMesPe();
   try {
     await fetchMargenes();
     document.getElementById('peMes').textContent = peState.datos.mesNombre;

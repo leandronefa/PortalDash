@@ -70,6 +70,13 @@ Al hacer clic en "Sugerido"/un talle, se abre un popover armado por `pintarFormu
   automático hacia la tarjeta (`fijarBotonVolverEnPantalla`) — así queda "cerca del recuadro" al
   aparecer, pero no desaparece si después se sigue bajando mucho más.
 
+## Botón "Ver en detalle" (home)
+
+Clase `.ver-detalle-btn` en `tablero_motor_quiebre.html`. Agrandado y recoloreado el 2026-09-01
+a pedido explícito de la usuaria: antes fondo `#1a2730` (gris casi negro), `font-size:13px`,
+`padding:10px 22px`; ahora fondo `#0e5a6b` (el mismo verde azulado que ya usa el hover y el botón
+"Volver"), `font-size:15px`, `padding:12px 26px`, `border-radius:24px`, con hover `#0a4552`.
+
 ## Reglas de trabajo (seguir siempre)
 
 - **Los cambios son siempre quirúrgicos: tocar solo la sección que se pide, sin refactorizar el resto.** No reordenar, renombrar ni "mejorar de paso" código que no forma parte del pedido puntual, aunque se vea una oportunidad de limpieza — proponerla aparte, no mezclarla en el mismo cambio.

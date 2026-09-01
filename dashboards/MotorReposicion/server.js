@@ -1197,6 +1197,72 @@ function construirDetalleDesdeFilas(detalleRows) {
 // consulta pesada (~20s). Se invalida con el mismo criterio que cacheTablero (ver mas abajo).
 const cacheQuiebre = new Map();
 
+// Extraido del handler de /api/tablero/quiebre (2026-09-01, ver spec
+// docs/superpowers/specs/2026-09-01-rendimiento-tablero-design.md) para poder reusarlo desde el
+// precalentado del combo default (ver precalentarComboDefaultSiHaceFalta, mas abajo) sin duplicar
+// la logica de cache/consulta pesada. Comportamiento IDENTICO al que tenia inline: mismo cache,
+// misma clave, misma consulta.
+async function obtenerDataPesadaQuiebre({ fechaDesde, fechaHasta, riesgoDias, ucFechaDesde, ucFechaHasta }) {
+  const claveCache = `${fechaDesde.toISOString().slice(0, 10)}|${fechaHasta.toISOString().slice(0, 10)}|${riesgoDias}|${ucFechaDesde.toISOString().slice(0, 10)}|${ucFechaHasta.toISOString().slice(0, 10)}`;
+  const refrescoQ = ultimoRefrescoEsperado();
+  const cacheado = cacheQuiebre.get(claveCache);
+  if (cacheado && cacheado.computedAt >= refrescoQ) return cacheado.data;
+
+  const pool = await poolPromise;
+  const fechaDesdePedidos = new Date();
+  fechaDesdePedidos.setMonth(fechaDesdePedidos.getMonth() - PEDIDOS_ANTIGUEDAD_MESES);
+  const fechaDesdeTransito = new Date();
+  fechaDesdeTransito.setDate(fechaDesdeTransito.getDate() - TRANSITO_VIGENCIA_DIAS);
+
+  const result = await pool
+    .request()
+    .input('fechaDesde', sql.Date, fechaDesde)
+    .input('fechaHasta', sql.Date, fechaHasta)
+    .input('fechaDesdePedidos', sql.Date, fechaDesdePedidos)
+    .input('fechaDesdeTransito', sql.Date, fechaDesdeTransito)
+    .input('riesgoDias', sql.Int, riesgoDias)
+    .input('ucFechaDesde', sql.Date, ucFechaDesde)
+    .input('ucFechaHasta', sql.Date, ucFechaHasta)
+    .query(QUERY_QUIEBRE_DETALLE);
+
+  const resumenRows = result.recordsets[0] || [];
+  const detalleRows = result.recordsets[1] || [];
+  const porArticuloRows = result.recordsets[2] || [];
+  const catalogoRows = result.recordsets[3] || [];
+
+  const resumenTotal = {};
+  resumenRows.forEach((r) => {
+    resumenTotal[r.Empresa] = {
+      quiebres: r.Quiebres,
+      riesgos: r.Riesgos,
+      ok: r.Ok,
+      impactoQuiebre: r.ImpactoQuiebre,
+      nroSucursales: r.NroSucursales,
+    };
+  });
+
+  const catalogo = construirCatalogoDesdeFilas(catalogoRows);
+  const detalle = construirDetalleDesdeFilas(detalleRows);
+  const porArticulo = porArticuloRows.map((r) => ({
+    empresa: r.Empresa,
+    codArticulo: r.CodArticulo,
+    color: r.COLOR,
+    sku: r.Sku,
+    quiebres: r.Quiebres,
+    riesgos: r.Riesgos,
+    ok: r.Ok,
+    impactoQuiebre: r.ImpactoQuiebre,
+  }));
+
+  const dataPesada = { resumenTotal, catalogo, detalleColumnas: DETALLE_COLUMNAS, detalle, porArticulo, fechaDesde, fechaHasta, riesgoDias, ucFechaDesde, ucFechaHasta };
+
+  for (const [clave, valor] of cacheQuiebre) {
+    if (valor.computedAt < refrescoQ) cacheQuiebre.delete(clave);
+  }
+  cacheQuiebre.set(claveCache, { data: dataPesada, computedAt: new Date() });
+  return dataPesada;
+}
+
 app.get('/api/tablero/quiebre', async (req, res) => {
   if (USE_MOCK) {
     return res.json({ resumen: {}, detalle: [] });
@@ -1239,72 +1305,7 @@ app.get('/api/tablero/quiebre', async (req, res) => {
     const favSkus = new Set(sanearListaCodigos(req.query.favSkus));
     const hayFavoritos = favModelos.size > 0 || favSkus.size > 0;
 
-    const claveCache = `${fechaDesde.toISOString().slice(0, 10)}|${fechaHasta.toISOString().slice(0, 10)}|${riesgoDias}|${ucFechaDesde.toISOString().slice(0, 10)}|${ucFechaHasta.toISOString().slice(0, 10)}`;
-    const refrescoQ = ultimoRefrescoEsperado();
-    let cacheado = cacheQuiebre.get(claveCache);
-    let dataPesada = cacheado && cacheado.computedAt >= refrescoQ ? cacheado.data : null;
-
-    if (!dataPesada) {
-      const fechaDesdePedidos = new Date();
-      fechaDesdePedidos.setMonth(fechaDesdePedidos.getMonth() - PEDIDOS_ANTIGUEDAD_MESES);
-      const fechaDesdeTransito = new Date();
-      fechaDesdeTransito.setDate(fechaDesdeTransito.getDate() - TRANSITO_VIGENCIA_DIAS);
-
-      const result = await pool
-        .request()
-        .input('fechaDesde', sql.Date, fechaDesde)
-        .input('fechaHasta', sql.Date, fechaHasta)
-        .input('fechaDesdePedidos', sql.Date, fechaDesdePedidos)
-        .input('fechaDesdeTransito', sql.Date, fechaDesdeTransito)
-        .input('riesgoDias', sql.Int, riesgoDias)
-        .input('ucFechaDesde', sql.Date, ucFechaDesde)
-        .input('ucFechaHasta', sql.Date, ucFechaHasta)
-        .query(QUERY_QUIEBRE_DETALLE);
-
-      const resumenRows = result.recordsets[0] || [];
-      const detalleRows = result.recordsets[1] || [];
-      const porArticuloRows = result.recordsets[2] || [];
-      const catalogoRows = result.recordsets[3] || [];
-
-      const resumenTotal = {};
-      resumenRows.forEach((r) => {
-        resumenTotal[r.Empresa] = {
-          quiebres: r.Quiebres,
-          riesgos: r.Riesgos,
-          ok: r.Ok,
-          impactoQuiebre: r.ImpactoQuiebre,
-          nroSucursales: r.NroSucursales,
-        };
-      });
-
-      // construirCatalogoDesdeFilas/construirDetalleDesdeFilas (no construirCatalogoYDetalle): ver
-      // el comentario completo junto a esas funciones -- acá el catalogo ya viene deduplicado por
-      // Sku desde SQL, en un recordset aparte.
-      const catalogo = construirCatalogoDesdeFilas(catalogoRows);
-      const detalle = construirDetalleDesdeFilas(detalleRows);
-
-      // Desglose por articulo (chico, sin Sucursal) -- se guarda tal cual viene de SQL, se filtra
-      // y suma en Node en cada request segun los favoritos de ESE request.
-      const porArticulo = porArticuloRows.map((r) => ({
-        empresa: r.Empresa,
-        codArticulo: r.CodArticulo,
-        color: r.COLOR,
-        sku: r.Sku,
-        quiebres: r.Quiebres,
-        riesgos: r.Riesgos,
-        ok: r.Ok,
-        impactoQuiebre: r.ImpactoQuiebre,
-      }));
-
-      dataPesada = { resumenTotal, catalogo, detalleColumnas: DETALLE_COLUMNAS, detalle, porArticulo, fechaDesde, fechaHasta, riesgoDias, ucFechaDesde, ucFechaHasta };
-
-      // Barrida liviana de entradas viejas (de un dia anterior al refresco actual) antes de guardar
-      // la nueva, para que el Map no crezca sin limite en un proceso que corre muchos dias seguidos.
-      for (const [clave, valor] of cacheQuiebre) {
-        if (valor.computedAt < refrescoQ) cacheQuiebre.delete(clave);
-      }
-      cacheQuiebre.set(claveCache, { data: dataPesada, computedAt: new Date() });
-    }
+    const dataPesada = await obtenerDataPesadaQuiebre({ fechaDesde, fechaHasta, riesgoDias, ucFechaDesde, ucFechaHasta });
 
     // Resumen final de esta respuesta: si hay favoritos, se recalcula en Node a partir del
     // desglose por articulo ya cacheado (instantaneo, cero trabajo en SQL Server) -- si no hay

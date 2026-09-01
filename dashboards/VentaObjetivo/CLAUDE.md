@@ -36,8 +36,8 @@ sin parser directo) — ver `extraido-del-qvw/layout-qlikview-raw.txt`.
 ## Dependencias en SQL Server (10.0.0.115)
 
 - **`TABLEROS.dbo.GrillaVentasComparativas`**: venta real ya agregada por sucursal/mes,
-  SOLO meses cerrados (el ETL no genera la fila del mes en curso todavía). Fuente de
-  Comparativas y de "Totales" para meses cerrados.
+  SOLO meses cerrados (el ETL no genera la fila del mes en curso todavía). Fuente única de
+  Comparativas — **Totales no la usa** (siempre objetivo, ver más abajo).
 - **`dw_vallejo.dbo.f_objetivos`** (`id_vendedor=0`) + **`dw_vallejo.dbo.f_dias_habiles`**:
   objetivo/Días Venta/Margen % por sucursal y mes — se usa para el mes en curso (mientras
   no está en la Grilla) y queda como historial permanente de Días/Margen de cualquier mes
@@ -85,11 +85,15 @@ sólo importa mientras alguien está cargando el mes que viene y no guardó toda
   Pueblo, +1% Digitales — `AJUSTE_MARGEN`).
 - Columnas **"Unidades x Día"** y **"Operaciones x Día"** (= Unidades/Operaciones ÷ Días
   Venta, mismo criterio que "Diario sin/con IVA").
-- **Selector de mes** (`#peSelectMes`): "mes que viene" (editable, default) + meses YA
-  CERRADOS con venta real (calculados en el cliente desde `state.filas`, sin endpoint
-  nuevo). Un mes cerrado sale de `GrillaVentasComparativas` (no de `f_objetivos`/
-  `TEMP_BI_APP`) y es **siempre de sólo lectura** — ni vallejo/admin puede editarlo
-  (`construirVistaMargenesParaMes(anioMes)` en `server.js`, endpoint
+- **Selector de mes** (`#peSelectMes`): "mes que viene" (editable, default) + todos los
+  meses con objetivo cargado (`GET /api/margenes-empresa/meses`, `DISTINCT id_mes` de
+  `f_objetivos`, acotado a `[ANIOMES_DESDE, mes editable]` para filtrar basura de pruebas
+  viejas). **Totales SIEMPRE muestra objetivo, nunca venta real** (30/08/2026) — a
+  diferencia de Comparativas: cualquier mes que no sea el editable sale 100% de
+  `dw_vallejo` (`f_objetivos` + `f_dias_habiles`), no de `GrillaVentasComparativas`, así un
+  mes recién cerrado (objetivo guardado, todavía sin fila real por el retraso del ETL)
+  también aparece. **Siempre de sólo lectura** — ni vallejo/admin puede editar un mes que
+  no sea el editable (`construirVistaMargenesParaMes(anioMes)` en `server.js`, endpoint
   `GET /api/margenes-empresa?mes=AAAAMM`).
 
 ## Permisos por usuario

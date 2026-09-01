@@ -215,7 +215,8 @@
       <button class="pe-grupo-btn" data-grupo="TESI">Tesi</button>
       <button class="pe-grupo-btn" data-grupo="WEB">Digitales</button>
     </div>
-    <select id="peSelectMes" style="margin-left:auto;width:auto;min-width:160px"></select>
+    <button class="btn-limpiar" id="btnEditarObjetivosMes" style="width:auto;margin-left:auto;display:none">✎ Editar objetivos del mes en curso</button>
+    <select id="peSelectMes" style="width:auto;min-width:160px"></select>
     <span class="sello" id="peMes"></span>
   </div>
   <div class="pe-contenido">
@@ -1407,7 +1408,7 @@ document.getElementById('btnGuardarTodo').addEventListener('click', async () => 
 // mesSeleccionado null = "mes que viene" (editable, comportamiento de
 // siempre); un AAAAMM puntual = otro mes con objetivo cargado, sólo
 // lectura (siempre objetivo, nunca venta real — eso es de Comparativas).
-const peState = { datos: null, grupo: 'PUEBLO', mesSeleccionado: null };
+const peState = { datos: null, grupo: 'PUEBLO', mesSeleccionado: null, mesActualDesbloqueado: false };
 let peTemporizadorGuardado = {};
 
 function fmtPct(frac){ return frac == null ? '' : (frac * 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%'; }
@@ -1446,13 +1447,19 @@ function nombreMesAAAAMM(aaaamm){
 }
 /* Excepción (30/08/2026): el mes en curso (mesSeleccionado === el mismo
    AñoMes de la columna morada de Comparativas) admite ajustes puntuales de
-   Días/Margen/Ajuste — escritura directa a dw_vallejo, sin borrador ni
-   GUARDAR (ya está guardado de verdad, esto es corregirlo). Cualquier OTRO
-   mes que no sea el editable sigue siendo siempre sólo lectura. */
+   Operaciones/Tkt Prom/Uni x Cli/Días/Margen — escritura directa a
+   dw_vallejo, sin borrador ni GUARDAR (ya está guardado de verdad, esto es
+   corregirlo) — pero sólo después de confirmar el botón "Editar objetivos
+   del mes en curso" (peState.mesActualDesbloqueado), para no dejarlo
+   editable por accidente. Cualquier OTRO mes que no sea el editable sigue
+   siendo siempre sólo lectura. Comparativas no cambia: ahí sólo se edita
+   el mes que viene, como siempre. */
 function esMesActualPe(){ return peState.mesSeleccionado != null && peState.mesSeleccionado === state.anioMesActual; }
-function pePuedeEditar(){ return state.puedeEditar && (!peState.mesSeleccionado || esMesActualPe()); }
+function pePuedeEditar(){ return state.puedeEditar && (!peState.mesSeleccionado || (esMesActualPe() && peState.mesActualDesbloqueado)); }
 function aplicarSoloLecturaPorMes(){
-  if (pePuedeEditar()) return; // mes que viene: lo maneja aplicarModoSoloLectura(); mes en curso: editable acá
+  const btn = document.getElementById('btnEditarObjetivosMes');
+  btn.style.display = (state.puedeEditar && esMesActualPe() && !peState.mesActualDesbloqueado) ? '' : 'none';
+  if (pePuedeEditar()) return; // mes que viene: lo maneja aplicarModoSoloLectura(); mes en curso desbloqueado: editable acá
   document.querySelectorAll('#peStats input, #peTablaCont input')
     .forEach((el) => { el.disabled = true; el.title = 'Mes cerrado — sólo lectura'; });
 }
@@ -1625,7 +1632,13 @@ function conectarTabs(){
   }));
   document.getElementById('peSelectMes').addEventListener('change', (e) => {
     peState.mesSeleccionado = e.target.value ? Number(e.target.value) : null;
+    peState.mesActualDesbloqueado = false; // cada vez que se cambia de mes, vuelve a pedir confirmación
     cargarPorEmpresa();
+  });
+  document.getElementById('btnEditarObjetivosMes').addEventListener('click', () => {
+    if (!confirm('Vas a habilitar la edición de Operaciones/Tkt Prom/Uni x Cli/Días/Margen del mes en curso — se guarda directo en la base real, sin vuelta atrás salvo que lo corrijas a mano. ¿Confirmás?')) return;
+    peState.mesActualDesbloqueado = true;
+    renderPorEmpresa();
   });
   document.querySelectorAll('.pe-grupo-btn').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.pe-grupo-btn').forEach((x) => x.classList.remove('activo'));
@@ -1716,29 +1729,42 @@ async function guardarAjusteGrupo(grupo){
 
 /* Digitales: Ajuste % es editable por sucursal (antes era +1% fijo de
    grupo) — dos columnas extra: el ajuste que se le suma, y el Margen Total
-   Ajustado ya con ese ajuste sumado (de sólo lectura, se recalcula solo). */
-function filaPeHtml(s, esDigital){
+   Ajustado ya con ese ajuste sumado (de sólo lectura, se recalcula solo).
+   Operaciones/Tkt Prom/Uni x Cli (30/08/2026): sólo se ofrecen como input
+   cuando la fila es del MES EN CURSO — para "mes que viene" siguen de sólo
+   lectura acá (se editan desde Comparativas, no desde Totales); para
+   cualquier otro mes tampoco aplica (sólo lectura de siempre). */
+function filaPeHtml(s, esDigital, esMesActual){
   const colsAjuste = esDigital ? `
       <td class="celda-editable"><input type="number" step="0.1" class="pe-in-ajuste" data-cod="${s.cod_sucursal}" value="${((s.ajusteMargen ?? 0) * 100).toLocaleString('es-AR', { maximumFractionDigits: 2 })}"></td>
       <td id="peMargenAjustFila_${s.cod_sucursal}">${s.margenPctAjustadoFila != null ? fmtPct(s.margenPctAjustadoFila) : '—'}</td>` : '';
+  const tktPromCell = esMesActual
+    ? `<td class="celda-editable"><input type="text" inputmode="decimal" class="pe-in-tkt" data-cod="${s.cod_sucursal}" value="${formatearMiles(s.tktProm)}"></td>`
+    : `<td>${fmt(s.tktProm, 'money')}</td>`;
+  const operacionesCell = esMesActual
+    ? `<td class="celda-editable"><input type="number" step="1" min="0" class="pe-in-oper" data-cod="${s.cod_sucursal}" value="${s.operaciones}"></td>`
+    : `<td>${fmt(s.operaciones, 'int')}</td>`;
+  const uniXOperCell = esMesActual
+    ? `<td class="celda-editable"><input type="number" step="0.01" min="0" class="pe-in-unixcli" data-cod="${s.cod_sucursal}" value="${s.uniXOper}"></td>`
+    : `<td>${s.uniXOper.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
   return `
     <tr data-cod="${s.cod_sucursal}">
       <td>${s.nombre}</td>
       <td>${s.supervisor || ''}</td>
-      <td>${fmt(s.objetivoSinIva, 'money')}</td>
-      <td>${fmt(s.objetivoConIva, 'money')}</td>
-      <td>${fmt(s.tktProm, 'money')}</td>
+      <td id="peObjSinIva_${s.cod_sucursal}">${fmt(s.objetivoSinIva, 'money')}</td>
+      <td id="peObjConIva_${s.cod_sucursal}">${fmt(s.objetivoConIva, 'money')}</td>
+      ${tktPromCell}
       <td class="celda-editable"><input type="number" step="1" min="1" class="pe-in-dias" data-cod="${s.cod_sucursal}" value="${s.diasVenta ?? ''}"></td>
       <td id="peDiarioSin_${s.cod_sucursal}">${s.diarioSinIva != null ? fmt(s.diarioSinIva, 'money') : '—'}</td>
       <td id="peDiarioCon_${s.cod_sucursal}">${s.diarioConIva != null ? fmt(s.diarioConIva, 'money') : '—'}</td>
       <td class="celda-editable"><input type="number" step="0.1" min="0" max="100" class="pe-in-margen" data-cod="${s.cod_sucursal}" value="${s.margenPct != null ? (s.margenPct * 100) : ''}"></td>
       <td id="peMargenPesos_${s.cod_sucursal}">${s.margenPesos != null ? fmt(s.margenPesos, 'money') : '—'}</td>
       ${colsAjuste}
-      <td>${fmt(s.unidades, 'int')}</td>
+      <td id="peUnidades_${s.cod_sucursal}">${fmt(s.unidades, 'int')}</td>
       <td id="peUnidadesDiarias_${s.cod_sucursal}">${s.unidadesDiarias != null ? fmt(s.unidadesDiarias, 'dec2') : '—'}</td>
-      <td>${fmt(s.operaciones, 'int')}</td>
+      ${operacionesCell}
       <td id="peOperacionesDiarias_${s.cod_sucursal}">${s.operacionesDiarias != null ? fmt(s.operacionesDiarias, 'dec2') : '—'}</td>
-      <td>${s.uniXOper.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      ${uniXOperCell}
     </tr>`;
 }
 
@@ -1834,7 +1860,7 @@ function encabezadosPeHtml(esDigital){
    una calculaba su propio ancho de columna y no quedaban alineadas. */
 function bloquePeHtml(sucursales, esDigital, titulo, idPrefix){
   if (!sucursales.length) return '';
-  const filasHtml = sucursales.map((s) => filaPeHtml(s, esDigital)).join('');
+  const filasHtml = sucursales.map((s) => filaPeHtml(s, esDigital, esMesActualPe())).join('');
   const totalSub = calcularTotalGrupoCliente(sucursales);
   const colspan = esDigital ? CANT_COLS_PE.digital : CANT_COLS_PE.normal;
   const tituloHtml = titulo ? `<tr class="pe-subtitulo-fila"><td colspan="${colspan}">${titulo} (${sucursales.length})</td></tr>` : '';
@@ -1862,7 +1888,7 @@ function renderPeTabla(){
   } else {
     cont.innerHTML = `<table>
       <thead>${encabezadosPeHtml(false)}</thead>
-      <tbody>${g.sucursales.map((s) => filaPeHtml(s, false)).join('')}${filaTotalPeHtml(g.total, false, 'Total', 'peTotal')}</tbody>
+      <tbody>${g.sucursales.map((s) => filaPeHtml(s, false, esMesActualPe())).join('')}${filaTotalPeHtml(g.total, false, 'Total', 'peTotal')}</tbody>
     </table>`;
   }
 
@@ -1870,6 +1896,8 @@ function renderPeTabla(){
     el.addEventListener('input', () => onInputPe(el.dataset.cod)));
   cont.querySelectorAll('.pe-in-ajuste').forEach((el) =>
     el.addEventListener('input', () => onInputAjuste(el.dataset.cod)));
+  cont.querySelectorAll('.pe-in-oper, .pe-in-tkt, .pe-in-unixcli').forEach((el) =>
+    el.addEventListener('input', (e) => onInputPeObjetivo(el.dataset.cod, e)));
 }
 
 function onInputPe(cod){
@@ -1980,8 +2008,11 @@ async function guardarPe(cod){
     setTxt(`peMargenAjustFila_${cod}`, s.margenPctAjustadoFila != null ? fmtPct(s.margenPctAjustadoFila) : '—');
     actualizarTotalesPeEnVivo(cod);
 
-    // Sincroniza con la pestaña Comparativas: "completo" (lo que exige GUARDAR) sí necesita días/margen.
-    if (objState.datos) {
+    // Sincroniza con la pestaña Comparativas (mes que viene): "completo" (lo
+    // que exige GUARDAR) sí necesita días/margen. No aplica al mes en
+    // curso — objState.datos es de otro mes, matchear por cod ahí pisaría
+    // mal el mes que viene con valores que son de éste.
+    if (objState.datos && !esMesActualPe()) {
       const so = objState.datos.sucursales.find((x) => x.cod_sucursal === cod);
       if (so) {
         so.diasVenta = s.diasVenta;
@@ -1991,6 +2022,80 @@ async function guardarPe(cod){
         renderObjSidebar();
       }
     }
+  } catch (e) {
+    mostrarToast('Error al guardar: ' + e.message);
+  }
+}
+
+/* Operaciones/Tkt Prom/Uni x Cli del MES EN CURSO (30/08/2026) — mismo
+   patrón que la celda editable de Comparativas: recalcula en vivo
+   Objetivo $/Unidades (y lo que depende de esos, diario y margen $) y
+   guarda con debounce, escribiendo directo a dw_vallejo. */
+function onInputPeObjetivo(cod, e){
+  const g = peState.datos.grupos[peState.grupo];
+  const s = g.sucursales.find((x) => x.cod_sucursal === cod);
+  const elTkt = document.querySelector(`.pe-in-tkt[data-cod="${cod}"]`);
+  const elOper = document.querySelector(`.pe-in-oper[data-cod="${cod}"]`);
+  const elUniXCli = document.querySelector(`.pe-in-unixcli[data-cod="${cod}"]`);
+  if (e && e.target === elTkt) formatoMilesLive(e);
+
+  const tktProm = elTkt ? (valorNumerico(elTkt) || 0) : s.tktProm;
+  const operaciones = elOper ? (Number(elOper.value) || 0) : s.operaciones;
+  const uniXCli = elUniXCli ? (Number(elUniXCli.value) || 0) : s.uniXOper;
+  const calc = calcularValores(uniXCli, tktProm, operaciones);
+
+  setTxt(`peObjSinIva_${cod}`, fmt(calc.ventaSinIva, 'money'));
+  setTxt(`peObjConIva_${cod}`, fmt(calc.ventaConIva, 'money'));
+  setTxt(`peUnidades_${cod}`, fmt(calc.unidades, 'int'));
+  if (s.diasVenta) {
+    setTxt(`peDiarioSin_${cod}`, fmt(calc.ventaSinIva / s.diasVenta, 'money'));
+    setTxt(`peDiarioCon_${cod}`, fmt((calc.ventaSinIva / s.diasVenta) * 1.21, 'money'));
+    setTxt(`peUnidadesDiarias_${cod}`, fmt(calc.unidades / s.diasVenta, 'dec2'));
+    setTxt(`peOperacionesDiarias_${cod}`, fmt(operaciones / s.diasVenta, 'dec2'));
+  }
+  if (s.margenPct != null) setTxt(`peMargenPesos_${cod}`, fmt(s.margenPct * calc.ventaSinIva, 'money'));
+
+  clearTimeout(peTemporizadorGuardado['obj_' + cod]);
+  peTemporizadorGuardado['obj_' + cod] = setTimeout(() => guardarPeObjetivo(cod), 700);
+}
+
+async function guardarPeObjetivo(cod){
+  const elTkt = document.querySelector(`.pe-in-tkt[data-cod="${cod}"]`);
+  const elOper = document.querySelector(`.pe-in-oper[data-cod="${cod}"]`);
+  const elUniXCli = document.querySelector(`.pe-in-unixcli[data-cod="${cod}"]`);
+  const tktProm = valorNumerico(elTkt);
+  const operaciones = Number(elOper.value);
+  const uniXCli = Number(elUniXCli.value);
+  if (!Number.isFinite(tktProm) || !Number.isFinite(operaciones) || !Number.isFinite(uniXCli)) return;
+
+  try {
+    const r = await fetch(`api/objetivo-actual/${encodeURIComponent(cod)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uniXCli, tktProm, operaciones })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+
+    const g = peState.datos.grupos[peState.grupo];
+    const s = g.sucursales.find((x) => x.cod_sucursal === cod);
+    s.tktProm = data.valores.tktProm;
+    s.operaciones = data.valores.operaciones;
+    s.uniXOper = data.valores.uniXCli;
+    s.objetivoSinIva = data.valores.ventaSinIva;
+    s.objetivoConIva = data.valores.ventaConIva;
+    s.unidades = data.valores.unidades;
+    if (s.diasVenta) {
+      s.diarioSinIva = s.objetivoSinIva / s.diasVenta;
+      s.diarioConIva = s.diarioSinIva * 1.21;
+      s.unidadesDiarias = s.unidades / s.diasVenta;
+      s.operacionesDiarias = s.operaciones / s.diasVenta;
+    }
+    if (s.margenPct != null) s.margenPesos = s.margenPct * s.objetivoSinIva;
+    g.total = calcularTotalGrupoCliente(g.sucursales);
+    g.margenPctAjustado = g.ajuste == null ? g.total.margenPctAjustadoPorSucursal : g.total.margenPct + g.ajuste;
+    renderPeStats();
+    actualizarTotalesPeEnVivo(cod);
   } catch (e) {
     mostrarToast('Error al guardar: ' + e.message);
   }

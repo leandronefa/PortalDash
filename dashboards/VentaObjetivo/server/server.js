@@ -5,7 +5,7 @@ const sql = require('mssql');
 const {
   GRILLA, OBJETIVO_MES, SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
   OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, MESES_CON_OBJETIVO, DELETE_OBJETIVO, SUPERVISORES, SUCURSALES_DE_ENCARGADO,
-  UPDATE_DIAS_MES, UPDATE_MARGEN_MES,
+  UPDATE_DIAS_MES, UPDATE_MARGEN_MES, INSERT_OBJETIVO, UPDATE_OBJETIVO,
   DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 } = require('./consultas');
 const { crearStoreObjetivos } = require('./objetivos-store');
@@ -1143,6 +1143,71 @@ app.post('/api/margenes-empresa/grupo/:grupo/ajuste', exigirEdicion, async (req,
     res.json({ ok: true, mes, grupo });
   } catch (e) {
     log('error', `margenes-empresa grupo ajuste POST: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* Operaciones/Tkt Prom/Uni x Cli del MES EN CURSO (30/08/2026) — mismo
+   endpoint que el "mes que viene" pero escribiendo DIRECTO a
+   dw_vallejo.f_objetivos (sin borrador): ese mes ya se guardó de verdad,
+   esto es corregirlo. Recalcula además obj_margen_pesos con la venta
+   nueva, para no dejarlo desincronizado del margen % ya cargado. Sólo
+   habilitado desde Totales tras confirmar "Editar objetivos del mes en
+   curso" — Comparativas sigue siendo sólo para el mes que viene. */
+app.post('/api/objetivo-actual/:cod', exigirEdicion, async (req, res) => {
+  try {
+    const { cod } = req.params;
+    const { uniXCli, tktProm, operaciones } = req.body || {};
+    const nums = [uniXCli, tktProm, operaciones].map(Number);
+    if (nums.some((n) => !Number.isFinite(n) || n < 0)) {
+      return res.status(400).json({ error: 'uniXCli, tktProm y operaciones deben ser números ≥ 0' });
+    }
+    const sucursales = await obtenerSucursalesCacheadas();
+    const s = sucursales.find((x) => x.cod_sucursal === cod);
+    if (!s) return res.status(404).json({ error: 'Sucursal no encontrada' });
+    const mes = mesActualAAAAMM();
+    const valores = calcular({ uniXCli: nums[0], tktProm: nums[1], operaciones: nums[2] });
+
+    const pool = await getPoolDwVallejo();
+    const camposComunes = (r) => {
+      r.input('mes', sql.Int, mes);
+      r.input('idSucursal', sql.Int, s.id_sucursal);
+      r.input('uniXCli', sql.Decimal(18, 4), valores.uniXCli);
+      r.input('tktProm', sql.Decimal(18, 4), valores.tktProm);
+      r.input('operaciones', sql.Decimal(18, 4), valores.operaciones);
+      r.input('unidades', sql.Decimal(18, 4), valores.unidades);
+      r.input('ventaConIva', sql.Decimal(18, 4), valores.ventaConIva);
+      r.input('ventaSinIva', sql.Decimal(18, 4), valores.ventaSinIva);
+    };
+    const reqUpd = pool.request();
+    camposComunes(reqUpd);
+    const r = await reqUpd.query(UPDATE_OBJETIVO);
+    if (r.rowsAffected[0] === 0) {
+      const reqIns = pool.request();
+      camposComunes(reqIns);
+      await reqIns.query(INSERT_OBJETIVO);
+    }
+
+    // obj_margen_pesos depende de la venta — si cambió, hay que recalcularlo
+    // con el margen % y ajuste que ya estaban cargados (no cambian acá).
+    const dbDiasMargen = await cargarDiasMargenDelMesDb(mes);
+    const actual = dbDiasMargen.get(s.id_sucursal);
+    if (actual && actual.margen_pct != null) {
+      const ajusteActual = actual.ajuste_usado != null ? Number(actual.ajuste_usado) : 0;
+      const margenPorAjustado = Number(actual.margen_pct) + ajusteActual;
+      const reqMargen = pool.request();
+      reqMargen.input('mes', sql.Int, mes);
+      reqMargen.input('idSucursal', sql.Int, s.id_sucursal);
+      reqMargen.input('margenPor', sql.Decimal(18, 4), margenPorAjustado);
+      reqMargen.input('ajuste', sql.Decimal(18, 4), ajusteActual);
+      reqMargen.input('margenPesos', sql.Decimal(18, 2), margenPorAjustado * valores.ventaSinIva);
+      await reqMargen.query(UPDATE_MARGEN_MES);
+    }
+
+    cache = { data: null, ts: 0, mesAbierto: null }; // la columna "mes en curso" de Comparativas sale de acá
+    res.json({ ok: true, mes, cod_sucursal: cod, valores });
+  } catch (e) {
+    log('error', `objetivo-actual POST: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });

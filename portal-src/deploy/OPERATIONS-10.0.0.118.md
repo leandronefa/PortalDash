@@ -25,7 +25,8 @@ C:\apps\
     ├── ControlCaja\                 Node/Express  → servicio "dashcontrolcaja.exe",          puerto 3014
     ├── VentaObjetivo\server\        Node/Express  → servicio "dashventaobjetivo.exe",        puerto 3016
     ├── StockProveedorMarca\server\  Node/Express  → servicio "dashstockproveedormarca.exe",  puerto 3017
-    └── VentaObjetivoSucursal\server\ Node/Express → servicio "dashventaobjetivosucursal.exe", puerto 3018
+    ├── VentaObjetivoSucursal\server\ Node/Express → servicio "dashventaobjetivosucursal.exe", puerto 3018
+    └── MotorReposicion\             Node/Express  → servicio "dashmotorreposicion.exe",       puerto 3019
 ```
 
 > `\\10.0.0.118\apps` es el recurso compartido que apunta a `C:\apps`. En el server SIEMPRE usar la ruta **local `C:\apps\...`** (los servicios no deben referenciar rutas UNC).
@@ -47,6 +48,7 @@ C:\apps\
 | `dashventaobjetivo.exe` | Dash-VentaObjetivo | VentaObjetivo\server / **3016** | `server.js` |
 | `dashstockproveedormarca.exe` | Dash-StockProveedorMarca | StockProveedorMarca\server / **3017** | `server.js` |
 | `dashventaobjetivosucursal.exe` | Dash-VentaObjetivoSucursal | VentaObjetivoSucursal\server / **3018** | `server.js` |
+| `dashmotorreposicion.exe` | Dash-MotorReposicion | MotorReposicion / **3019** | `server.js` |
 
 ⚠️ **node-windows registra los servicios con sufijo `.exe`** en el Name real. `Get-Service Dash-*` **no** los encuentra. Usar:
 ```powershell
@@ -61,7 +63,7 @@ Restart-Service dashpromociones.exe
 ```powershell
 # Estado de todo
 Get-Service DashboardPortal, dash* | Format-Table Name, Status
-Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012,3013,3014,3016,3017,3018 | Format-Table LocalPort, OwningProcess
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,3001,3002,3003,3004,3006,3007,3008,3009,3010,3011,3012,3013,3014,3016,3017,3018,3019 | Format-Table LocalPort, OwningProcess
 
 # Reiniciar / detener (nombre real con .exe)
 Restart-Service dashcomisiones.exe
@@ -284,3 +286,23 @@ Registrado en el portal el 31/08/2026 (Dashboard Id **20**); URL vía proxy `/d/
   Si aparecen nuevos encargados de sucursal única más adelante, no hay
   automatización — hay que repetir el alta a mano (UI de Administración) o
   un script similar.
+
+## MotorReposicion — tablero de reposición/quiebre de stock (01/09/2026)
+
+Servicio `dashmotorreposicion.exe`, puerto **3019** (solo loopback), carpeta
+`C:\apps\dashboards\MotorReposicion`. Registrado en el portal el 01/09/2026
+(Dashboard Id **21**, nombre "Motor Reposición"); URL vía proxy `/d/21/`.
+Antes vivía como repo git local separado (sin remoto) — se fusionó al
+monorepo `PortalDash` en este alta para quedar consistente con el resto de
+los dashboards.
+
+- `server.js` no bindeaba `HOST` explícito (`app.listen(PORT, ...)`, sin
+  segundo argumento) y por default escuchaba en todas las interfaces —
+  se corrigió agregando `HOST=process.env.HOST || '127.0.0.1'` antes de
+  instalar el servicio.
+- Conexión directa a SQL Server 2008 R2 (`10.0.0.115`, base `db_Cegid`),
+  sin capa intermedia SQLite. Precálculo nocturno vía SQL Agent Job
+  ("MotorReposicion - PreCalcular DiasConStock", 06:30) sobre tablas
+  `dbo.MotorReposicion_*`.
+- Alta de usuarios/permisos hecha por el usuario desde la UI de
+  Administración (no por script).

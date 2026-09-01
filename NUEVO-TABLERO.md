@@ -105,7 +105,7 @@ existente (nunca commitearla).
 ## 2. Elegir puerto
 
 Mirar la tabla de `C:\apps\dashboards\CLAUDE.md` y `C:\apps\CLAUDE.md` — usar el
-siguiente libre (al momento de escribir esto, el último asignado es 3018). Un
+siguiente libre (al momento de escribir esto, el último asignado es 3019). Un
 puerto único por dashboard evita `EADDRINUSE`.
 
 ## 3. Probar en primer plano (antes de instalar el servicio)

@@ -2815,6 +2815,7 @@ function detalleData(){
 }
 
 function abrirVerDetalle(){
+  altoFilaDetalleCache = null; // remedir -- puede haber cambiado el zoom/fuente desde la ultima apertura
   detState = DET_STATE_INICIAL();
   document.getElementById('m-title').textContent = "Ver en detalle · Quiebre y riesgo";
   // display:flex ANTES de renderVerDetalle() (no después, como en otros "abrir" de este modal) --
@@ -3422,6 +3423,20 @@ function renderVentanaComprar(modelo, color){
       if(itemsCompletos && itemsCompletos.length && document.getElementById('art-modal').style.display==='flex' && artModalRefrescar) artModalRefrescar();
     });
   }
+}
+
+// Alto real de una fila de "Ver en detalle", medido EN VIVO (nunca adivinado -- mismo criterio ya
+// usado para --modal-hd-alto/--tpv-detheader-alto en otras partes de este archivo). Es constante
+// mientras dure la apertura del modal (mismo CSS/contenido de fila siempre, sin wrap de texto) --
+// se remide solo al reabrir el modal (ver abrirVerDetalle), por si cambio el zoom/fuente entre
+// aperturas.
+let altoFilaDetalleCache = null;
+function medirAltoFilaDetalle(primeraFila, listaEl) {
+  if (altoFilaDetalleCache != null) return altoFilaDetalleCache;
+  if (!primeraFila) return 0;
+  listaEl.innerHTML = filaBarraHtml(primeraFila, primeraFila.estadoFinal);
+  altoFilaDetalleCache = listaEl.firstElementChild.getBoundingClientRect().height;
+  return altoFilaDetalleCache;
 }
 
 function renderVerDetalle(){

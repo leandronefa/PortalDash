@@ -2237,6 +2237,24 @@ function ordenarBarras(items, criterio){
   else items.sort((a,b)=>b.impacto-a.impacto); // margen (default)
   return items;
 }
+// Calcula que rango de INDICES de un array ya ordenado hay que pintar como HTML real, dado el
+// scroll actual -- pura (sin tocar el DOM), para poder probarla aislada. overscan = filas extra
+// arriba/abajo del viewport, para no ver un instante en blanco al scrollear rapido.
+// paddingArriba/paddingAbajo simulan el alto de las filas NO pintadas, para que la scrollbar se
+// comporte igual que si estuvieran todas las filas reales en el DOM.
+function calcularRangoVirtual({ scrollTop, altoViewport, altoFila, totalFilas, overscan = 6 }) {
+  if (totalFilas <= 0 || altoFila <= 0) return { desde: 0, hasta: 0, paddingArriba: 0, paddingAbajo: 0 };
+  const primeraVisible = Math.floor(scrollTop / altoFila);
+  const filasVisibles = Math.ceil(altoViewport / altoFila) + 1; // +1: la fila parcialmente visible al fondo
+  const desde = Math.max(0, primeraVisible - overscan);
+  const hasta = Math.min(totalFilas, primeraVisible + filasVisibles + overscan);
+  return {
+    desde,
+    hasta,
+    paddingArriba: desde * altoFila,
+    paddingAbajo: (totalFilas - hasta) * altoFila,
+  };
+}
 // Favoritos: dos niveles independientes (SKU puntual y artículo completo). Solo tratamiento
 // visual (estrella) — no altera ningún orden ni cálculo.
 let favSku = new Set();

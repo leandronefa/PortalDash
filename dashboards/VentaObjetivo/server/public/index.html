@@ -1444,12 +1444,15 @@ function nombreMesAAAAMM(aaaamm){
   const n = Number(aaaamm);
   return `${NOMBRES_MES[(n % 100) - 1]} ${Math.floor(n / 100)}`;
 }
-/* Un mes que no sea el editable (mesSeleccionado != null) es SIEMPRE sólo
-   lectura, sin excepción para vallejo/admin — nunca se edita un objetivo
-   que ya no es el del mes que viene. */
-function pePuedeEditar(){ return state.puedeEditar && !peState.mesSeleccionado; }
+/* Excepción (30/08/2026): el mes en curso (mesSeleccionado === el mismo
+   AñoMes de la columna morada de Comparativas) admite ajustes puntuales de
+   Días/Margen/Ajuste — escritura directa a dw_vallejo, sin borrador ni
+   GUARDAR (ya está guardado de verdad, esto es corregirlo). Cualquier OTRO
+   mes que no sea el editable sigue siendo siempre sólo lectura. */
+function esMesActualPe(){ return peState.mesSeleccionado != null && peState.mesSeleccionado === state.anioMesActual; }
+function pePuedeEditar(){ return state.puedeEditar && (!peState.mesSeleccionado || esMesActualPe()); }
 function aplicarSoloLecturaPorMes(){
-  if (!peState.mesSeleccionado) return; // mes que viene: lo maneja aplicarModoSoloLectura()
+  if (pePuedeEditar()) return; // mes que viene: lo maneja aplicarModoSoloLectura(); mes en curso: editable acá
   document.querySelectorAll('#peStats input, #peTablaCont input')
     .forEach((el) => { el.disabled = true; el.title = 'Mes cerrado — sólo lectura'; });
 }
@@ -1690,7 +1693,10 @@ async function guardarAjusteGrupo(grupo){
   if (!Number.isFinite(ajuste)) return;
 
   try {
-    const r = await fetch(`api/margenes-empresa/grupo/${encodeURIComponent(grupo)}/ajuste`, {
+    const url = esMesActualPe()
+      ? `api/objetivo-actual/grupo/${encodeURIComponent(grupo)}/ajuste`
+      : `api/margenes-empresa/grupo/${encodeURIComponent(grupo)}/ajuste`;
+    const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ajuste })
@@ -1702,6 +1708,7 @@ async function guardarAjusteGrupo(grupo){
     g.ajuste = ajuste;
     g.margenPctAjustado = g.total.margenPct + ajuste;
     if (peState.grupo === grupo) setTxt('peAjusteGrupoVal', fmtPct(g.margenPctAjustado));
+    if (esMesActualPe()) await cargarPorEmpresa(); // el ajuste puntual es por sucursal en la base, hay que releer para reflejarlo bien en cada fila
   } catch (e) {
     mostrarToast('Error al guardar el ajuste: ' + e.message);
   }
@@ -1907,7 +1914,10 @@ async function guardarAjuste(cod){
   if (!Number.isFinite(ajusteMargen)) return;
 
   try {
-    const r = await fetch(`api/margenes-empresa/${encodeURIComponent(cod)}/ajuste`, {
+    const url = esMesActualPe()
+      ? `api/objetivo-actual/${encodeURIComponent(cod)}/margen`
+      : `api/margenes-empresa/${encodeURIComponent(cod)}/ajuste`;
+    const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ajusteMargen })
@@ -1940,7 +1950,10 @@ async function guardarPe(cod){
     const body = {};
     if (diasVenta !== '') body.diasVenta = diasVenta;
     if (margenPct !== '') body.margenPct = Number(margenPct) / 100;
-    const r = await fetch(`api/margenes-empresa/${encodeURIComponent(cod)}`, {
+    const url = esMesActualPe()
+      ? `api/objetivo-actual/${encodeURIComponent(cod)}/margen`
+      : `api/margenes-empresa/${encodeURIComponent(cod)}`;
+    const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)

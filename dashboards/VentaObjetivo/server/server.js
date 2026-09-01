@@ -5,6 +5,7 @@ const sql = require('mssql');
 const {
   GRILLA, OBJETIVO_MES, SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
   OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, MESES_CON_OBJETIVO, DELETE_OBJETIVO, SUPERVISORES, SUCURSALES_DE_ENCARGADO,
+  UPDATE_DIAS_MES, UPDATE_MARGEN_MES,
   DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 } = require('./consultas');
 const { crearStoreObjetivos } = require('./objetivos-store');
@@ -1142,6 +1143,118 @@ app.post('/api/margenes-empresa/grupo/:grupo/ajuste', exigirEdicion, async (req,
     res.json({ ok: true, mes, grupo });
   } catch (e) {
     log('error', `margenes-empresa grupo ajuste POST: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* Ajuste puntual del MES EN CURSO (30/08/2026) — ese mes ya se guardó de
+   verdad (GUARDAR OBJETIVOS corrió, TEMP_BI_APP+SP ya empujaron todo a
+   dw_vallejo), así que corregir algo acá escribe DIRECTO a la base, sin
+   borrador ni SP: no hay "guardar" pendiente, cada cambio YA es el cambio
+   real. Body parcial — cualquier combinación de diasVenta/margenPct/
+   ajusteMargen; lo que no venga se completa con lo que ya hay en la base. */
+app.post('/api/objetivo-actual/:cod/margen', exigirEdicion, async (req, res) => {
+  try {
+    const { cod } = req.params;
+    const sucursales = await obtenerSucursalesCacheadas();
+    const s = sucursales.find((x) => x.cod_sucursal === cod);
+    if (!s) return res.status(404).json({ error: 'Sucursal no encontrada' });
+    const mes = mesActualAAAAMM();
+    const grupo = CANALES_WEB.has(cod) ? 'WEB' : s.empresa;
+
+    const [dbDiasMargen, dbRows] = await Promise.all([
+      cargarDiasMargenDelMesDb(mes),
+      cargarObjetivosDelMesDb(mes)
+    ]);
+    const obj = dbRows.get(s.id_sucursal);
+    if (!obj) return res.status(409).json({ error: 'Esta sucursal no tiene objetivo cargado el mes en curso' });
+    const actual = dbDiasMargen.get(s.id_sucursal) || {};
+
+    const body = req.body || {};
+    const diasVenta = body.diasVenta != null ? Number(body.diasVenta) : (actual.dias_venta != null ? Number(actual.dias_venta) : null);
+    const margenPctRaw = body.margenPct != null ? Number(body.margenPct) : (actual.margen_pct != null ? Number(actual.margen_pct) : null);
+    const ajusteDefault = grupo === 'WEB' ? AJUSTE_MARGEN.WEB : AJUSTE_MARGEN[grupo];
+    const ajusteMargen = body.ajusteMargen != null ? Number(body.ajusteMargen) : (actual.ajuste_usado != null ? Number(actual.ajuste_usado) : ajusteDefault);
+
+    if (!(diasVenta > 0)) return res.status(400).json({ error: 'diasVenta debe ser > 0' });
+    if (margenPctRaw == null || !Number.isFinite(margenPctRaw) || margenPctRaw < 0 || margenPctRaw > 1) {
+      return res.status(400).json({ error: 'margenPct debe ser una fracción entre 0 y 1' });
+    }
+    if (!Number.isFinite(ajusteMargen) || ajusteMargen < -1 || ajusteMargen > 1) {
+      return res.status(400).json({ error: 'ajusteMargen debe ser una fracción entre -1 y 1' });
+    }
+
+    const valores = calcular({ uniXCli: obj.obj_unidades_clientes, tktProm: obj.obj_ticket_promedio, operaciones: obj.obj_operaciones });
+    const margenPorAjustado = margenPctRaw + ajusteMargen;
+    const margenPesos = margenPorAjustado * valores.ventaSinIva;
+
+    const pool = await getPoolDwVallejo();
+    const reqDias = pool.request();
+    reqDias.input('mes', sql.Int, mes);
+    reqDias.input('idSucursal', sql.Int, s.id_sucursal);
+    reqDias.input('dias', sql.Decimal(10, 2), diasVenta);
+    await reqDias.query(UPDATE_DIAS_MES);
+
+    const reqMargen = pool.request();
+    reqMargen.input('mes', sql.Int, mes);
+    reqMargen.input('idSucursal', sql.Int, s.id_sucursal);
+    reqMargen.input('margenPor', sql.Decimal(18, 4), margenPorAjustado);
+    reqMargen.input('ajuste', sql.Decimal(18, 4), ajusteMargen);
+    reqMargen.input('margenPesos', sql.Decimal(18, 2), margenPesos);
+    await reqMargen.query(UPDATE_MARGEN_MES);
+
+    res.json({ ok: true, mes, cod_sucursal: cod });
+  } catch (e) {
+    log('error', `objetivo-actual margen POST: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* Ajuste puntual de grupo (Pueblo/Tesi) del mes en curso — recalcula cada
+   sucursal del grupo preservando su margenPct "crudo" propio, sólo cambia
+   el ajuste. Las que no tienen margen cargado ese mes quedan afuera (nada
+   que reajustar). */
+app.post('/api/objetivo-actual/grupo/:grupo/ajuste', exigirEdicion, async (req, res) => {
+  try {
+    const { grupo } = req.params;
+    if (grupo !== 'PUEBLO' && grupo !== 'TESI') {
+      return res.status(400).json({ error: 'grupo debe ser PUEBLO o TESI' });
+    }
+    const aj = Number(req.body && req.body.ajuste);
+    if (!Number.isFinite(aj) || aj < -1 || aj > 1) {
+      return res.status(400).json({ error: 'ajuste debe ser una fracción entre -1 y 1' });
+    }
+    const mes = mesActualAAAAMM();
+    const [sucursales, dbRows, dbDiasMargen] = await Promise.all([
+      obtenerSucursalesCacheadas(),
+      cargarObjetivosDelMesDb(mes),
+      cargarDiasMargenDelMesDb(mes)
+    ]);
+    const delGrupo = sucursales.filter((s) => !CANALES_WEB.has(s.cod_sucursal) && s.empresa === grupo && dbRows.has(s.id_sucursal));
+
+    const pool = await getPoolDwVallejo();
+    let actualizadas = 0;
+    for (const s of delGrupo) {
+      const actual = dbDiasMargen.get(s.id_sucursal);
+      if (!actual || actual.margen_pct == null) continue; // sin margen cargado, nada que reajustar
+      const obj = dbRows.get(s.id_sucursal);
+      const margenPctRaw = Number(actual.margen_pct);
+      const valores = calcular({ uniXCli: obj.obj_unidades_clientes, tktProm: obj.obj_ticket_promedio, operaciones: obj.obj_operaciones });
+      const margenPorAjustado = margenPctRaw + aj;
+      const margenPesos = margenPorAjustado * valores.ventaSinIva;
+
+      const reqMargen = pool.request();
+      reqMargen.input('mes', sql.Int, mes);
+      reqMargen.input('idSucursal', sql.Int, s.id_sucursal);
+      reqMargen.input('margenPor', sql.Decimal(18, 4), margenPorAjustado);
+      reqMargen.input('ajuste', sql.Decimal(18, 4), aj);
+      reqMargen.input('margenPesos', sql.Decimal(18, 2), margenPesos);
+      await reqMargen.query(UPDATE_MARGEN_MES);
+      actualizadas++;
+    }
+    res.json({ ok: true, mes, grupo, actualizadas });
+  } catch (e) {
+    log('error', `objetivo-actual grupo ajuste POST: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });

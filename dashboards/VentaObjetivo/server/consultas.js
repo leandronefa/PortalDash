@@ -178,6 +178,23 @@ const DIAS_MARGEN_DEL_MES = `
   WHERE o.id_vendedor = 0 AND o.id_mes = @mes;
 `;
 
+/* Ajuste puntual del mes en curso (30/08/2026) — escritura directa, sin
+   borrador ni SP: el mes en curso ya se guardó de verdad con GUARDAR
+   OBJETIVOS, esto es corregir un valor puntual después. obj_margen_por va
+   con el ajuste ya sumado (mismo criterio que el resto del dashboard). */
+const UPDATE_DIAS_MES = `
+  UPDATE dw_vallejo.dbo.f_dias_habiles
+  SET dias_habiles = @dias
+  WHERE id_mes = @mes AND id_sucursal = @idSucursal;
+`;
+const UPDATE_MARGEN_MES = `
+  UPDATE ${T.objetivos}
+  SET obj_margen_por = @margenPor,
+      obj_margen_ope_por = @ajuste,
+      obj_margen_pesos = @margenPesos
+  WHERE id_mes = @mes AND id_sucursal = @idSucursal AND id_vendedor = 0;
+`;
+
 const INSERT_OBJETIVO = `
   INSERT INTO ${T.objetivos}
     (id_mes, id_sucursal, id_vendedor, obj_unidades_clientes, obj_ticket_promedio,
@@ -316,5 +333,6 @@ module.exports = {
   T, GRILLA, OBJETIVO_MES, CANAL_A_COD,
   SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
   OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, MESES_CON_OBJETIVO, INSERT_OBJETIVO, UPDATE_OBJETIVO, DELETE_OBJETIVO,
+  UPDATE_DIAS_MES, UPDATE_MARGEN_MES,
   SUPERVISORES, SUCURSALES_DE_ENCARGADO, DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 };

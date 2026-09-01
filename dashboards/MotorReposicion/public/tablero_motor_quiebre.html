@@ -3465,7 +3465,6 @@ function renderVerDetalle(){
   const sinFiltroTxt = detState.estadoFiltro.size===2 ? "con estos filtros"
     : detState.estadoFiltro.size===0 ? "(ningún estado tildado en el filtro de arriba)"
     : `en ${detState.estadoFiltro.has("QUIEBRE")?"quiebre":"riesgo"} con estos filtros`;
-  const filas = ordenado.map(r=>filaBarraHtml(r, r.estadoFinal)).join("") || `<div style="padding:28px;text-align:center;color:#9aa7ad">Sin artículos ${sinFiltroTxt}.</div>`;
 
   // Lista con scroll PROPIO (#det-lista-scroll), separada del título/controles/filtros/encabezado
   // de columnas -- esos quedan siempre visibles arriba, sin sticky ni offsets que coordinar entre
@@ -3486,7 +3485,6 @@ function renderVerDetalle(){
   const listaEl = document.getElementById('det-lista-scroll');
   const topLista = listaEl.getBoundingClientRect().top;
   listaEl.style.maxHeight = Math.max(200, window.innerHeight - topLista - 20) + 'px';
-  listaEl.innerHTML = filas;
   document.getElementById('det-orden').onchange = e=>{ detState.orden=e.target.value; registrarActividad("Cambió orden: Ver en detalle", e.target.value); renderVerDetalle(); };
   document.getElementById('det-csv').onclick = exportarDetalleCSV;
   // Filtro por Estado -- click en el encabezado abre un selector con un checkbox por estado
@@ -3494,16 +3492,64 @@ function renderVerDetalle(){
   // directo a ESE estado solo (cierra el popover si estaba abierto, para no dejarlo con checkboxes
   // desactualizados).
   document.getElementById('det-estado-th').onclick = (e)=>{ e.stopPropagation(); abrirEstadoPopover(e.currentTarget); };
-  document.querySelectorAll('#m-body .pcg-estado-click').forEach(el=>el.onclick=(e)=>{
-    e.stopPropagation();
-    cerrarEstadoPopover();
-    detState.estadoFiltro = new Set([el.dataset.estado]);
-    registrarActividad("Filtró Ver en detalle por Estado", el.dataset.estado);
-    renderVerDetalle();
-  });
-  document.querySelectorAll('#m-body .pcard').forEach(c=>c.onclick=()=>abrirCoberturaArticulo(c.dataset.mod, null, c.dataset.color));
-  document.querySelectorAll('#m-body .pcg-repo').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); verPropuestaCompra(b.dataset.mod, b.dataset.color); });
-  bindFavStars(renderVerDetalle, document.getElementById('m-body'));
+
+  // Virtualizacion: con miles de filas agrupadas (casos reales de ~9000+), pintar TODAS como HTML
+  // real en cada click de orden/filtro tardaba varios segundos (medido, ver spec). Solo se pintan
+  // las filas que caen en el rango visible del scroll (+ colchon de overscan), el resto del alto se
+  // simula con padding para que la scrollbar se comporte igual que con todas las filas reales.
+  const altoFila = medirAltoFilaDetalle(ordenado[0], listaEl);
+  function repintarVentana(){
+    const { desde, hasta, paddingArriba, paddingAbajo } = calcularRangoVirtual({
+      scrollTop: listaEl.scrollTop,
+      altoViewport: listaEl.clientHeight,
+      altoFila,
+      totalFilas: ordenado.length,
+    });
+    listaEl.style.paddingTop = paddingArriba + 'px';
+    listaEl.style.paddingBottom = paddingAbajo + 'px';
+    listaEl.innerHTML = ordenado.slice(desde, hasta).map(r=>filaBarraHtml(r, r.estadoFinal)).join("")
+      || `<div style="padding:28px;text-align:center;color:#9aa7ad">Sin artículos ${sinFiltroTxt}.</div>`;
+  }
+  repintarVentana();
+  // requestAnimationFrame: evita repintar mas de una vez por frame si el navegador dispara varios
+  // eventos de scroll seguidos (scroll rapido con rueda/trackpad).
+  let _repintarPendiente = false;
+  listaEl.onscroll = () => {
+    if (_repintarPendiente) return;
+    _repintarPendiente = true;
+    requestAnimationFrame(() => { repintarVentana(); _repintarPendiente = false; });
+  };
+
+  // Clicks delegados en el contenedor (no por fila): con virtualizacion las filas se crean y
+  // destruyen al scrollear, asi que bindear onclick fila por fila (como antes) perderia los
+  // handlers de filas que ya se pintaron y volvieron a pintarse. Un solo listener en el contenedor,
+  // que nunca se destruye entre repintados de ventana (solo se reemplaza entero en cada
+  // renderVerDetalle(), ver mas abajo).
+  listaEl.onclick = (e) => {
+    const favEl = e.target.closest('.fav-star');
+    if (favEl) {
+      e.stopPropagation();
+      const tipo = favEl.dataset.favTipo, id = favEl.dataset.favId;
+      const set = tipo==='sku' ? favSku : favModelo;
+      if(set.has(id)){ set.delete(id); registrarActividad("Desmarcó favorito", `${tipo==='sku'?'SKU':'Artículo'}: ${id}`); }
+      else { set.add(id); registrarActividad("Marcó favorito", `${tipo==='sku'?'SKU':'Artículo'}: ${id}`); }
+      renderTodoTrasFavoritos();
+      return;
+    }
+    const repoEl = e.target.closest('.pcg-repo');
+    if (repoEl) { e.stopPropagation(); verPropuestaCompra(repoEl.dataset.mod, repoEl.dataset.color); return; }
+    const estadoEl = e.target.closest('.pcg-estado-click');
+    if (estadoEl) {
+      e.stopPropagation();
+      cerrarEstadoPopover();
+      detState.estadoFiltro = new Set([estadoEl.dataset.estado]);
+      registrarActividad("Filtró Ver en detalle por Estado", estadoEl.dataset.estado);
+      renderVerDetalle();
+      return;
+    }
+    const card = e.target.closest('.pcard');
+    if (card) abrirCoberturaArticulo(card.dataset.mod, null, card.dataset.color);
+  };
 }
 
 function exportarDetalleCSV(){

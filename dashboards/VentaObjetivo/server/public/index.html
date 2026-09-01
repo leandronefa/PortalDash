@@ -1405,7 +1405,8 @@ document.getElementById('btnGuardarTodo').addEventListener('click', async () => 
 
 /* ── Pestaña "Por Empresa" ─────────────────────────────────────────────── */
 // mesSeleccionado null = "mes que viene" (editable, comportamiento de
-// siempre); un AAAAMM puntual = mes cerrado, sólo lectura (venta real).
+// siempre); un AAAAMM puntual = otro mes con objetivo cargado, sólo
+// lectura (siempre objetivo, nunca venta real — eso es de Comparativas).
 const peState = { datos: null, grupo: 'PUEBLO', mesSeleccionado: null };
 let peTemporizadorGuardado = {};
 
@@ -1419,26 +1420,33 @@ async function fetchMargenes(){
 }
 
 /* Selector de mes de "Totales": "mes que viene" (siempre primero, valor
-   vacío) + los meses CERRADOS con venta real en state.filas (ya cargados
-   para Comparativas, no hace falta pedirlos de nuevo), más recientes
-   primero. Se puebla una sola vez — la lista de meses no cambia en la
-   sesión del usuario. */
-function poblarSelectMesPe(){
+   vacío, editable) + todos los meses con objetivo cargado en dw_vallejo
+   (30/08/2026: ya no depende de qué cerró GrillaVentasComparativas — así
+   un mes recién cerrado, con objetivo guardado pero todavía sin venta real
+   por el ETL, también aparece). Se puebla una sola vez — la lista de meses
+   no cambia en la sesión del usuario. */
+async function poblarSelectMesPe(){
   const sel = document.getElementById('peSelectMes');
   if (sel.dataset.poblado === '1') return;
-  const mesesCerrados = [...new Set(state.filas.filter((f) => !f.esObjetivo).map((f) => f.AñoMes))]
-    .sort((a, b) => Number(b) - Number(a));
+  const mesEditable = objState.datos ? objState.datos.mes : null;
+  let meses = [];
+  try {
+    const r = await fetch('api/margenes-empresa/meses');
+    const data = await r.json();
+    meses = (data.meses || []).filter((m) => m !== mesEditable);
+  } catch (e) { /* si falla, queda sólo la opción del mes editable */ }
   const nombreProximo = objState.datos ? objState.datos.mesNombre : 'Mes que viene';
   sel.innerHTML = `<option value="">${nombreProximo} (editable)</option>` +
-    mesesCerrados.map((m) => `<option value="${m}">${nombreMesAAAAMM(m)}</option>`).join('');
+    meses.map((m) => `<option value="${m}">${nombreMesAAAAMM(m)}</option>`).join('');
   sel.dataset.poblado = '1';
 }
 function nombreMesAAAAMM(aaaamm){
   const n = Number(aaaamm);
   return `${NOMBRES_MES[(n % 100) - 1]} ${Math.floor(n / 100)}`;
 }
-/* Un mes cerrado (mesSeleccionado != null) es SIEMPRE sólo lectura, sin
-   excepción para vallejo/admin — nunca se edita venta real ya cerrada. */
+/* Un mes que no sea el editable (mesSeleccionado != null) es SIEMPRE sólo
+   lectura, sin excepción para vallejo/admin — nunca se edita un objetivo
+   que ya no es el del mes que viene. */
 function pePuedeEditar(){ return state.puedeEditar && !peState.mesSeleccionado; }
 function aplicarSoloLecturaPorMes(){
   if (!peState.mesSeleccionado) return; // mes que viene: lo maneja aplicarModoSoloLectura()
@@ -1626,7 +1634,7 @@ function conectarTabs(){
 }
 
 async function cargarPorEmpresa(){
-  poblarSelectMesPe();
+  await poblarSelectMesPe();
   try {
     await fetchMargenes();
     document.getElementById('peMes').textContent = peState.datos.mesNombre;

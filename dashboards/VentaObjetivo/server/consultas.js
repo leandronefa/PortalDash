@@ -151,6 +151,16 @@ const OBJETIVOS_DEL_MES = `
   WHERE id_vendedor = 0 AND id_mes = @mes;
 `;
 
+/* Lista de meses con objetivo cargado — para poblar el selector de Totales
+   (30/08/2026: Totales siempre muestra objetivo, nunca venta real, así que
+   ya no depende de qué meses cerró GrillaVentasComparativas). */
+const MESES_CON_OBJETIVO = `
+  SELECT DISTINCT id_mes
+  FROM ${T.objetivos}
+  WHERE id_vendedor = 0
+  ORDER BY id_mes DESC;
+`;
+
 /* Días Venta y Margen % ya guardados de verdad (GUARDAR OBJETIVOS ya corrió
    para esa sucursal) — sin esto, la pestaña Totales quedaba en blanco para
    Días/Margen apenas se guardaba, porque el borrador local (única fuente que
@@ -305,6 +315,6 @@ const SUCURSALES_DE_ENCARGADO = `
 module.exports = {
   T, GRILLA, OBJETIVO_MES, CANAL_A_COD,
   SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
-  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, INSERT_OBJETIVO, UPDATE_OBJETIVO, DELETE_OBJETIVO,
+  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, MESES_CON_OBJETIVO, INSERT_OBJETIVO, UPDATE_OBJETIVO, DELETE_OBJETIVO,
   SUPERVISORES, SUCURSALES_DE_ENCARGADO, DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 };

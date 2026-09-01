@@ -4,7 +4,7 @@ const express = require('express');
 const sql = require('mssql');
 const {
   GRILLA, OBJETIVO_MES, SUCURSALES, COD_SUCURSAL_CON_VENTAS, SUCURSALES_ACTIVAS_RECIENTES,
-  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, DELETE_OBJETIVO, SUPERVISORES, SUCURSALES_DE_ENCARGADO,
+  OBJETIVOS_DEL_MES, DIAS_MARGEN_DEL_MES, MESES_CON_OBJETIVO, DELETE_OBJETIVO, SUPERVISORES, SUCURSALES_DE_ENCARGADO,
   DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 } = require('./consultas');
 const { crearStoreObjetivos } = require('./objetivos-store');
@@ -321,6 +321,23 @@ async function cargarDiasMargenDelMesDb(mes) {
   return new Map(r.recordset.map((row) => [row.id_sucursal, row]));
 }
 
+/* ── Meses con objetivo cargado (para el selector de Totales) ─────────────── */
+let cacheMesesConObjetivo = { data: null, ts: 0 };
+
+async function obtenerMesesConObjetivoCacheados() {
+  if (cacheMesesConObjetivo.data && Date.now() - cacheMesesConObjetivo.ts < TTL_SUCURSALES_MS) {
+    return cacheMesesConObjetivo.data;
+  }
+  const pool = await getPoolDwVallejo();
+  const r = await pool.request().query(MESES_CON_OBJETIVO);
+  // Filtra basura de pruebas viejas (ej. 999999, 190001) que haya quedado
+  // en f_objetivos — nada legítimo cae fuera de [ANIOMES_DESDE, mes editable].
+  const tope = mesObjetivoAAAAMM();
+  const data = r.recordset.map((row) => row.id_mes).filter((m) => m >= ANIOMES_DESDE && m <= tope);
+  cacheMesesConObjetivo = { data, ts: Date.now() };
+  return data;
+}
+
 function calcular(valores) {
   const uniXCli = Number(valores.uniXCli);
   const tktProm = Number(valores.tktProm);
@@ -595,19 +612,20 @@ function calcularTotalGrupo(filas) {
   };
 }
 
-/* "Totales" para un mes CERRADO cualquiera (31/08/2026) — a pedido del
-   usuario, poder ver Agosto/Julio/etc, no sólo el mes que viene. Sale de
-   `GrillaVentasComparativas` (venta real, misma fuente que Comparativas),
-   no de f_objetivos/TEMP_BI_APP (eso es sólo para el mes que viene, que
-   todavía no cerró). Días Venta/Margen % salen de dw_vallejo — ya están
-   guardados ahí de cuando ese mes SÍ era "el mes que viene" y alguien lo
-   cargó, así que no hay nada nuevo que calcular, sólo leer. 100% solo
-   lectura: no hay borrador, no hay ajuste editable, no hay guardado — un
-   mes cerrado no se edita nunca, ni para vallejo/admin. */
+/* "Totales" para cualquier mes que NO sea el editable (31/08/2026, ajustado
+   30/08/2026) — a pedido del usuario, poder ver Agosto/Julio/etc., y que
+   SIEMPRE muestre el objetivo cargado para ese mes (no la venta real: eso
+   es cosa de Comparativas). Sale 100% de dw_vallejo (f_objetivos +
+   f_dias_habiles), nunca de GrillaVentasComparativas — así un mes recién
+   cerrado (sin fila real todavía por el ETL) también se puede ver, y un
+   mes viejo muestra lo que se había targeteado, no lo que terminó pasando.
+   100% solo lectura: no hay borrador, no hay ajuste editable, no hay
+   guardado — un mes que no es el editable no se edita nunca, ni para
+   vallejo/admin. */
 async function construirVistaMargenesParaMes(anioMes) {
-  const [grilla, sucursales, supervisores, dbDiasMargen] = await Promise.all([
-    obtenerGrillaCacheada(),
+  const [sucursales, dbRows, supervisores, dbDiasMargen] = await Promise.all([
     obtenerSucursalesCacheadas().catch(() => []),
+    cargarObjetivosDelMesDb(anioMes),
     obtenerSupervisoresCacheados().catch((e) => {
       log('warn', `supervisores falló: ${e.message}`);
       return new Map();
@@ -617,51 +635,51 @@ async function construirVistaMargenesParaMes(anioMes) {
       return new Map();
     })
   ]);
-  const idPorCod = new Map(sucursales.map((s) => [s.cod_sucursal, s.id_sucursal]));
-  const filasMes = grilla.filas.filter((f) => Number(f.AñoMes) === anioMes && !f.esObjetivo);
+  const infoPorId = new Map(sucursales.map((s) => [s.id_sucursal, s]));
 
-  const filas = filasMes.map((f) => {
-    const grupo = CANALES_WEB.has(f.cod_sucursal) ? 'WEB' : f.Empresa;
-    const idSucursal = idPorCod.get(f.cod_sucursal);
-    const guardadoDb = idSucursal != null ? dbDiasMargen.get(idSucursal) : null;
-    const diasVenta = guardadoDb && guardadoDb.dias_venta != null ? Number(guardadoDb.dias_venta) : null;
-    const margenPct = guardadoDb && guardadoDb.margen_pct != null ? Number(guardadoDb.margen_pct) : null;
-    const objetivoSinIva = Number(f.ventas_sin_iva) || 0;
-    const objetivoConIva = objetivoSinIva * 1.21;
-    const diarioSinIva = diasVenta ? objetivoSinIva / diasVenta : null;
-    const diarioConIva = diarioSinIva != null ? diarioSinIva * 1.21 : null;
-    const unidades = Number(f.unidades_vta) || 0;
-    const operaciones = Number(f.cant_operaciones) || 0;
-    const unidadesDiarias = diasVenta ? unidades / diasVenta : null;
-    const operacionesDiarias = diasVenta ? operaciones / diasVenta : null;
-    const margenPesos = margenPct != null ? margenPct * objetivoSinIva : null;
-    const ajusteGuardado = guardadoDb && guardadoDb.ajuste_usado != null ? Number(guardadoDb.ajuste_usado) : null;
-    const ajusteMargen = grupo === 'WEB' ? (ajusteGuardado != null ? ajusteGuardado : AJUSTE_MARGEN.WEB) : null;
-    const margenPctAjustadoFila = grupo === 'WEB' && margenPct != null ? margenPct + ajusteMargen : null;
-    return {
-      cod_sucursal: f.cod_sucursal,
-      nombre: f.desc_sucursal2,
-      grupo,
-      empresaReal: f.Empresa,
-      supervisor: supervisores.get(f.cod_sucursal) || null,
-      objetivoSinIva,
-      objetivoConIva,
-      unidades,
-      operaciones,
-      uniXOper: Number(f.unidadCliente) || 0,
-      tktProm: Number(f.ticketPromIVA) || 0,
-      diasVenta,
-      margenPct,
-      diarioSinIva,
-      diarioConIva,
-      unidadesDiarias,
-      operacionesDiarias,
-      margenPesos,
-      ajusteMargen,
-      margenPctAjustadoFila,
-      cargado: diasVenta != null && margenPct != null
-    };
-  });
+  const filas = [...dbRows.entries()]
+    .filter(([idSucursal]) => infoPorId.has(idSucursal))
+    .map(([idSucursal, obj]) => {
+      const info = infoPorId.get(idSucursal);
+      const grupo = CANALES_WEB.has(info.cod_sucursal) ? 'WEB' : info.empresa;
+      const valores = calcular({ uniXCli: obj.obj_unidades_clientes, tktProm: obj.obj_ticket_promedio, operaciones: obj.obj_operaciones });
+      const guardadoDb = dbDiasMargen.get(idSucursal);
+      const diasVenta = guardadoDb && guardadoDb.dias_venta != null ? Number(guardadoDb.dias_venta) : null;
+      const margenPct = guardadoDb && guardadoDb.margen_pct != null ? Number(guardadoDb.margen_pct) : null;
+      const objetivoSinIva = valores.ventaSinIva;
+      const objetivoConIva = valores.ventaConIva;
+      const diarioSinIva = diasVenta ? objetivoSinIva / diasVenta : null;
+      const diarioConIva = diarioSinIva != null ? diarioSinIva * 1.21 : null;
+      const unidadesDiarias = diasVenta ? valores.unidades / diasVenta : null;
+      const operacionesDiarias = diasVenta ? valores.operaciones / diasVenta : null;
+      const margenPesos = margenPct != null ? margenPct * objetivoSinIva : null;
+      const ajusteGuardado = guardadoDb && guardadoDb.ajuste_usado != null ? Number(guardadoDb.ajuste_usado) : null;
+      const ajusteMargen = grupo === 'WEB' ? (ajusteGuardado != null ? ajusteGuardado : AJUSTE_MARGEN.WEB) : null;
+      const margenPctAjustadoFila = grupo === 'WEB' && margenPct != null ? margenPct + ajusteMargen : null;
+      return {
+        cod_sucursal: info.cod_sucursal,
+        nombre: info.nombre,
+        grupo,
+        empresaReal: info.empresa,
+        supervisor: supervisores.get(info.cod_sucursal) || null,
+        objetivoSinIva,
+        objetivoConIva,
+        unidades: valores.unidades,
+        operaciones: valores.operaciones,
+        uniXOper: valores.uniXCli,
+        tktProm: valores.tktProm,
+        diasVenta,
+        margenPct,
+        diarioSinIva,
+        diarioConIva,
+        unidadesDiarias,
+        operacionesDiarias,
+        margenPesos,
+        ajusteMargen,
+        margenPctAjustadoFila,
+        cargado: diasVenta != null && margenPct != null
+      };
+    });
 
   const grupos = {};
   for (const g of ['PUEBLO', 'TESI', 'WEB']) {
@@ -1022,6 +1040,15 @@ app.delete('/api/objetivos-proximo/:cod', exigirEdicion, async (req, res) => {
     res.json({ ok: true, mes, cod_sucursal: cod });
   } catch (e) {
     log('error', `objetivos-proximo DELETE: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/margenes-empresa/meses', async (_req, res) => {
+  try {
+    res.json({ meses: await obtenerMesesConObjetivoCacheados() });
+  } catch (e) {
+    log('error', `margenes-empresa meses: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });

@@ -1632,6 +1632,48 @@ function ultimoRefrescoEsperado() {
   return ayerRefresco;
 }
 
+// Precalentado del combo de fechas por defecto (2026-09-01, a pedido explicito -- ver spec
+// docs/superpowers/specs/2026-09-01-rendimiento-tablero-design.md): el default del frontend es
+// Periodo de ventas = ultimos 90 dias terminando ayer, Fecha de ultima compra = ultimos 365 dias
+// (mismos defaults que ya usa el handler cuando no vienen esos parametros en el query). Sin esto,
+// la PRIMERA carga del dia de cualquier usuario paga la consulta pesada en frio (~15-25s, ver
+// comentario junto a QUERY_QUIEBRE_DETALLE). obtenerDataPesadaQuiebre ya es idempotente (si ya hay
+// cache tibia, no vuelve a pegarle a SQL Server), asi que llamarla de mas acá adentro no tiene
+// costo una vez que ya se precalento.
+const RIESGO_DIAS_DEFAULT = 3; // mismo default que usa el handler cuando no viene riesgoDias en el query
+let precalentandoDefault = false;
+async function precalentarComboDefaultSiHaceFalta() {
+  if (USE_MOCK || precalentandoDefault) return;
+  const ahora = new Date();
+  const hoyRefresco = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), HORA_REFRESCO, MINUTO_REFRESCO, 0, 0);
+  if (ahora < hoyRefresco) return; // el precalculo nocturno de HOY todavia no corrio -- esperar
+
+  const hastaDefault = new Date();
+  const desdeDefault = new Date();
+  desdeDefault.setDate(desdeDefault.getDate() - 89);
+  const ucHastaDefault = new Date();
+  const ucDesdeDefault = new Date();
+  ucDesdeDefault.setDate(ucDesdeDefault.getDate() - 364);
+
+  precalentandoDefault = true;
+  try {
+    await obtenerDataPesadaQuiebre({
+      fechaDesde: desdeDefault,
+      fechaHasta: hastaDefault,
+      riesgoDias: RIESGO_DIAS_DEFAULT,
+      ucFechaDesde: ucDesdeDefault,
+      ucFechaHasta: ucHastaDefault,
+    });
+    console.log('Precalentado combo default de /api/tablero/quiebre OK -', new Date().toISOString());
+  } catch (err) {
+    console.error('Error al precalentar combo default de /api/tablero/quiebre:', err);
+  } finally {
+    precalentandoDefault = false;
+  }
+}
+setInterval(precalentarComboDefaultSiHaceFalta, 5 * 60 * 1000);
+precalentarComboDefaultSiHaceFalta(); // tambien al arrancar -- cubre un reinicio del servicio a mitad de mañana
+
 app.listen(PORT, HOST, () => {
   console.log(`Servidor escuchando en http://${HOST}:${PORT} (USE_MOCK=${USE_MOCK})`);
 });

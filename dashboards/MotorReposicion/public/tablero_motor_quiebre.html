@@ -2242,14 +2242,21 @@ function ordenarBarras(items, criterio){
 // arriba/abajo del viewport, para no ver un instante en blanco al scrollear rapido.
 // paddingArriba/paddingAbajo simulan el alto de las filas NO pintadas, para que la scrollbar se
 // comporte igual que si estuvieran todas las filas reales en el DOM.
-function calcularRangoVirtual({ scrollTop, altoViewport, altoFila, totalFilas, overscan = 6 }) {
+function calcularRangoVirtual({ scrollTop, altoViewport, altoFila, totalFilas, overscan }) {
   if (totalFilas <= 0 || altoFila <= 0) return { desde: 0, hasta: 0, paddingArriba: 0, paddingAbajo: 0 };
   const primeraVisible = Math.floor(scrollTop / altoFila);
   const filasVisibles = Math.ceil(altoViewport / altoFila) + 1; // +1: la fila parcialmente visible al fondo
-  const hasta = Math.min(totalFilas, primeraVisible + filasVisibles + overscan);
+  // overscan por defecto: 2 pantallas completas de colchon arriba/abajo, no una constante fija --
+  // con un numero chico fijo (6), un scroll rapido con inercia (rueda/trackpad) salta mas alla del
+  // colchon entre dos repintados y se ve un hueco en blanco hasta que el proximo repintado alcanza
+  // (reportado por Claudia, 2026-09-02). Escalar con filasVisibles cubre pantallas grandes/chicas
+  // por igual, y sigue siendo barato: son unas decenas de filas de mas, lejos de las miles que la
+  // virtualizacion existe para evitar pintar.
+  const overscanReal = overscan != null ? overscan : filasVisibles * 2;
+  const hasta = Math.min(totalFilas, primeraVisible + filasVisibles + overscanReal);
   // clamp extra a totalFilas/hasta (ademas del piso en 0): con un scrollTop fuera de rango (p.ej.
   // tras reducirse totalFilas) desde nunca deberia poder superar el techo ni cruzarse con hasta.
-  const desde = Math.max(0, Math.min(primeraVisible - overscan, totalFilas, hasta));
+  const desde = Math.max(0, Math.min(primeraVisible - overscanReal, totalFilas, hasta));
   return {
     desde,
     hasta,

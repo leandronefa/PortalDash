@@ -164,6 +164,15 @@ tables ahí se probó antes y empeoró el resultado neto. Acelerar ese cruce fin
 proyecto aparte (analizar/reescribir esa parte específica de la consulta), fuera de alcance de este
 cambio.
 
+**Decisión final: se mantienen las tablas y la Etapa 8 (no se revierte).** A diferencia del intento
+de índices SQL del 2026-09-01 (revertido porque agregaba costo de escritura en `Vta_detalle`, tabla
+de alto tráfico, sin beneficio neto), esta pre-agregación solo escribe una vez por noche en la
+Etapa 8 (ya medida en segundos, no minutos) y no toca ninguna tabla de alto tráfico en vivo — el
+costo de mantenerla es bajo. El usuario no va a notar hoy un cambio de velocidad al cambiar fechas
+en el tablero (el total sigue en ~32s), pero queda como base ya hecha para si en el futuro se ataca
+el cuello de botella real (el cruce final contra `MotorReposicion_UltimaRecepcion`/
+`_EvidenciaHistorica`/`#Universo`, ver arriba).
+
 ## Reglas de trabajo (seguir siempre)
 
 - **Los cambios son siempre quirúrgicos: tocar solo la sección que se pide, sin refactorizar el resto.** No reordenar, renombrar ni "mejorar de paso" código que no forma parte del pedido puntual, aunque se vea una oportunidad de limpieza — proponerla aparte, no mezclarla en el mismo cambio.

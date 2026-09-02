@@ -116,6 +116,54 @@ Ver `docs/superpowers/specs/2026-09-01-rendimiento-tablero-design.md` y los plan
   `cargarAllReal`), cediendo el hilo entre tanda y tanda — el tiempo total de carga es el mismo,
   pero la página ya no se congela de punta a punta (el tipeo del login puede intercalarse).
 
+## Pre-agregado de ventas/tránsito por día (2026-09-02)
+
+Ver `docs/superpowers/specs/2026-09-02-preagregado-ventas-diarias-design.md` y
+`docs/superpowers/plans/2026-09-02-preagregado-ventas-diarias.md` para el detalle completo.
+
+**Implementado:** `dbo.MotorReposicion_VentasPorDia` (una fila por día×Sucursal×CodArticulo×COLOR×
+TALLE con ventas y promoción, retiene 18 meses = misma `@fechaDesde` que ya usa Etapa 1, no una
+constante separada — si esa ventana cambia en el futuro, esta tabla la sigue sola) y
+`dbo.MotorReposicion_TransitoHoy` (snapshot simple, recalculado completo cada noche — `#TransitoRango`
+nunca dependió del rango de fechas elegido por el usuario, solo de "hoy"). Pobladas por la Etapa 8
+nueva del SP nocturno (incremental "ayer" todas las noches + recálculo completo de últimos 3 meses
+los domingos + limpieza de lo que pasó los 18 meses). Script manual `recalcular_ventas_por_dia.js`
+para corregir a mano una venta de más de 3 meses de antigüedad si hiciera falta (el recálculo
+semanal automático no llega tan atrás).
+
+**`QUERY_QUIEBRE_DETALLE`** (`server.js`) ahora lee `#VentasRango`/`#PromoRango`/`#TransitoRango` de
+estas tablas en vez de escanear `Vta_detalle`/`dis_transf_emitidas` en vivo. Verificado exacto contra
+el cálculo en vivo (515K+ filas de detalle, coincidencia exacta como conjunto, en 2 combinaciones
+reales) — única diferencia encontrada: el campo `color` del catálogo puede venir con distinta
+capitalización (ej. "WHITE" vs "White") en ~0,1% de las entradas — confirmado con datos reales
+(`MotorReposicion_UniversoCompleto`) que es una ambigüedad PREEXISTENTE (distintas sucursales cargan
+el mismo color con distinta capitalización), no determinística incluso sin tocar nada, sin ningún
+efecto en cálculos de negocio.
+
+**Bugs reales encontrados y corregidos durante la implementación** (quedan documentados en los
+commits, no repetirlos si se retoma esto):
+- `Vta_detalle` tiene ~14% de filas con `TALLE`/`COLOR` `NULL` (y `dis_transf_emitidas` un ~0,24%) —
+  hace falta `ISNULL(...,'')` en toda consulta de población, igual que ya hace el resto del sistema.
+- Combinar el cálculo de `CantidadVendida` (sin join de promo) y el de promoción (con `JOIN` contra
+  `CGD_CONDCOM_VTA_DET`) en una sola pasada con `LEFT JOIN` **duplica** las ventas cuando una línea
+  matchea más de una condición comercial — siempre en 2 pasadas separadas, combinar recién al final.
+
+**Resultado de rendimiento — objetivo NO logrado del todo, documentado con honestidad:**
+Las 3 sub-consultas que se optimizaron mejoraron enormemente en aislado (de varios segundos cada
+una a 26ms/701ms/~1,5s combinado), pero el tiempo TOTAL de la consulta no bajó por sí solo — el
+bloque final que junta todo (`#Universo` + `MotorReposicion_UltimaRecepcion` +
+`_EvidenciaHistorica`, tablas de 1 a 4 millones de filas) pasó a tomar un plan de ejecución peor
+(el optimizador llegó a sobre-estimar 15,6x la cardinalidad de `UltimaRecepcion` tras el cambio de
+tamaño de las tablas de entrada). Se agregó `OPTION (FORCE ORDER)` al final de ese `SELECT` para
+estabilizar el plan — con eso, el total vuelve a estar en línea con el original (~32s), **sin
+empeorar nada**, pero sin lograr el objetivo original (1-3s). Confirmado que `MotorReposicion_
+UltimaRecepcion`/`_EvidenciaHistorica` ya tienen el índice correcto (Sucursal, CodArticulo, COLOR,
+TALLE) — el costo real está en que el otro lado del cruce (`#Universo`) es una tabla temporal sin
+índice, y el propio código YA documentó (comentario "Ajuste evidencia histórica") que indexar temp
+tables ahí se probó antes y empeoró el resultado neto. Acelerar ese cruce final necesitaría un
+proyecto aparte (analizar/reescribir esa parte específica de la consulta), fuera de alcance de este
+cambio.
+
 ## Reglas de trabajo (seguir siempre)
 
 - **Los cambios son siempre quirúrgicos: tocar solo la sección que se pide, sin refactorizar el resto.** No reordenar, renombrar ni "mejorar de paso" código que no forma parte del pedido puntual, aunque se vea una oportunidad de limpieza — proponerla aparte, no mezclarla en el mismo cambio.

@@ -197,19 +197,35 @@ async function poblarMes(pool, desde, hasta) {
   req.input('desde', sql.Date, desde);
   req.input('hasta', sql.Date, hasta);
   await req.query(`
-    DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde AND Fecha <= @hasta;
-    INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
-    SELECT vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,''),
-           SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END),
-           SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END),
-           MAX(c.NOMBRE_COND),
-           MAX(c.DESCUENTO)
+    IF OBJECT_ID('tempdb..#VentasDia') IS NOT NULL DROP TABLE #VentasDia;
+    IF OBJECT_ID('tempdb..#PromoDia') IS NOT NULL DROP TABLE #PromoDia;
+
+    SELECT vd.FECHA, vd.ESTAB AS Sucursal, ISNULL(vd.ARTCEGID,'') AS CodArticulo, ISNULL(vd.COLOR,'') AS COLOR, ISNULL(vd.TALLE,'') AS TALLE,
+           SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END) AS CantidadVendida
+    INTO #VentasDia
     FROM Vta_detalle vd
-    LEFT JOIN CGD_CONDCOM_VTA_DET c
+    WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde AND vd.FECHA <= @hasta
+    GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
+
+    SELECT vd.FECHA, vd.ESTAB AS Sucursal, ISNULL(vd.ARTCEGID,'') AS CodArticulo, ISNULL(vd.COLOR,'') AS COLOR, ISNULL(vd.TALLE,'') AS TALLE,
+           COUNT(*) AS CantidadVentasPromo, MAX(c.NOMBRE_COND) AS NombrePromoDia, MAX(c.DESCUENTO) AS DescuentoPromoDia
+    INTO #PromoDia
+    FROM Vta_detalle vd
+    INNER JOIN CGD_CONDCOM_VTA_DET c
       ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
       AND c.PVP_REBAJADO < c.PRECIOLLENO AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
     WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde AND vd.FECHA <= @hasta
     GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
+
+    DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde AND Fecha <= @hasta;
+    INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
+    SELECT v.FECHA, v.Sucursal, v.CodArticulo, v.COLOR, v.TALLE,
+           v.CantidadVendida, ISNULL(p.CantidadVentasPromo, 0), p.NombrePromoDia, p.DescuentoPromoDia
+    FROM #VentasDia v
+    LEFT JOIN #PromoDia p ON p.FECHA=v.FECHA AND p.Sucursal=v.Sucursal AND p.CodArticulo=v.CodArticulo AND p.COLOR=v.COLOR AND p.TALLE=v.TALLE;
+
+    DROP TABLE #VentasDia;
+    DROP TABLE #PromoDia;
   `);
   console.log(`  ${desde.toISOString().slice(0,10)} a ${hasta.toISOString().slice(0,10)}: ${Date.now()-inicio}ms`);
 }
@@ -231,7 +247,7 @@ async function main() {
 main().catch(e => { console.error(e); process.exit(1); });
 ```
 
-**IMPORTANTE:** el `LEFT JOIN` (no `INNER JOIN`) contra `CGD_CONDCOM_VTA_DET` es intencional y DISTINTO de la consulta original de `#PromoRango` (que usa `INNER JOIN`, porque esa consulta SOLO le interesan las filas con promo). Acá necesitamos UNA fila por día×combo que cubra TANTO ventas con promo como sin — por eso `LEFT JOIN` + `SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END)` en vez de `COUNT(*)` sobre un INNER JOIN. Verificar en el Task 5 que esto da el mismo resultado que el camino viejo al sumarlo por rango.
+**IMPORTANTE (corregido tras un bug real encontrado al correr esto — ver reporte del Task 4 abajo):** las ventas y la promoción se calculan en DOS PASADAS SEPARADAS (`#VentasDia` sin ningún join a promo, `#PromoDia` con su propio `INNER JOIN` — igual que `#VentasRango`/`#PromoRango` originales, que nunca se cruzan entre sí) y recién se combinan al final con un `LEFT JOIN` entre los dos resultados YA agregados. La primera versión de este script combinaba todo en una sola pasada con `LEFT JOIN` directo contra `CGD_CONDCOM_VTA_DET`, y cuando una línea de venta matcheaba más de una condición comercial, el join la duplicaba — inflando `SUM(CANTIDAD)` (medido: 322041 vs 322055 en un rango real con promociones). Verificado en el Task 5 que esta versión en dos pasadas da el mismo resultado exacto que el camino viejo, incluyendo `CantidadVentasPromo`.
 
 - [ ] **Step 2: Confirmar con Claudia, después correr**
 
@@ -341,39 +357,79 @@ sql.connect(dbConfig).then(async (pool) => {
   -- (MotorReposicion_TransitoHoy), para que server.js deje de escanear Vta_detalle/
   -- dis_transf_emitidas en vivo por cada cambio de fecha en el tablero.
 
+  -- IMPORTANTE (hallazgo real del backfill, Task 4): SIEMPRE en 2 pasadas separadas (ventas sin
+  -- join de promo, promo con su propio join), NUNCA combinadas en una sola pasada con LEFT JOIN --
+  -- una linea de venta que matchea mas de una condicion comercial en CGD_CONDCOM_VTA_DET duplica
+  -- el join, y si CANTIDAD se suma en esa misma pasada, queda inflada. Medido: diferencia real de
+  -- 322041 vs 322055 en un rango con promos antes de separar los pasos.
+
   -- 8a: incremental -- solo "ayer" (rapido, corre todas las noches)
   DECLARE @ayer DATE = DATEADD(DAY, -1, CAST(@ahora AS DATE));
-  DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha = @ayer;
-  INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
-  SELECT vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,''),
-         SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END),
-         SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END),
-         MAX(c.NOMBRE_COND),
-         MAX(c.DESCUENTO)
+
+  IF OBJECT_ID('tempdb..#VentasDia') IS NOT NULL DROP TABLE #VentasDia;
+  IF OBJECT_ID('tempdb..#PromoDia') IS NOT NULL DROP TABLE #PromoDia;
+
+  SELECT vd.FECHA, vd.ESTAB AS Sucursal, ISNULL(vd.ARTCEGID,'') AS CodArticulo, ISNULL(vd.COLOR,'') AS COLOR, ISNULL(vd.TALLE,'') AS TALLE,
+         SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END) AS CantidadVendida
+  INTO #VentasDia
   FROM Vta_detalle vd
-  LEFT JOIN CGD_CONDCOM_VTA_DET c
+  WHERE vd.ESTAB IS NOT NULL AND vd.FECHA = @ayer
+  GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
+
+  SELECT vd.FECHA, vd.ESTAB AS Sucursal, ISNULL(vd.ARTCEGID,'') AS CodArticulo, ISNULL(vd.COLOR,'') AS COLOR, ISNULL(vd.TALLE,'') AS TALLE,
+         COUNT(*) AS CantidadVentasPromo, MAX(c.NOMBRE_COND) AS NombrePromoDia, MAX(c.DESCUENTO) AS DescuentoPromoDia
+  INTO #PromoDia
+  FROM Vta_detalle vd
+  INNER JOIN CGD_CONDCOM_VTA_DET c
     ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
     AND c.PVP_REBAJADO < c.PRECIOLLENO AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
   WHERE vd.ESTAB IS NOT NULL AND vd.FECHA = @ayer
   GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
 
+  DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha = @ayer;
+  INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
+  SELECT v.FECHA, v.Sucursal, v.CodArticulo, v.COLOR, v.TALLE,
+         v.CantidadVendida, ISNULL(p.CantidadVentasPromo, 0), p.NombrePromoDia, p.DescuentoPromoDia
+  FROM #VentasDia v
+  LEFT JOIN #PromoDia p ON p.FECHA=v.FECHA AND p.Sucursal=v.Sucursal AND p.CodArticulo=v.CodArticulo AND p.COLOR=v.COLOR AND p.TALLE=v.TALLE;
+
+  DROP TABLE #VentasDia;
+  DROP TABLE #PromoDia;
+
   -- 8b: recalculo semanal de seguridad -- domingos, ultimos 3 meses (correcciones retroactivas)
   IF DATEPART(WEEKDAY, @ahora) = 1
   BEGIN
     DECLARE @desde3Meses DATE = DATEADD(MONTH, -3, CAST(@ahora AS DATE));
-    DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde3Meses AND Fecha <= @ayer;
-    INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
-    SELECT vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,''),
-           SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END),
-           SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END),
-           MAX(c.NOMBRE_COND),
-           MAX(c.DESCUENTO)
+
+    IF OBJECT_ID('tempdb..#VentasDia3M') IS NOT NULL DROP TABLE #VentasDia3M;
+    IF OBJECT_ID('tempdb..#PromoDia3M') IS NOT NULL DROP TABLE #PromoDia3M;
+
+    SELECT vd.FECHA, vd.ESTAB AS Sucursal, ISNULL(vd.ARTCEGID,'') AS CodArticulo, ISNULL(vd.COLOR,'') AS COLOR, ISNULL(vd.TALLE,'') AS TALLE,
+           SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END) AS CantidadVendida
+    INTO #VentasDia3M
     FROM Vta_detalle vd
-    LEFT JOIN CGD_CONDCOM_VTA_DET c
+    WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde3Meses AND vd.FECHA <= @ayer
+    GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
+
+    SELECT vd.FECHA, vd.ESTAB AS Sucursal, ISNULL(vd.ARTCEGID,'') AS CodArticulo, ISNULL(vd.COLOR,'') AS COLOR, ISNULL(vd.TALLE,'') AS TALLE,
+           COUNT(*) AS CantidadVentasPromo, MAX(c.NOMBRE_COND) AS NombrePromoDia, MAX(c.DESCUENTO) AS DescuentoPromoDia
+    INTO #PromoDia3M
+    FROM Vta_detalle vd
+    INNER JOIN CGD_CONDCOM_VTA_DET c
       ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
       AND c.PVP_REBAJADO < c.PRECIOLLENO AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
     WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde3Meses AND vd.FECHA <= @ayer
     GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
+
+    DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde3Meses AND Fecha <= @ayer;
+    INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
+    SELECT v.FECHA, v.Sucursal, v.CodArticulo, v.COLOR, v.TALLE,
+           v.CantidadVendida, ISNULL(p.CantidadVentasPromo, 0), p.NombrePromoDia, p.DescuentoPromoDia
+    FROM #VentasDia3M v
+    LEFT JOIN #PromoDia3M p ON p.FECHA=v.FECHA AND p.Sucursal=v.Sucursal AND p.CodArticulo=v.CodArticulo AND p.COLOR=v.COLOR AND p.TALLE=v.TALLE;
+
+    DROP TABLE #VentasDia3M;
+    DROP TABLE #PromoDia3M;
   END
 
   -- 8c: retencion -- misma @fechaDesde (18 meses) que ya usa Etapa 1
@@ -502,19 +558,35 @@ async function main() {
   req.input('desde', sql.Date, new Date(desdeArg));
   req.input('hasta', sql.Date, new Date(hastaArg));
   await req.query(`
-    DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde AND Fecha <= @hasta;
-    INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
-    SELECT vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,''),
-           SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END),
-           SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END),
-           MAX(c.NOMBRE_COND),
-           MAX(c.DESCUENTO)
+    IF OBJECT_ID('tempdb..#VentasDia') IS NOT NULL DROP TABLE #VentasDia;
+    IF OBJECT_ID('tempdb..#PromoDia') IS NOT NULL DROP TABLE #PromoDia;
+
+    SELECT vd.FECHA, vd.ESTAB AS Sucursal, ISNULL(vd.ARTCEGID,'') AS CodArticulo, ISNULL(vd.COLOR,'') AS COLOR, ISNULL(vd.TALLE,'') AS TALLE,
+           SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END) AS CantidadVendida
+    INTO #VentasDia
     FROM Vta_detalle vd
-    LEFT JOIN CGD_CONDCOM_VTA_DET c
+    WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde AND vd.FECHA <= @hasta
+    GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
+
+    SELECT vd.FECHA, vd.ESTAB AS Sucursal, ISNULL(vd.ARTCEGID,'') AS CodArticulo, ISNULL(vd.COLOR,'') AS COLOR, ISNULL(vd.TALLE,'') AS TALLE,
+           COUNT(*) AS CantidadVentasPromo, MAX(c.NOMBRE_COND) AS NombrePromoDia, MAX(c.DESCUENTO) AS DescuentoPromoDia
+    INTO #PromoDia
+    FROM Vta_detalle vd
+    INNER JOIN CGD_CONDCOM_VTA_DET c
       ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
       AND c.PVP_REBAJADO < c.PRECIOLLENO AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
     WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde AND vd.FECHA <= @hasta
     GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
+
+    DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde AND Fecha <= @hasta;
+    INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
+    SELECT v.FECHA, v.Sucursal, v.CodArticulo, v.COLOR, v.TALLE,
+           v.CantidadVendida, ISNULL(p.CantidadVentasPromo, 0), p.NombrePromoDia, p.DescuentoPromoDia
+    FROM #VentasDia v
+    LEFT JOIN #PromoDia p ON p.FECHA=v.FECHA AND p.Sucursal=v.Sucursal AND p.CodArticulo=v.CodArticulo AND p.COLOR=v.COLOR AND p.TALLE=v.TALLE;
+
+    DROP TABLE #VentasDia;
+    DROP TABLE #PromoDia;
   `);
   console.log(`Recalculado ${desdeArg} a ${hastaArg}.`);
   await pool.close();
@@ -547,5 +619,5 @@ git commit -m "docs(motor-reposicion): documentar resultado del pre-agregado de 
 
 - **Cobertura del spec:** los 5 componentes del diseño (tabla VentasPorDia, tabla TransitoHoy, Etapa 8, cambio en QUERY_QUIEBRE_DETALLE, script manual) están cubiertos en Tasks 1-2 / 3-4 / 6 / 7 / 8 respectivamente. La verificación de igualdad exacta (punto central del spec) tiene su propio Task (5) antes de tocar el SP o server.js.
 - **Placeholders:** ninguno — todo el SQL/JS está completo, no hay "TODO" ni lógica descrita sin código.
-- **Consistencia:** la lógica de agregación (`LEFT JOIN` + `SUM(CASE WHEN c.NUMERO IS NOT NULL...)`) es IDÉNTICA en el backfill (Task 4), la Etapa 8 (Task 6) y el script manual (Task 8) — mismo patrón copiado a propósito en los 3 lugares, documentado como intencional.
+- **Consistencia:** la lógica de agregación en DOS pasadas separadas (`#VentasDia` sin join de promo + `#PromoDia` con `INNER JOIN` propio, combinadas recién al final) es IDÉNTICA en el backfill (Task 4), la Etapa 8 (Task 6) y el script manual (Task 8) — corregida en los 3 lugares tras el bug real encontrado durante la ejecución del Task 4 (ver nota ahí).
 - **Gates de confirmación:** Tasks 2, 4 y 6 (los que tocan la base real con cambios de esquema/datos) están marcados explícitamente para pedir confirmación antes de ejecutar, igual que el plan de índices del 2026-09-01.

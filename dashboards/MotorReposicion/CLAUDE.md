@@ -173,6 +173,26 @@ en el tablero (el total sigue en ~32s), pero queda como base ya hecha para si en
 el cuello de botella real (el cruce final contra `MotorReposicion_UltimaRecepcion`/
 `_EvidenciaHistorica`/`#Universo`, ver arriba).
 
+**Confirmación adicional de "sin regresión" (2026-09-02, tarde):** una medición previa (un solo
+request por combo, sesiones separadas por 16 minutos) había mostrado el código nuevo 7-17% más
+lento que el viejo en 3 combos — se sospechó regresión real. Se repitió con protocolo riguroso:
+código viejo (commit `eb05b5e^`) y nuevo corriendo en paralelo (puertos distintos, misma base real),
+6 combos de fecha, viejo/nuevo intercalados, 2 repeticiones cada uno. Resultado: nuevo igual o 2-8%
+más rápido en los 6 combos — el "7-17% más lento" de la medición anterior era ruido de carga variable
+del servidor SQL de producción entre mediciones, no una regresión (confirmado: la variación entre dos
+corridas del MISMO servidor llegó a 28%, mayor que cualquier diferencia viejo/nuevo). Lección: para
+comparar rendimiento antes/después contra este SQL Server, correr ambas versiones en paralelo e
+intercaladas, nunca en sesiones de medición separadas en el tiempo.
+
+**Intento descartado: sacar `#Universo` (temp table sin índice) y leer directo de
+`dbo.MotorReposicion_UniversoCompleto` (que ya tiene el índice correcto en Sucursal/CodArticulo/
+COLOR/TALLE).** Probado contra datos reales (2026-09-02): el bloque final pasó de ~11s a ~23-26s
+(con o sin `FORCE ORDER`) — más del doble de lento, no más rápido. El índice de la tabla permanente
+no ayuda acá; copiar a un temp table propio de la sesión (aunque sin índice) le sale más barato al
+optimizador que compartir acceso a la tabla base. **No volver a probar esta idea puntual** — quedó
+descartada con evidencia real, no es una pista a futuro. (Nunca se aplicó a `server.js` ni al SP,
+todo fue comparación directa en scripts descartables.)
+
 ## Reglas de trabajo (seguir siempre)
 
 - **Los cambios son siempre quirúrgicos: tocar solo la sección que se pide, sin refactorizar el resto.** No reordenar, renombrar ni "mejorar de paso" código que no forma parte del pedido puntual, aunque se vea una oportunidad de limpieza — proponerla aparte, no mezclarla en el mismo cambio.

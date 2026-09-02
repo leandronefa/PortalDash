@@ -3502,7 +3502,8 @@ function renderVerDetalle(){
     + `<div id="det-lista-scroll" class="prio-grid det-lista-scroll"></div>`;
   const listaEl = document.getElementById('det-lista-scroll');
   const topLista = listaEl.getBoundingClientRect().top;
-  listaEl.style.maxHeight = Math.max(200, window.innerHeight - topLista - 20) + 'px';
+  const altoMaxLista = Math.max(200, window.innerHeight - topLista - 20);
+  listaEl.style.maxHeight = altoMaxLista + 'px';
   document.getElementById('det-orden').onchange = e=>{ detState.orden=e.target.value; registrarActividad("Cambió orden: Ver en detalle", e.target.value); renderVerDetalle(); };
   document.getElementById('det-csv').onclick = exportarDetalleCSV;
   // Filtro por Estado -- click en el encabezado abre un selector con un checkbox por estado
@@ -3537,9 +3538,16 @@ function renderVerDetalle(){
       listaEl.innerHTML = ordenado.map(r=>filaBarraHtml(r, r.estadoFinal)).join("");
       return;
     }
+    // altoViewport: SE USA altoMaxLista (el numero ya calculado para maxHeight), NO
+    // listaEl.clientHeight -- el contenedor solo tiene max-height (no height fijo), asi que
+    // ARRANCA vacio con content-height 0 (nada lo obliga a crecer hasta el tope todavia) y
+    // clientHeight leia 0 en el primer repintado de cada apertura/cambio de orden -- eso
+    // achicaba filasVisibles a 1 y pintaba solo ~3 filas (overscan chico) hasta que alguna otra
+    // interaccion (ej. un scroll) forzaba a clientHeight a reflejar el maxHeight real. Usar el
+    // numero ya conocido evita depender de que el contenedor haya "crecido" todavia.
     const { desde, hasta, paddingArriba, paddingAbajo } = calcularRangoVirtual({
       scrollTop: listaEl.scrollTop,
-      altoViewport: listaEl.clientHeight,
+      altoViewport: altoMaxLista,
       altoFila,
       totalFilas: ordenado.length,
     });

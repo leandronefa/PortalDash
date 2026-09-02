@@ -98,6 +98,23 @@ Ver `docs/superpowers/specs/2026-09-01-rendimiento-tablero-design.md` y los plan
   real acá necesitaría un rediseño más profundo (ej. pre-agregar ventas por día en el precálculo
   nocturno, no escanear `Vta_detalle` en vivo) — evaluarlo como proyecto aparte, no como índices
   sueltos.
+- **Payload inicial de `/api/tablero/quiebre` — causa de fondo identificada, NO resuelta todavía.**
+  La carga inicial de la página (antes de elegir cualquier filtro, antes incluso de loguearse) trae
+  `detalle` con **475.882 filas** (SKU×sucursal, ~117MB de JSON) — confirmado con datos reales. Solo
+  el `JSON.parse` en el navegador tarda ~1-2s; sumado al mapeo a objetos JS y el render, el hilo
+  principal queda bloqueado varios segundos, lo que hace sentir "trabado" el login (que no depende
+  de esta carga, pero corre en el mismo hilo). Causa de fondo: casi todo el procesamiento (ranking
+  de Atención Prioritaria, agrupado/orden/filtro de "Ver en detalle", cascada de filtros de
+  Sección/Familia/etc.) se hace en el navegador a partir del detalle CRUDO por SKU×sucursal — por
+  eso el servidor manda todo, no un resumen. Una reducción real de tamaño movería ese agrupado
+  (por artículo+color) al SQL/backend, mandando al navegador solo lo ya agregado que las pantallas
+  muestran, y dejando el detalle crudo solo para lo que de verdad lo necesita (ej. exportar CSV).
+  Es un cambio de arquitectura grande (toca la consulta SQL, el backend, y varias pantallas del
+  frontend a la vez) — evaluarlo como proyecto aparte con brainstorming completo, no de un dia para
+  el otro. Mientras tanto (2026-09-02, parche quirúrgico al síntoma, no a la causa): el mapeo de
+  filas a objetos JS ahora corre en tandas de 5.000 (`mapearFilasEnTandas`, cerca de
+  `cargarAllReal`), cediendo el hilo entre tanda y tanda — el tiempo total de carga es el mismo,
+  pero la página ya no se congela de punta a punta (el tipeo del login puede intercalarse).
 
 ## Reglas de trabajo (seguir siempre)
 

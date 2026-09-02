@@ -1717,6 +1717,26 @@ function avisoActualizacionFinalizar(ok){
   }
 }
 
+// Mapea las filas crudas (SKU x sucursal, casos reales de ~475.000 en la carga inicial) en TANDAS
+// en vez de un solo .map() sincronico (2026-09-02, a pedido explicito -- ese .map() de un tiron
+// bloqueaba el hilo principal varios segundos en CADA carga de pagina, incluso antes de loguearse,
+// haciendo que el navegador pareciera "trabado" para escribir usuario/contraseña). Entre tanda y
+// tanda se cede el hilo (setTimeout 0) para que el navegador procese eventos pendientes (tipeo,
+// clicks) -- el tiempo TOTAL de mapeo no baja, pero la pagina deja de congelarse de punta a punta.
+// No ataca la causa de fondo (por que se manda semejante volumen de filas crudas en vez de un
+// agregado ya hecho en el servidor -- ver CLAUDE.md, "Payload inicial de /api/tablero/quiebre",
+// para ese analisis mas grande, pendiente como proyecto aparte) -- esto es un parche quirurgico
+// al sintoma puntual (bloqueo del hilo), mientras se decide si se encara lo de fondo.
+async function mapearFilasEnTandas(filas, columnas, catalogo, tamTanda = 5000){
+  const resultado = new Array(filas.length);
+  for(let i=0; i<filas.length; i+=tamTanda){
+    const fin = Math.min(i+tamTanda, filas.length);
+    for(let j=i; j<fin; j++) resultado[j] = itemDesdeFilaReal(filas[j], columnas, catalogo);
+    if(fin < filas.length) await new Promise(r=>setTimeout(r, 0));
+  }
+  return resultado;
+}
+
 // Si dos llamadas se superponen (ej. el usuario cambia un filtro antes de que termine la
 // anterior), la respuesta mas vieja puede llegar DESPUES de la mas nueva y pisar el dato fresco
 // con uno desactualizado. _cargaSeq descarta cualquier respuesta que no sea la mas reciente.
@@ -1736,7 +1756,9 @@ async function cargarAllReal(){
   if(!resp.ok) throw new Error('No se pudo cargar /api/tablero/quiebre: ' + resp.status);
   const data = await resp.json();
   if(miSeq !== _cargaSeq) return; // llego una carga mas nueva mientras esperabamos esta -- descartar
-  ALL = data.detalle.map(fila => itemDesdeFilaReal(fila, data.detalleColumnas, data.catalogo));
+  const mapeado = await mapearFilasEnTandas(data.detalle, data.detalleColumnas, data.catalogo);
+  if(miSeq !== _cargaSeq) return; // idem, pero chequeado de nuevo -- las tandas ceden el hilo y una carga mas nueva pudo arrancar mientras tanto
+  ALL = mapeado;
   resumenQuiebre = data.resumen || {};
   // Los filtros globales cambiaron -- lo que ya se pidio de /api/tablero/articulo (ver mas abajo)
   // quedo calculado con Vd/Estado del periodo VIEJO, asi que no sirve mas.

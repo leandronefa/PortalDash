@@ -479,7 +479,17 @@
      visible sin ningún offset que calcular ni z-index que coordinar (2026-08-28, a pedido
      explícito tras seguir sin poder scrollear con el enfoque sticky anterior -- ver
      renderVerDetalle para el alto, medido en vivo). */
-  .det-lista-scroll { overflow-y:auto; }
+  /* overflow-anchor:none (2026-09-02, a pedido explicito -- diagnosticado con logs reales de
+     Claudia: el calculo de desde/hasta/padding era correcto en el momento exacto del bug, asi que
+     la causa no era matematica -- era el navegador). Sin esto, el "scroll anchoring" del navegador
+     (ajusta scrollTop solo cuando cambia el tamaño de contenido ARRIBA de lo visible, para evitar
+     "saltos") pelea contra nuestros propios cambios de padding-top en cada repintado de la
+     virtualizacion -- el navegador reinterpreta cada cambio de padding como algo a compensar
+     corriendo el scroll, lo que termina desalineando que fila real corresponde a que posicion
+     visible (se ve "pegado" en pocas filas hasta que suficiente scroll manual fuerza a
+     resincronizar). overflow-anchor:none le dice al navegador que NO toque scrollTop por su cuenta
+     en este contenedor -- la virtualizacion ya maneja el scroll ella misma. */
+  .det-lista-scroll { overflow-y:auto; overflow-anchor:none; }
   .pcg-cd { font-size:14.5px; font-weight:900; color:#1a2730; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .pcg-desc { font-size:11.5px; color:#5f7079; display:flex; align-items:baseline; min-width:0; }
   .pcg-desc-nombre { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
@@ -3508,10 +3518,20 @@ function renderVerDetalle(){
   // ARRIBA -- título/controles/encabezado de columnas -- nunca sus propios hijos). Midiendo contra
   // el contenedor todavía vacío, el reflow forzado es sobre un DOM chico -- sigue siendo una
   // medición en vivo real (nunca un número adivinado), solo que en el momento más barato posible.
+  // Dos elementos, no uno solo (2026-09-02, a pedido explicito -- diagnosticado con datos reales
+  // de Claudia: el elemento con max-height media mas de 1.000.000px en vez de los ~400px
+  // esperados). Con box-sizing:border-box (regla global del archivo), max-height DEBERIA incluir
+  // el padding -- pero un padding-bottom enorme (simulando miles de filas no pintadas) en el MISMO
+  // elemento que tiene max-height+overflow no se respeta de forma confiable. Separar en dos
+  // elementos evita la combinacion problematica: #det-lista-scroll (afuera) SOLO recorta/scrollea
+  // (max-height, overflow-y:auto, sin padding propio); #det-lista-contenido (adentro) lleva el
+  // padding simulado + las filas reales, con su alto natural (no le importa max-height, nada lo
+  // esta constriñendo a el mismo).
   document.getElementById('m-body').innerHTML = controles
     + `<div style="margin-top:14px">${filaBarraHeaderHtml(true)}</div>`
-    + `<div id="det-lista-scroll" class="prio-grid det-lista-scroll"></div>`;
+    + `<div id="det-lista-scroll" class="det-lista-scroll"><div id="det-lista-contenido" class="prio-grid"></div></div>`;
   const listaEl = document.getElementById('det-lista-scroll');
+  const contenidoEl = document.getElementById('det-lista-contenido');
   const topLista = listaEl.getBoundingClientRect().top;
   const altoMaxLista = Math.max(200, window.innerHeight - topLista - 20);
   listaEl.style.maxHeight = altoMaxLista + 'px';
@@ -3527,16 +3547,16 @@ function renderVerDetalle(){
   // real en cada click de orden/filtro tardaba varios segundos (medido, ver spec). Solo se pintan
   // las filas que caen en el rango visible del scroll (+ colchon de overscan), el resto del alto se
   // simula con padding para que la scrollbar se comporte igual que con todas las filas reales.
-  const altoFila = medirAltoFilaDetalle(ordenado[0], listaEl);
+  const altoFila = medirAltoFilaDetalle(ordenado[0], contenidoEl);
   function repintarVentana(){
     // El mensaje "Sin artículos" depende SOLO de que ordenado (la lista real, ya filtrada) este
     // vacia -- nunca de que la porcion pintada (el slice virtual) salga vacia, porque eso tambien
     // puede pasar por un bug de medicion (ver mas abajo) y mostraria "no hay nada" con miles de
     // filas reales esperando pintarse.
     if (ordenado.length === 0) {
-      listaEl.style.paddingTop = '0px';
-      listaEl.style.paddingBottom = '0px';
-      listaEl.innerHTML = `<div style="padding:28px;text-align:center;color:#9aa7ad">Sin artículos ${sinFiltroTxt}.</div>`;
+      contenidoEl.style.paddingTop = '0px';
+      contenidoEl.style.paddingBottom = '0px';
+      contenidoEl.innerHTML = `<div style="padding:28px;text-align:center;color:#9aa7ad">Sin artículos ${sinFiltroTxt}.</div>`;
       return;
     }
     if (!(altoFila > 0)) {
@@ -3544,9 +3564,9 @@ function renderVerDetalle(){
       // pudo medir un alto real. Calcular el rango virtual con un alto inventado rompe la ventana
       // (potencialmente un slice vacio con filas reales existentes), asi que en este caso se pinta
       // TODA la lista de una vez (mismo comportamiento que antes de virtualizar) en vez de adivinar.
-      listaEl.style.paddingTop = '0px';
-      listaEl.style.paddingBottom = '0px';
-      listaEl.innerHTML = ordenado.map(r=>filaBarraHtml(r, r.estadoFinal)).join("");
+      contenidoEl.style.paddingTop = '0px';
+      contenidoEl.style.paddingBottom = '0px';
+      contenidoEl.innerHTML = ordenado.map(r=>filaBarraHtml(r, r.estadoFinal)).join("");
       return;
     }
     // altoViewport: SE USA altoMaxLista (el numero ya calculado para maxHeight), NO
@@ -3562,9 +3582,9 @@ function renderVerDetalle(){
       altoFila,
       totalFilas: ordenado.length,
     });
-    listaEl.style.paddingTop = paddingArriba + 'px';
-    listaEl.style.paddingBottom = paddingAbajo + 'px';
-    listaEl.innerHTML = ordenado.slice(desde, hasta).map(r=>filaBarraHtml(r, r.estadoFinal)).join("");
+    contenidoEl.style.paddingTop = paddingArriba + 'px';
+    contenidoEl.style.paddingBottom = paddingAbajo + 'px';
+    contenidoEl.innerHTML = ordenado.slice(desde, hasta).map(r=>filaBarraHtml(r, r.estadoFinal)).join("");
   }
   repintarVentana();
   // requestAnimationFrame: evita repintar mas de una vez por frame si el navegador dispara varios

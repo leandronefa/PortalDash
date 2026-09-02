@@ -1,0 +1,101 @@
+[
+  {
+    "etiqueta": "antes",
+    "combo": {
+      "desde": "2025-11-01",
+      "hasta": "2026-01-31",
+      "ucDesde": "2025-01-01",
+      "ucHasta": "2025-12-31"
+    },
+    "ms": 32042,
+    "timestamp": "2026-09-02T14:07:36.957Z"
+  },
+  {
+    "etiqueta": "antes",
+    "combo": {
+      "desde": "2025-06-01",
+      "hasta": "2025-08-31",
+      "ucDesde": "2024-06-01",
+      "ucHasta": "2025-05-31"
+    },
+    "ms": 25157,
+    "timestamp": "2026-09-02T14:08:02.115Z"
+  },
+  {
+    "etiqueta": "antes",
+    "combo": {
+      "desde": "2026-02-01",
+      "hasta": "2026-04-30",
+      "ucDesde": "2025-04-01",
+      "ucHasta": "2026-03-31"
+    },
+    "ms": 27492,
+    "timestamp": "2026-09-02T14:08:29.607Z"
+  },
+  {
+    "etiqueta": "despues",
+    "combo": {
+      "desde": "2025-11-01",
+      "hasta": "2026-01-31",
+      "ucDesde": "2025-01-01",
+      "ucHasta": "2025-12-31"
+    },
+    "ms": 35583,
+    "timestamp": "2026-09-02T14:12:07.767Z"
+  },
+  {
+    "etiqueta": "despues",
+    "combo": {
+      "desde": "2025-06-01",
+      "hasta": "2025-08-31",
+      "ucDesde": "2024-06-01",
+      "ucHasta": "2025-05-31"
+    },
+    "ms": 25129,
+    "timestamp": "2026-09-02T14:12:32.901Z"
+  },
+  {
+    "etiqueta": "despues",
+    "combo": {
+      "desde": "2026-02-01",
+      "hasta": "2026-04-30",
+      "ucDesde": "2025-04-01",
+      "ucHasta": "2026-03-31"
+    },
+    "ms": 27809,
+    "timestamp": "2026-09-02T14:13:00.710Z"
+  },
+  {
+    "etiqueta": "despues",
+    "combo": {
+      "desde": "2025-11-01",
+      "hasta": "2026-01-31",
+      "ucDesde": "2025-01-01",
+      "ucHasta": "2025-12-31"
+    },
+    "ms": 34211,
+    "timestamp": "2026-09-02T14:23:39.112Z"
+  },
+  {
+    "etiqueta": "despues",
+    "combo": {
+      "desde": "2025-06-01",
+      "hasta": "2025-08-31",
+      "ucDesde": "2024-06-01",
+      "ucHasta": "2025-05-31"
+    },
+    "ms": 29138,
+    "timestamp": "2026-09-02T14:24:08.257Z"
+  },
+  {
+    "etiqueta": "despues",
+    "combo": {
+      "desde": "2026-02-01",
+      "hasta": "2026-04-30",
+      "ucDesde": "2025-04-01",
+      "ucHasta": "2026-03-31"
+    },
+    "ms": 32312,
+    "timestamp": "2026-09-02T14:24:40.573Z"
+  }
+]

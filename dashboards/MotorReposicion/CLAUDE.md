@@ -70,12 +70,34 @@ Al hacer clic en "Sugerido"/un talle, se abre un popover armado por `pintarFormu
   automático hacia la tarjeta (`fijarBotonVolverEnPantalla`) — así queda "cerca del recuadro" al
   aparecer, pero no desaparece si después se sigue bajando mucho más.
 
-## Botón "Ver en detalle" (home)
+## Rendimiento del tablero (2026-09-02)
 
-Clase `.ver-detalle-btn` en `tablero_motor_quiebre.html`. Agrandado y recoloreado el 2026-09-01
-a pedido explícito de la usuaria: antes fondo `#1a2730` (gris casi negro), `font-size:13px`,
-`padding:10px 22px`; ahora fondo `#0e5a6b` (el mismo verde azulado que ya usa el hover y el botón
-"Volver"), `font-size:15px`, `padding:12px 26px`, `border-radius:24px`, con hover `#0a4552`.
+Ver `docs/superpowers/specs/2026-09-01-rendimiento-tablero-design.md` y los planes en
+`docs/superpowers/plans/` para el detalle completo. Resumen de resultado real:
+
+- **Virtualización de "Ver en detalle"** (`tablero_motor_quiebre.html`): implementada y funcionando
+  — solo se pintan las filas visibles del scroll (antes: todas, miles de filas, varios segundos por
+  click). Gotcha real encontrado en el camino: un mismo elemento con `max-height` **y** un
+  `padding-bottom` enorme (para simular filas no pintadas) no respeta `max-height` de forma
+  confiable, incluso con `box-sizing:border-box` global — el elemento termina midiendo el padding
+  completo. Se resolvió separando en dos elementos: uno "de afuera" que solo recorta/scrollea
+  (`#det-lista-scroll`, con `max-height`, sin padding propio) y uno "de adentro" que lleva el
+  padding simulado + las filas reales (`#det-lista-contenido`, sin restricción de alto propia). Si
+  se necesita otra lista virtualizada en el futuro, usar este mismo patrón de entrada.
+- **Precalentado de caché del combo de fechas por defecto** (`server.js`): funcionando, confirmado
+  con datos reales — el combo que realmente manda el navegador en el primer load (no el fallback
+  interno del handler, que es distinto y solo se usa si no vienen parámetros) responde en <1s en
+  vez de 25-30s+.
+- **Índices SQL en `Vta_detalle`/`dis_transf_emitidas`/`CGD_CONDCOM_VTA_DET`: PROBADOS Y
+  REVERTIDOS.** Cada índice mejoró la operación puntual que atacaba (confirmado con
+  `sys.dm_db_index_usage_stats` y `SET STATISTICS TIME`), pero el tiempo total de
+  `QUERY_QUIEBRE_DETALLE` para una fecha nueva no mejoró de punta a punta (en un caso, empeoró) —
+  el optimizador parece elegir un plan distinto para el resto de la consulta multi-statement al
+  cambiar cómo se resuelve una parte. Se hizo `DROP INDEX` de los 3 el mismo día; la base quedó
+  igual que antes. Detalle completo en `sql/2026-09-01_indices_rendimiento_fechas.sql`. Una mejora
+  real acá necesitaría un rediseño más profundo (ej. pre-agregar ventas por día en el precálculo
+  nocturno, no escanear `Vta_detalle` en vivo) — evaluarlo como proyecto aparte, no como índices
+  sueltos.
 
 ## Reglas de trabajo (seguir siempre)
 

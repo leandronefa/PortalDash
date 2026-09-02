@@ -2,6 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Estado final (2026-09-02): ejecutado completo, luego REVERTIDO.** Los 3 índices (los 2 originales
++ uno tercero agregado en el momento tras perfilar con `SET STATISTICS TIME`, ver
+`sql/2026-09-01_indices_rendimiento_fechas.sql`) se crearon en producción, se midieron con datos
+reales, y cada uno mejoró la operación puntual que atacaba — pero el tiempo total de
+`QUERY_QUIEBRE_DETALLE` no mejoró de punta a punta (en un caso, empeoró), probablemente porque el
+optimizador elige un plan distinto para el resto de la consulta al cambiar una parte. Se revirtieron
+los 3 el mismo día (`DROP INDEX`), confirmado que no queda ninguno. Ver `CLAUDE.md` para el resumen
+y el archivo `.sql` para el detalle completo — una mejora real necesitaría un rediseño más profundo
+de la consulta, no más índices sueltos.
+
 **Goal:** Que un cambio de fecha a un rango NUEVO (cache-miss real en `cacheQuiebre`) corra más rápido, agregando índices cubrientes en `Vta_detalle` y `dis_transf_emitidas` — las dos tablas de millones de filas que `QUERY_QUIEBRE_DETALLE` sigue consultando en vivo, filtradas por fecha, en cada request.
 
 **Architecture:** Dos índices no-clusterizados nuevos (aditivos, no se toca ningún índice existente), definidos en un archivo `.sql` versionado (mismo patrón que `sql/MotorReposicion_sp_PreCalcularStockSemanal.sql`), desplegados con un script Node siguiendo el mismo patrón que `scripts/precalc/desplegar_sp.js`. Se mide el tiempo real de `/api/tablero/quiebre` para combinaciones de fecha NUEVAS (forzando cache-miss) antes y después, contra la base real.

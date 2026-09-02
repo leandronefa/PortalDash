@@ -1,0 +1,50 @@
+=== Vta_detalle ===
+[
+  {
+    "name": "IX_PLE_20250611_005",
+    "type_desc": "NONCLUSTERED",
+    "columnas": "ESTAB, FECHA",
+    "incluidas": "ARTCEGID, CANTIDAD, costouni, PRECIO, TAX"
+  },
+  {
+    "name": "IX_PASANTE3",
+    "type_desc": "NONCLUSTERED",
+    "columnas": "FECHA, VEND",
+    "incluidas": "ARTCEGID, CANTIDAD, CODBARRA, CODBARRA_prin, COLOR, costouni, DESCUENTO, DESCUENTO2, ESTAB, NUMERO, NUMLIN, PRECIO, pvp, TALLE, TAX, TAX2"
+  },
+  {
+    "name": "IX_PASANTE3_003",
+    "type_desc": "NONCLUSTERED",
+    "columnas": "VEND, FECHA",
+    "incluidas": "ARTCEGID, CANTIDAD, CODBARRA, CODBARRA_prin, COLOR, costouni, DESCUENTO, DESCUENTO2, ESTAB, NUMERO, NUMLIN, PRECIO, pvp, TALLE, TAX, TAX2"
+  },
+  {
+    "name": "IX_Vta_fecha_art",
+    "type_desc": "NONCLUSTERED",
+    "columnas": "FECHA, ARTCEGID",
+    "incluidas": "CANTIDAD, COLOR, ESTAB, TALLE"
+  },
+  {
+    "name": "IX_PLE_20260722_018",
+    "type_desc": "NONCLUSTERED",
+    "columnas": "NUMERO, ESTAB",
+    "incluidas": "CANTIDAD, CODBARRA_prin, DESCUENTO2, PRECIO, TAX"
+  },
+  {
+    "name": "IX_PLE_20260722_020",
+    "type_desc": "NONCLUSTERED",
+    "columnas": "ARTCEGID, VEND",
+    "incluidas": "CANTIDAD, COLOR, ESTAB, FECHA"
+  }
+]
+
+=== dis_transf_emitidas ===
+[
+  {
+    "name": "IX_PLE_20250611_003",
+    "type_desc": "NONCLUSTERED",
+    "columnas": "estab, destino, fecha",
+    "incluidas": "arprove, cantidad, costouni"
+  }
+]
+

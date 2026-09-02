@@ -139,59 +139,40 @@ GROUP BY CODEARTICLE, COLOR, TALLE;
 -- directo de "unidades a comprar": es stock real que ya salio hacia ESA sucursal puntual, no una
 -- promesa externa. Es POR SUCURSAL (no por empresa, a diferencia de deposito/OC), asi que no
 -- necesita reparto/pool -- se resta directo en calcularNecesidadPorBarra (frontend).
--- "Vigente" = emitida hace <= 30 dias (a pedido explicito, tras confirmar con datos reales que el
--- 99.7% de "cantpend>0" es historico sin resolver -- 2.670.648 filas desde 2021, pero solo 7.469 en
--- los ultimos 30 dias -- señal de que el dato viejo casi nunca se cierra en el sistema y no refleja
--- una transferencia realmente en camino). destino se filtra igual que en dis_transf_recibidas (solo
--- sucursales de venta reales, no depositos/devoluciones).
-SELECT te.destino AS Sucursal, te.arprove AS CodArticulo, te.color AS COLOR, te.talle AS TALLE,
-       SUM(te.cantpend) AS TransitoPendiente
+-- 2026-09-02 (ver spec docs/superpowers/specs/2026-09-02-preagregado-ventas-diarias-design.md):
+-- #TransitoRango/#VentasRango/#PromoRango dejaron de escanear dis_transf_emitidas/Vta_detalle en
+-- vivo -- ahora leen de dbo.MotorReposicion_TransitoHoy/_VentasPorDia, precalculadas de noche
+-- (Etapa 8 del mismo job que precalcula StockSemanal). Mismas columnas de salida que antes, para
+-- no tener que tocar nada del resto de esta consulta ni del pipeline de Node. TransitoHoy ya no
+-- necesita filtro de fecha en vivo (la vigencia de 30 dias se resuelve en la Etapa 8, siempre
+-- respecto de "hoy" -- por eso @fechaDesdeTransito ya no se usa en esta consulta).
+SELECT Sucursal, CodArticulo, COLOR, TALLE, TransitoPendiente
 INTO #TransitoRango
-FROM dis_transf_emitidas te
-INNER JOIN Sucursales s ON s.Sucursal = te.destino AND (s.viewSuc='S' OR s.Sucursal IN ('WEB','WEB2','ML1','ML2','FK','000102','000111')) AND s.Sucursal NOT IN ('000226','000235')
-WHERE te.fecha >= @fechaDesdeTransito AND te.cantpend > 0
-GROUP BY te.destino, te.arprove, te.color, te.talle;
+FROM dbo.MotorReposicion_TransitoHoy;
 
-SELECT ESTAB AS Sucursal, ARTCEGID AS CodArticulo, COLOR, TALLE,
-       SUM(CASE WHEN ISNUMERIC(CANTIDAD)=1 THEN CAST(CANTIDAD AS DECIMAL(18,4)) ELSE 0 END) AS VentasRango,
-       COUNT(DISTINCT FECHA) AS DiasConVenta,
-       MAX(FECHA) AS UltimaVenta
+SELECT Sucursal, CodArticulo, COLOR, TALLE,
+       SUM(CantidadVendida) AS VentasRango,
+       COUNT(*) AS DiasConVenta,
+       MAX(Fecha) AS UltimaVenta
 INTO #VentasRango
-FROM Vta_detalle
-WHERE ESTAB IS NOT NULL AND FECHA >= @fechaDesde AND FECHA <= @fechaHasta
-GROUP BY ESTAB, ARTCEGID, COLOR, TALLE;
+FROM dbo.MotorReposicion_VentasPorDia
+WHERE Fecha >= @fechaDesde AND Fecha <= @fechaHasta
+GROUP BY Sucursal, CodArticulo, COLOR, TALLE;
 
--- "Estuvo en promo" durante el Periodo de ventas elegido (2026-09-02, a pedido explicito;
--- corregido 2026-09-03 tras otro pedido explicito de Claudia -- el cruce original enlazaba
--- CGD_CONDCOM_VTA_DET contra cgd_ARTICULOS por CODBARRA_prin/GA_CODEBARRE de forma independiente,
--- sin atarlo al TICKET real de Vta_detalle). Ahora se cruza directamente contra Vta_detalle por
--- los TRES campos que identifican una venta puntual -- ESTAB + NUMERO + FECHA -- mas el codigo de
--- barras (CODBARRA_prin, que ya viene en Vta_detalle) para asegurar que es la MISMA linea de venta
--- (un ticket puede tener varias lineas de articulos distintos). CodArticulo/COLOR/TALLE salen de
--- Vta_detalle (no de cgd_ARTICULOS): mismo origen que #VentasRango arriba, así los combos calzan
--- exactamente contra los mismos Sucursal+CodArticulo+COLOR+TALLE que ya arma esa consulta.
--- MAX(NOMBRE_COND)/MAX(DESCUENTO): si hubo mas de una promo distinta en el periodo para el mismo
--- combo, se guarda una sola como referencia (alcanza para "hubo promo", no es una lista completa).
-SELECT vd.ESTAB AS Sucursal, vd.ARTCEGID AS CodArticulo, vd.COLOR, vd.TALLE,
-       COUNT(*) AS CantidadVentasPromo,
-       MAX(c.NOMBRE_COND) AS NombrePromo,
-       MAX(c.DESCUENTO) AS DescuentoPromo
+-- "Estuvo en promo" durante el Periodo de ventas elegido -- CantidadVentasPromo/NombrePromoDia/
+-- DescuentoPromoDia ya vienen resueltos por dia en MotorReposicion_VentasPorDia (misma logica de
+-- join/filtro contra CGD_CONDCOM_VTA_DET que antes, calculada de noche en vez de en vivo). SUM de
+-- los conteos diarios = COUNT(*) directo sobre el crudo; MAX de los MAX diarios = MAX directo
+-- sobre todo el rango (matematicamente exacto, no una aproximacion -- verificado con datos reales
+-- antes de desplegar esto).
+SELECT Sucursal, CodArticulo, COLOR, TALLE,
+       SUM(CantidadVentasPromo) AS CantidadVentasPromo,
+       MAX(NombrePromoDia) AS NombrePromo,
+       MAX(DescuentoPromoDia) AS DescuentoPromo
 INTO #PromoRango
-FROM Vta_detalle vd
-INNER JOIN CGD_CONDCOM_VTA_DET c
-  ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
-  -- PVP_REBAJADO < PRECIOLLENO (2026-09-08, a pedido explicito): sin este filtro, entran lineas
-  -- de descuentos NO especificos del articulo (ej. "COMPRA MIN $300.000, DESCUENTO $30.000" a
-  -- nivel ticket) donde CGD_CONDCOM_VTA_DET igual registra la promo pero el PVP de ESTA linea
-  -- puntual no bajo (PVP_REBAJADO = PRECIOLLENO) -- no es una rebaja de ESTE articulo.
-  AND c.PVP_REBAJADO < c.PRECIOLLENO
-  -- "MES DE TU CUMPLEAÑOS" excluida aparte (2026-09-08, a pedido explicito): es un descuento
-  -- personal del CLIENTE (segun su fecha de cumpleaños), no una promo del articulo -- pasa el
-  -- filtro de arriba (SI baja el PVP de esa linea puntual) pero igual no sirve como señal de
-  -- "este articulo estuvo en promo".
-  AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
-WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @fechaDesde AND vd.FECHA <= @fechaHasta
-GROUP BY vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE;
+FROM dbo.MotorReposicion_VentasPorDia
+WHERE Fecha >= @fechaDesde AND Fecha <= @fechaHasta AND CantidadVentasPromo > 0
+GROUP BY Sucursal, CodArticulo, COLOR, TALLE;
 
 -- "Dias con stock" del periodo elegido: antes esto corria en vivo (Numerado/ConAnterior/Base/
 -- Correccion sobre #StockSemanalRango, ~24s de los ~42s de respuesta total) para CADA request.
@@ -444,7 +425,20 @@ CROSS APPLY (
 -- barras se listan) -- a pedido explicito. NULL (2.8% del universo, sin ninguna recepcion real
 -- registrada) nunca se excluye -- falta de dato no es lo mismo que "nunca comprado".
 WHERE ur.FechaUltimaCompra IS NULL
-   OR (ur.FechaUltimaCompra >= @ucFechaDesde AND ur.FechaUltimaCompra <= @ucFechaHasta);
+   OR (ur.FechaUltimaCompra >= @ucFechaDesde AND ur.FechaUltimaCompra <= @ucFechaHasta)
+-- OPTION (FORCE ORDER) (2026-09-02, ver spec docs/superpowers/specs/2026-09-02-preagregado-ventas-diarias-design.md):
+-- al pasar #VentasRango/#PromoRango/#TransitoRango a leer de tablas precalculadas mucho mas chicas
+-- (en vez de escanear Vta_detalle/dis_transf_emitidas en vivo), el optimizador reordenaba este JOIN
+-- de forma distinta -- y peor -- basandose en una estimacion de cardinalidad inflada contra
+-- MotorReposicion_UltimaRecepcion (estimaba 18.2M filas, la realidad son 1.16M -- 15.6x de mas).
+-- Medido: sin esto, este SELECT solo (una vez arregladas las estadisticas de las tablas nuevas)
+-- pasaba de ~8-9s a 22-39s. Con FORCE ORDER, vuelve a un costo en linea con el original (~32s
+-- totales de la consulta completa, igual que antes de este cambio). MotorReposicion_UltimaRecepcion
+-- y MotorReposicion_EvidenciaHistorica YA tienen el indice correcto (Sucursal, CodArticulo, COLOR,
+-- TALLE) -- el costo real esta en que el otro lado del join (#Universo) es una tabla temporal sin
+-- indice (heap); indexar temp tables para esta consulta ya se probo antes (ver comentario sobre
+-- "evidencia historica" mas arriba) y empeoro el resultado neto -- no se repite ese intento.
+OPTION (FORCE ORDER);
 
 ;WITH Calc AS (
     SELECT *,
@@ -1219,15 +1213,12 @@ async function obtenerDataPesadaQuiebre({ fechaDesde, fechaHasta, riesgoDias, uc
     const pool = await poolPromise;
     const fechaDesdePedidos = new Date();
     fechaDesdePedidos.setMonth(fechaDesdePedidos.getMonth() - PEDIDOS_ANTIGUEDAD_MESES);
-    const fechaDesdeTransito = new Date();
-    fechaDesdeTransito.setDate(fechaDesdeTransito.getDate() - TRANSITO_VIGENCIA_DIAS);
 
     const result = await pool
       .request()
       .input('fechaDesde', sql.Date, fechaDesde)
       .input('fechaHasta', sql.Date, fechaHasta)
       .input('fechaDesdePedidos', sql.Date, fechaDesdePedidos)
-      .input('fechaDesdeTransito', sql.Date, fechaDesdeTransito)
       .input('riesgoDias', sql.Int, riesgoDias)
       .input('ucFechaDesde', sql.Date, ucFechaDesde)
       .input('ucFechaHasta', sql.Date, ucFechaHasta)

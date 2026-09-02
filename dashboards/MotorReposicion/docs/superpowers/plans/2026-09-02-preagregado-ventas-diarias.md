@@ -140,11 +140,11 @@ async function main() {
   await pool.request().query(`
     TRUNCATE TABLE dbo.MotorReposicion_TransitoHoy;
     INSERT INTO dbo.MotorReposicion_TransitoHoy (Sucursal, CodArticulo, COLOR, TALLE, TransitoPendiente)
-    SELECT te.destino, te.arprove, te.color, te.talle, SUM(te.cantpend)
+    SELECT te.destino, ISNULL(te.arprove,''), ISNULL(te.color,''), ISNULL(te.talle,''), SUM(te.cantpend)
     FROM dis_transf_emitidas te
     INNER JOIN Sucursales s ON s.Sucursal = te.destino AND (s.viewSuc='S' OR s.Sucursal IN ('WEB','WEB2','ML1','ML2','FK','000102','000111')) AND s.Sucursal NOT IN ('000226','000235')
     WHERE te.fecha >= DATEADD(DAY, -30, CAST(GETDATE() AS DATE)) AND te.cantpend > 0
-    GROUP BY te.destino, te.arprove, te.color, te.talle;
+    GROUP BY te.destino, ISNULL(te.arprove,''), ISNULL(te.color,''), ISNULL(te.talle,'');
   `);
   console.log('TransitoHoy poblada en', Date.now() - inicio, 'ms');
   const r = await pool.request().query('SELECT COUNT(*) AS n FROM dbo.MotorReposicion_TransitoHoy');
@@ -199,7 +199,7 @@ async function poblarMes(pool, desde, hasta) {
   await req.query(`
     DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde AND Fecha <= @hasta;
     INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
-    SELECT vd.FECHA, vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE,
+    SELECT vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,''),
            SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END),
            SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END),
            MAX(c.NOMBRE_COND),
@@ -209,7 +209,7 @@ async function poblarMes(pool, desde, hasta) {
       ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
       AND c.PVP_REBAJADO < c.PRECIOLLENO AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
     WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde AND vd.FECHA <= @hasta
-    GROUP BY vd.FECHA, vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE;
+    GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
   `);
   console.log(`  ${desde.toISOString().slice(0,10)} a ${hasta.toISOString().slice(0,10)}: ${Date.now()-inicio}ms`);
 }
@@ -345,7 +345,7 @@ sql.connect(dbConfig).then(async (pool) => {
   DECLARE @ayer DATE = DATEADD(DAY, -1, CAST(@ahora AS DATE));
   DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha = @ayer;
   INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
-  SELECT vd.FECHA, vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE,
+  SELECT vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,''),
          SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END),
          SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END),
          MAX(c.NOMBRE_COND),
@@ -355,7 +355,7 @@ sql.connect(dbConfig).then(async (pool) => {
     ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
     AND c.PVP_REBAJADO < c.PRECIOLLENO AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
   WHERE vd.ESTAB IS NOT NULL AND vd.FECHA = @ayer
-  GROUP BY vd.FECHA, vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE;
+  GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
 
   -- 8b: recalculo semanal de seguridad -- domingos, ultimos 3 meses (correcciones retroactivas)
   IF DATEPART(WEEKDAY, @ahora) = 1
@@ -363,7 +363,7 @@ sql.connect(dbConfig).then(async (pool) => {
     DECLARE @desde3Meses DATE = DATEADD(MONTH, -3, CAST(@ahora AS DATE));
     DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde3Meses AND Fecha <= @ayer;
     INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
-    SELECT vd.FECHA, vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE,
+    SELECT vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,''),
            SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END),
            SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END),
            MAX(c.NOMBRE_COND),
@@ -373,7 +373,7 @@ sql.connect(dbConfig).then(async (pool) => {
       ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
       AND c.PVP_REBAJADO < c.PRECIOLLENO AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
     WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde3Meses AND vd.FECHA <= @ayer
-    GROUP BY vd.FECHA, vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE;
+    GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
   END
 
   -- 8c: retencion -- misma @fechaDesde (18 meses) que ya usa Etapa 1
@@ -382,11 +382,11 @@ sql.connect(dbConfig).then(async (pool) => {
   -- 8d: TransitoHoy -- snapshot completo, siempre (tabla chica, no hace falta incremental)
   TRUNCATE TABLE dbo.MotorReposicion_TransitoHoy;
   INSERT INTO dbo.MotorReposicion_TransitoHoy (Sucursal, CodArticulo, COLOR, TALLE, TransitoPendiente)
-  SELECT te.destino, te.arprove, te.color, te.talle, SUM(te.cantpend)
+  SELECT te.destino, ISNULL(te.arprove,''), ISNULL(te.color,''), ISNULL(te.talle,''), SUM(te.cantpend)
   FROM dis_transf_emitidas te
   INNER JOIN Sucursales s ON s.Sucursal = te.destino AND (s.viewSuc='S' OR s.Sucursal IN ('WEB','WEB2','ML1','ML2','FK','000102','000111')) AND s.Sucursal NOT IN ('000226','000235')
   WHERE te.fecha >= DATEADD(DAY, -30, CAST(@ahora AS DATE)) AND te.cantpend > 0
-  GROUP BY te.destino, te.arprove, te.color, te.talle;
+  GROUP BY te.destino, ISNULL(te.arprove,''), ISNULL(te.color,''), ISNULL(te.talle,'');
 ```
 
 - [ ] **Step 3: Confirmar con Claudia, luego desplegar con el script existente**
@@ -504,7 +504,7 @@ async function main() {
   await req.query(`
     DELETE FROM dbo.MotorReposicion_VentasPorDia WHERE Fecha >= @desde AND Fecha <= @hasta;
     INSERT INTO dbo.MotorReposicion_VentasPorDia (Fecha, Sucursal, CodArticulo, COLOR, TALLE, CantidadVendida, CantidadVentasPromo, NombrePromoDia, DescuentoPromoDia)
-    SELECT vd.FECHA, vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE,
+    SELECT vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,''),
            SUM(CASE WHEN ISNUMERIC(vd.CANTIDAD)=1 THEN CAST(vd.CANTIDAD AS DECIMAL(18,4)) ELSE 0 END),
            SUM(CASE WHEN c.NUMERO IS NOT NULL THEN 1 ELSE 0 END),
            MAX(c.NOMBRE_COND),
@@ -514,7 +514,7 @@ async function main() {
       ON c.ESTAB = vd.ESTAB AND c.NUMERO = vd.NUMERO AND c.FECHA = vd.FECHA AND c.CODBARRA_prin = vd.CODBARRA_prin
       AND c.PVP_REBAJADO < c.PRECIOLLENO AND c.NOMBRE_COND NOT LIKE '%MES DE TU CUMPLEA%'
     WHERE vd.ESTAB IS NOT NULL AND vd.FECHA >= @desde AND vd.FECHA <= @hasta
-    GROUP BY vd.FECHA, vd.ESTAB, vd.ARTCEGID, vd.COLOR, vd.TALLE;
+    GROUP BY vd.FECHA, vd.ESTAB, ISNULL(vd.ARTCEGID,''), ISNULL(vd.COLOR,''), ISNULL(vd.TALLE,'');
   `);
   console.log(`Recalculado ${desdeArg} a ${hastaArg}.`);
   await pool.close();

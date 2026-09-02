@@ -486,7 +486,18 @@
   .pcg-desc-ct { flex:none; white-space:nowrap; }
   .pcg-promo { flex:none; margin-left:5px; font-size:11px; }
   .pcg-sim { flex:0 0 auto; }
-  .pcg-suc, .pcg-rot, .pcg-cant { font-size:11px; overflow-wrap:break-word; line-height:1.3; }
+  /* white-space:nowrap + ellipsis (2026-09-02, a pedido explicito -- antes overflow-wrap:break-word):
+     estas 3 celdas viven dentro de "Ver en detalle", que desde la virtualizacion ASUME que todas
+     las filas miden lo mismo (se mide una sola fila al abrir el modal y ese numero se reusa para
+     todo el calculo de scroll -- ver medirAltoFilaDetalle). .pcg-rot en particular ("⟳ 1.234,56
+     unidades/día") mide mas que sus 112px en la mayoria de las filas reales y pasaba a 2 lineas --
+     con la fila medida en 1 sola linea (dependia de que texto tuviera ESA fila puntual) y la
+     mayoria de las demas en 2, el calculo de scroll se desalineaba cada vez mas cuanto mas se
+     bajaba en la lista (reportado por Claudia: "bajo bastante... al subir se queda con esas 5
+     lineas... recien despues de subir bastante vuelve a mostrar varias lineas"). Truncar con "..."
+     en vez de wrappear garantiza que TODAS las filas midan exactamente lo mismo, que es lo que la
+     virtualizacion necesita para que el calculo de scroll no derive. */
+  .pcg-suc, .pcg-rot, .pcg-cant { font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3; }
   .pcg-cant { color:#9a6700; font-weight:600; }
   .pcg-margen { font-size:13px; font-weight:800; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .pcg-lupa { text-align:center; font-size:12px; }

@@ -9,6 +9,8 @@ const {
   DELETE_TEMP_BI_APP_FILA, INSERT_TEMP_BI_APP_FILA, EXEC_SP_DASHBOARD
 } = require('./consultas');
 const { crearStoreObjetivos } = require('./objetivos-store');
+const { registrarConsumoApiKey } = require('./registrar-consumo-apikey');
+const { cargarHistorialChat, guardarHistorialChat, borrarHistorialChat } = require('./sesion-chat');
 
 const PORT = Number(process.env.PORT || 3016);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -16,6 +18,16 @@ const ANIOMES_DESDE = Number(process.env.ANIOMES_DESDE || 201401);
 const TTL_CERRADO_MS = Number(process.env.TTL_CERRADO_MIN || 720) * 60 * 1000;
 const TTL_ABIERTO_MS = Number(process.env.TTL_ABIERTO_MIN || 5) * 60 * 1000;
 const TTL_SUCURSALES_MS = 60 * 60 * 1000;
+
+/* Chat flotante (02/09/2026): pega DIRECTO a la API de Anthropic (dejó de
+   pasar por OpenRouter — key propia de la empresa, un intermediario menos
+   para los datos que salen). */
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const ANTHROPIC_API_URL = process.env.ANTHROPIC_API_URL || 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
+/* Prender/apagar el chat entero sin tocar código — ver VentaObjetivo/CLAUDE.md.
+   Default OFF (cualquier valor que no sea exactamente "1" queda apagado). */
+const CHAT_HABILITADO_GLOBAL = process.env.CHAT_HABILITADO === '1';
 
 const NOMBRES_MES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -802,6 +814,13 @@ function puedeEditar(req) {
   const u = usuarioDe(req).toLowerCase();
   return u.includes('vallejo') || u === 'admin';
 }
+/* Chat flotante (01/09/2026): sólo usuarios con "vallejo" en el nombre —
+   a diferencia de puedeEditar, acá NO entra "admin" (pedido explícito:
+   "para los usuarios %Vallejo%"). Se chequea de nuevo en el server aunque
+   el frontend ya oculte el botón, por si alguien pega directo al endpoint. */
+function esVallejo(req) {
+  return CHAT_HABILITADO_GLOBAL && usuarioDe(req).toLowerCase().includes('vallejo');
+}
 function exigirEdicion(req, res, next) {
   if (!puedeEditar(req)) {
     return res.status(403).json({ error: 'Este usuario es de sólo lectura — no puede cargar ni modificar objetivos.' });
@@ -848,7 +867,193 @@ const app = express();
 app.use(express.json());
 
 app.get('/api/permisos', (req, res) => {
-  res.json({ usuario: usuarioDe(req), puedeEditar: puedeEditar(req) });
+  res.json({ usuario: usuarioDe(req), puedeEditar: puedeEditar(req), chatHabilitado: esVallejo(req) });
+});
+
+/* Rate limit muy simple en memoria (por usuario del portal): evita que
+   alguien deje la pestaña pegando F5 al chat y funda la cuenta de la API.
+   No persiste (se resetea si el servicio reinicia) — alcanza para esto. */
+const chatPedidosPorUsuario = new Map(); // usuario -> [timestamps]
+const CHAT_LIMITE_PEDIDOS = 20;
+const CHAT_LIMITE_VENTANA_MS = 5 * 60 * 1000;
+function chatExcedeLimite(usuario) {
+  const ahora = Date.now();
+  const previos = (chatPedidosPorUsuario.get(usuario) || []).filter((t) => ahora - t < CHAT_LIMITE_VENTANA_MS);
+  previos.push(ahora);
+  chatPedidosPorUsuario.set(usuario, previos);
+  return previos.length > CHAT_LIMITE_PEDIDOS;
+}
+
+const CHAT_APLICACION = 'VentaObjetivo';
+const CHAT_MAX_TOKENS = 4096;
+
+const CHAT_SYSTEM_PROMPT = [
+  [
+    'Sos un analista senior de retail especializado en performance comercial, con años de',
+    'experiencia leyendo tableros de venta comparativa y objetivos por sucursal. Trabajás para',
+    'Vallejo San Juan (cadena con marcas/empresas "Pueblo" y "Tesi", más canales digitales',
+    'web/MercadoLibre) analizando el tablero "Ventas Comparativas / Objetivo": ventas,',
+    'operaciones, unidades, ticket promedio, unidades por cliente, días de venta y margen,',
+    'comparados año contra año y contra el objetivo cargado. Respondé en español rioplatense,',
+    'con criterio analítico propio (no sólo repitas números): señalá tendencias, variaciones',
+    'llamativas, estacionalidad, y relacioná ticket promedio/unidades por cliente/operaciones',
+    'entre sí cuando ayude a explicar un resultado. Sé directo y priorizá la conclusión antes',
+    'que el detalle, pero no cortes el análisis por acortar — si la pregunta lo amerita, dado',
+    'un buen desarrollo completo.'
+  ].join(' '),
+  [
+    'Solo tenés la información que te paso a continuación como "Datos visibles en el tablero"',
+    '(lo que el usuario tiene en pantalla en este momento) más el historial de esta',
+    'conversación — no inventes números que no estén ahí. Si te preguntan algo que no se puede',
+    'responder con esos datos, decilo claramente y sugerí qué filtro o pestaña conviene mirar.'
+  ].join(' '),
+  [
+    'Si el usuario pide ver otros datos que HOY NO reflejan los filtros aplicados (años,',
+    'empresa o sucursal), PODÉS cambiar esos filtros vos mismo: terminá tu respuesta con una',
+    'línea aparte, exactamente en este formato (sin texto extra en esa línea, sin bloque de',
+    'código), incluyendo SÓLO las claves que corresponda cambiar:',
+    'ACCION_FILTRO: {"anios":[2021,2022,2023,2024,2025],"empresa":"PUEBLO","sucursales":["05","12"]}',
+    '"anios": lista COMPLETA de años que deben quedar tildados después del cambio (no sólo',
+    'los nuevos), usando ÚNICAMENTE años de "Años disponibles" del contexto.',
+    '"empresa": el nombre EXACTO de una de "Empresas disponibles" del contexto, o null para',
+    'volver a "todas las empresas" (sin filtro de empresa).',
+    '"sucursales": lista de códigos EXACTOS (la parte antes de los dos puntos) de',
+    '"Sucursales disponibles" del contexto, o [] para volver a "todas las sucursales".',
+    'Nunca inventes un año, empresa o código de sucursal que no figure en esas listas del',
+    'contexto — si no estás seguro de a qué sucursal/empresa se refiere el usuario, preguntá',
+    'en vez de adivinar. Si el pedido no requiere cambiar ningún filtro, no incluyas la línea.'
+  ].join(' ')
+].join('\n\n');
+
+app.get('/api/chat/historial', async (req, res) => {
+  if (!esVallejo(req)) return res.status(403).json({ error: 'Chat no habilitado para este usuario.' });
+  try {
+    const pool = await getPoolTableros();
+    const historial = await cargarHistorialChat({ pool, aplicacion: CHAT_APLICACION, usuario: usuarioDe(req), log });
+    res.json({ historial });
+  } catch (e) {
+    log('error', `chat historial GET: ${e.message}`);
+    res.json({ historial: [] }); // nunca bloquea la carga del chat por esto
+  }
+});
+
+app.delete('/api/chat/historial', async (req, res) => {
+  if (!esVallejo(req)) return res.status(403).json({ error: 'Chat no habilitado para este usuario.' });
+  try {
+    const pool = await getPoolTableros();
+    await borrarHistorialChat({ pool, aplicacion: CHAT_APLICACION, usuario: usuarioDe(req), log });
+  } catch (e) {
+    log('error', `chat historial DELETE: ${e.message}`);
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/chat', async (req, res) => {
+  if (!esVallejo(req)) return res.status(403).json({ error: 'Chat no habilitado para este usuario.' });
+  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: 'Chat no configurado (falta ANTHROPIC_API_KEY en el .env del servidor).' });
+  const usuario = usuarioDe(req);
+  if (chatExcedeLimite(usuario)) {
+    return res.status(429).json({ error: 'Demasiadas preguntas seguidas — esperá unos minutos.' });
+  }
+
+  const mensaje = String(req.body?.mensaje || '').slice(0, 2000).trim();
+  const contexto = String(req.body?.contexto || '').slice(0, 12000);
+  if (!mensaje) return res.status(400).json({ error: 'Falta el mensaje.' });
+
+  try {
+    const pool = await getPoolTableros();
+    /* Sesión por usuario (02/09/2026): el historial vive en SQL Server, no en
+       el navegador — el server es la única fuente de verdad, sobrevive F5,
+       cierre de pestaña y reinicio del servicio. Se guardan los mensajes
+       "limpios" (sin el bloque "Datos visibles en el tablero" de cada
+       turno) para no repetir contexto viejo/potencialmente desactualizado en
+       cada request — sólo el turno ACTUAL lleva los datos en pantalla. */
+    const historialPrevio = await cargarHistorialChat({ pool, aplicacion: CHAT_APLICACION, usuario, log });
+    const messages = [
+      ...historialPrevio.map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: `Datos visibles en el tablero ahora:\n${contexto}\n\nPregunta: ${mensaje}` }
+    ];
+
+    const r = await fetch(ANTHROPIC_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({ model: ANTHROPIC_MODEL, system: CHAT_SYSTEM_PROMPT, messages, max_tokens: CHAT_MAX_TOKENS })
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      log('error', `chat POST: Anthropic ${r.status} ${JSON.stringify(data).slice(0, 500)}`);
+      return res.status(502).json({ error: data?.error?.message || 'Error consultando el asistente.' });
+    }
+    const bloqueTexto = data?.content?.find((b) => b.type === 'text');
+    let textoCrudo = bloqueTexto?.text;
+    if (!textoCrudo) {
+      // No debería pasar con esta API (siempre devuelve al menos un bloque de
+      // texto, salvo "refusal" o un JSON inesperado) — logueamos entero para
+      // poder diagnosticar la próxima vez en vez de mostrar un cartel mudo.
+      log('warn', `chat POST: sin bloque de texto (stop_reason=${data?.stop_reason}) — ${JSON.stringify(data).slice(0, 800)}`);
+      textoCrudo = data?.stop_reason === 'refusal'
+        ? 'No puedo responder esa pregunta con la información del tablero — reformulala.'
+        : 'El asistente no devolvió una respuesta esta vez — probá de nuevo o reformulá la pregunta.';
+    }
+    // ACCION_FILTRO: {...} en la última línea = pedido de cambiar Años/Empresa/
+    // Sucursal en el navegador (nunca toca nada del lado del servidor, es
+    // puramente visual — el frontend vuelve a validar contra lo disponible).
+    let respuesta = textoCrudo;
+    let accion = null;
+    const m = textoCrudo.match(/\n?ACCION_FILTRO:\s*(\{[^\n]*\})\s*$/);
+    if (m) {
+      try {
+        const candidato = JSON.parse(m[1]);
+        const accionCandidata = {};
+        if (Array.isArray(candidato.anios) && candidato.anios.every((a) => Number.isInteger(a))) {
+          accionCandidata.anios = candidato.anios;
+        }
+        if (candidato.empresa === null || typeof candidato.empresa === 'string') {
+          accionCandidata.empresa = candidato.empresa;
+        }
+        if (Array.isArray(candidato.sucursales) && candidato.sucursales.every((s) => typeof s === 'string')) {
+          accionCandidata.sucursales = candidato.sucursales;
+        }
+        if (Object.keys(accionCandidata).length) {
+          accion = accionCandidata;
+          respuesta = textoCrudo.slice(0, m.index).trim() || 'Listo, ya actualicé el filtro.';
+        }
+      } catch (e) {
+        log('warn', `chat POST: ACCION_FILTRO mal formada: ${m[1]}`);
+      }
+    }
+    // stop_reason "max_tokens" = la respuesta vino cortada — se avisa en vez
+    // de dejar que el usuario piense que ese es el final natural.
+    const truncada = data?.stop_reason === 'max_tokens';
+    if (truncada) respuesta += '\n\n_(la respuesta se cortó por longitud — pedime que continúe si hace falta)_';
+    res.json({ respuesta, accion, truncada });
+
+    // Guarda el turno (mensaje limpio, sin el bloque de datos) para la
+    // próxima pregunta de este usuario. Fire-and-forget: no debe demorar la
+    // respuesta ya enviada.
+    guardarHistorialChat({
+      pool, aplicacion: CHAT_APLICACION, usuario, log,
+      historial: [...historialPrevio, { role: 'user', content: mensaje }, { role: 'assistant', content: respuesta }]
+    }).catch((e) => log('warn', `guardarHistorialChat: ${e.message}`));
+
+    // Fire-and-forget: registrar consumo nunca debe demorar ni romper la respuesta ya enviada.
+    registrarConsumoApiKey({
+      pool,
+      aplicacion: CHAT_APLICACION,
+      usuario,
+      proveedor: 'Anthropic',
+      modelo: ANTHROPIC_MODEL,
+      tokensEntrada: data?.usage?.input_tokens || 0,
+      tokensSalida: data?.usage?.output_tokens || 0
+    }).catch((e) => log('warn', `registrarConsumoApiKey: ${e.message}`));
+  } catch (e) {
+    log('error', `chat POST: ${e.message}`);
+    res.status(500).json({ error: 'No se pudo contactar al asistente.' });
+  }
 });
 
 app.get('/api/salud', async (_req, res) => {

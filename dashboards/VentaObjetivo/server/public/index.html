@@ -120,6 +120,48 @@
   tr.pe-total td{font-weight:600;border-top:3px solid var(--border-fuerte);background:var(--panel2)}
   .toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.18);z-index:20}
 
+  .chat-fab{position:fixed;bottom:20px;right:20px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#4f8cff);color:#fff;border:none;cursor:pointer;font-size:23px;box-shadow:0 4px 18px rgba(37,99,235,.45);z-index:30;display:none;align-items:center;justify-content:center;transition:transform .15s}
+  .chat-fab:hover{transform:scale(1.06)}
+
+  .chat-panel{position:fixed;bottom:86px;right:20px;width:420px;height:600px;max-width:calc(100vw - 32px);max-height:calc(100vh - 110px);min-width:320px;min-height:220px;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);z-index:30;display:none;flex-direction:column;overflow:hidden;resize:both}
+  .chat-panel.abierto{display:flex}
+  .chat-panel.expandido{width:760px;height:min(880px,calc(100vh - 110px))}
+  .chat-panel.minimizado{height:auto!important;min-height:0;resize:none}
+  .chat-panel.minimizado .chat-msgs,.chat-panel.minimizado .chat-input-row{display:none}
+
+  .chat-header{padding:11px 8px 11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:2px;background:linear-gradient(135deg,var(--accent),#4f8cff);color:#fff;cursor:default;flex:0 0 auto}
+  .chat-header b{font-size:13.5px;flex:1;font-weight:600;letter-spacing:.01em}
+  .chat-header .chat-header-sub{font-size:10.5px;opacity:.85;font-weight:400;display:block;margin-top:1px}
+  .chat-header-titulo{flex:1;min-width:0}
+  .chat-header button{background:rgba(255,255,255,.12);border:none;color:#fff;cursor:pointer;font-size:13px;width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .chat-header button:hover{background:rgba(255,255,255,.28)}
+
+  .chat-msgs{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+  .chat-msg{max-width:90%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.5;word-wrap:break-word;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .chat-msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--accent),#4f8cff);color:#fff;border-bottom-right-radius:3px;white-space:pre-wrap}
+  .chat-msg.bot{align-self:flex-start;background:var(--panel);border:1px solid var(--border);border-bottom-left-radius:3px}
+  .chat-msg.bot.error{color:var(--bad);border-color:var(--bad);background:rgba(220,38,38,.06)}
+  .chat-msg.pensando{color:var(--muted);font-style:italic;white-space:pre-wrap;animation:chatPulso 1.2s ease-in-out infinite}
+  @keyframes chatPulso{0%,100%{opacity:.55}50%{opacity:1}}
+
+  /* Markdown básico renderizado dentro de una respuesta del asistente (ver
+     renderizarMarkdownBasico en el script) — números/negrita legibles en vez
+     de asteriscos crudos. */
+  .chat-msg.bot p{margin:0 0 7px}
+  .chat-msg.bot p:last-child{margin-bottom:0}
+  .chat-msg.bot ul,.chat-msg.bot ol{margin:2px 0 8px;padding-left:20px}
+  .chat-msg.bot li{margin-bottom:3px}
+  .chat-msg.bot li:last-child{margin-bottom:0}
+  .chat-msg.bot strong{color:var(--accent);font-weight:700}
+  .chat-msg.bot em{color:var(--muted)}
+
+  .chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border);flex:0 0 auto;background:var(--panel)}
+  .chat-input-row textarea{flex:1;resize:none;height:38px;max-height:120px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:9px 10px;font:inherit;font-size:13px}
+  .chat-input-row textarea:focus{outline:none;border-color:var(--accent)}
+  .chat-input-row button{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:0 16px;cursor:pointer;font-weight:600;font-size:13px}
+  .chat-input-row button:hover:not(:disabled){filter:brightness(1.08)}
+  .chat-input-row button:disabled{background:#e2e5eb;color:#9aa3b2;cursor:not-allowed}
+
   .modal-fondo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:30}
   .modal-fondo.abierto{display:flex}
   .modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;padding:22px 26px}
@@ -236,6 +278,25 @@
   </div>
 </section>
 
+<button class="chat-fab" id="chatFab" title="Preguntarle al asistente sobre lo que ves en pantalla">💬</button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header" id="chatHeaderBar">
+    <div class="chat-header-titulo">
+      <b>Asistente del tablero</b>
+      <span class="chat-header-sub">Ventas Comparativas / Objetivo</span>
+    </div>
+    <button id="chatMinimizar" title="Minimizar">–</button>
+    <button id="chatExpandir" title="Ampliar">⤢</button>
+    <button id="chatLimpiar" title="Borrar conversación">🗑</button>
+    <button id="chatCerrar" title="Cerrar">✕</button>
+  </div>
+  <div class="chat-msgs" id="chatMsgs"></div>
+  <div class="chat-input-row">
+    <textarea id="chatInput" placeholder="Preguntá sobre lo que estás viendo…" maxlength="2000"></textarea>
+    <button id="chatEnviar">Enviar</button>
+  </div>
+</div>
+
 <div class="modal-fondo" id="modalAyuda">
   <div class="modal">
     <button class="cerrar" id="cerrarAyuda">✕</button>
@@ -284,7 +345,7 @@ const ID_INPUT = { uniXCli: 'inCeldaUniXCli', tktProm: 'inCeldaTktProm', operaci
 const ID_INPUT_EMPRESA = { uniXCli: 'inEmpresaUniXCli', tktProm: 'inEmpresaTktProm', operaciones: 'inEmpresaOperaciones' };
 const ANIOS_POR_DEFECTO = 3;
 
-const state = { filas: [], anioMesActual: null, filtro: { empresa: '', sucursales: new Set(), anios: new Set() }, puedeEditar: false, usuario: '' };
+const state = { filas: [], anioMesActual: null, filtro: { empresa: '', sucursales: new Set(), anios: new Set() }, puedeEditar: false, usuario: '', chatHabilitado: false };
 
 /* Solo-lectura por usuario (28/08/2026): el portal manda el username en el
    header X-Portal-User, el server decide con la misma regla de siempre
@@ -297,14 +358,18 @@ async function fetchPermisos(){
     const data = await r.json();
     state.puedeEditar = !!data.puedeEditar;
     state.usuario = data.usuario || '';
+    state.chatHabilitado = !!data.chatHabilitado;
   } catch (e) {
     state.puedeEditar = false; // ante la duda, solo lectura
+    state.chatHabilitado = false;
   }
   const chip = document.getElementById('soloLecturaChip');
   if (chip) {
     chip.style.display = state.puedeEditar ? 'none' : '';
     chip.title = state.usuario ? `Usuario: ${state.usuario}` : '';
   }
+  const fab = document.getElementById('chatFab');
+  if (fab) fab.style.display = state.chatHabilitado ? 'flex' : 'none';
 }
 
 /* Deshabilita todo input/select recién renderizado y oculta los botones que
@@ -1620,6 +1685,242 @@ async function confirmarSugerenciaEnBloque(){
   }
 }
 
+/* Chat flotante (01/09/2026, sesión persistida 02/09/2026): manda como
+   "contexto" el texto visible de la pestaña activa (tal cual lo lee el
+   usuario) + los filtros aplicados — no pega a la base, sólo responde con
+   lo que ya está en pantalla. El HISTORIAL ya no vive acá: el server lo
+   guarda en SQL Server por usuario (sobrevive F5 y reinicio del servicio) —
+   este archivo sólo pinta lo que el server le devuelve. */
+const chatState = { enviando: false, cargado: false };
+
+async function chatCargarHistorial(){
+  if (chatState.cargado) return;
+  chatState.cargado = true;
+  try {
+    const r = await fetch('api/chat/historial');
+    const data = await r.json();
+    for (const m of (data.historial || [])) {
+      chatAgregarMensaje(m.role === 'user' ? 'user' : 'bot', m.content);
+    }
+  } catch (e) { /* si falla, arranca vacío — no es bloqueante */ }
+}
+
+/* Markdown mínimo para que las respuestas del asistente (negrita, listas)
+   se vean formateadas en vez de mostrar los asteriscos crudos — no es un
+   parser completo, alcanza con lo que efectivamente usa el modelo:
+   párrafos, **negrita**, cursiva (con asterisco o guión bajo) y listas con "-"/"1.". Escapa
+   HTML primero, así nunca se puede inyectar markup desde la respuesta. */
+function chatEscaparHtml(s){
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function chatMarkdownInline(s){
+  return s
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>')
+    .replace(/(?<!_)_([^_\n]+)_(?!_)/g, '<em>$1</em>');
+}
+function chatRenderizarMarkdown(texto){
+  const lineas = chatEscaparHtml(texto).split('\n');
+  let html = '';
+  let listaAbierta = null; // 'ul' | 'ol' | null
+  const cerrarLista = () => { if (listaAbierta) { html += `</${listaAbierta}>`; listaAbierta = null; } };
+  for (const linea of lineas) {
+    const bullet = linea.match(/^\s*[-*]\s+(.*)/);
+    const numerada = linea.match(/^\s*\d+[.)]\s+(.*)/);
+    if (bullet) {
+      if (listaAbierta !== 'ul') { cerrarLista(); html += '<ul>'; listaAbierta = 'ul'; }
+      html += `<li>${chatMarkdownInline(bullet[1])}</li>`;
+    } else if (numerada) {
+      if (listaAbierta !== 'ol') { cerrarLista(); html += '<ol>'; listaAbierta = 'ol'; }
+      html += `<li>${chatMarkdownInline(numerada[1])}</li>`;
+    } else if (linea.trim() === '') {
+      cerrarLista();
+    } else {
+      cerrarLista();
+      html += `<p>${chatMarkdownInline(linea)}</p>`;
+    }
+  }
+  cerrarLista();
+  return html;
+}
+
+function chatContextoActual(){
+  const vistaEl = document.querySelector('.vista.activa');
+  const nombreVista = vistaEl ? vistaEl.id.replace('vista', '') : '(ninguna)';
+  const filtros = {
+    empresa: state.filtro.empresa || '(todas)',
+    sucursales: [...state.filtro.sucursales].map(nombreDeSucursal),
+    anios: [...state.filtro.anios].sort()
+  };
+  const texto = vistaEl ? vistaEl.innerText.replace(/\n{3,}/g, '\n\n').trim().slice(0, 8000) : '';
+  const empresasDisponibles = [...new Set(state.filas.map((f) => f.Empresa))];
+  const sucursalesDisponibles = [...new Map(state.filas.map((f) => [f.cod_sucursal, f.desc_sucursal2])).entries()]
+    .map(([cod, nombre]) => `${cod}:${nombre}`);
+  return `Pestaña activa: ${nombreVista}\nFiltros: ${JSON.stringify(filtros)}\n`
+    + `Años disponibles: ${JSON.stringify(todosLosAnios())}\n`
+    + `Empresas disponibles: ${JSON.stringify(empresasDisponibles)}\n`
+    + `Sucursales disponibles (código:nombre): ${JSON.stringify(sucursalesDisponibles)}\n\n`
+    + `Tabla visible:\n${texto}`;
+}
+
+/* Aplica el cambio de filtro que haya pedido el asistente (Años/Empresa/
+   Sucursal). Todo el histórico ya está cargado en state.filas (fetchGrilla
+   trae desde ANIOMES_DESDE, ya recortado a lo que el usuario puede ver —
+   incluidos los supervisores restringidos, ver sucursalesPermitidas en el
+   server), así que cambiar cualquiera de estos filtros es 100% cliente — no
+   hace falta volver a pedirle nada al server. Vuelve a validar contra lo
+   disponible AHORA (nunca confía ciegamente en lo que mandó el modelo). */
+function chatAplicarAccion(accion){
+  if (!accion) return;
+  const cambios = [];
+  let cambioAnios = false;
+  let cambioEmpresaSucursal = false;
+
+  if (Array.isArray(accion.anios)) {
+    const disponibles = new Set(todosLosAnios());
+    const anios = accion.anios.filter((a) => disponibles.has(a));
+    if (anios.length) {
+      state.filtro.anios = new Set(anios);
+      cambioAnios = true;
+      cambios.push(`Años: ${anios.sort((a, b) => a - b).join(', ')}`);
+    }
+  }
+  if (accion.empresa !== undefined) {
+    const empresasDisponibles = new Set(state.filas.map((f) => f.Empresa));
+    if (accion.empresa === null) {
+      state.filtro.empresa = '';
+      cambioEmpresaSucursal = true;
+      cambios.push('Empresa: todas');
+    } else if (empresasDisponibles.has(accion.empresa)) {
+      state.filtro.empresa = accion.empresa;
+      cambioEmpresaSucursal = true;
+      cambios.push(`Empresa: ${accion.empresa}`);
+    }
+  }
+  if (Array.isArray(accion.sucursales)) {
+    const codsDisponibles = new Set(state.filas.map((f) => f.cod_sucursal));
+    const cods = accion.sucursales.filter((c) => codsDisponibles.has(c));
+    state.filtro.sucursales = new Set(cods);
+    cambioEmpresaSucursal = true;
+    cambios.push(cods.length ? `Sucursales: ${cods.map(nombreDeSucursal).join(', ')}` : 'Sucursales: todas');
+  }
+
+  if (cambioAnios) renderListaAnios();
+  if (cambioEmpresaSucursal) sincronizarFiltros();
+  if (cambioAnios || cambioEmpresaSucursal) { renderTablas(); renderObjSidebar(); }
+  if (cambios.length) mostrarToast(`Asistente actualizó filtros — ${cambios.join(' · ')}`);
+}
+
+function chatAgregarMensaje(rol, texto, extraClase){
+  const cont = document.getElementById('chatMsgs');
+  const div = document.createElement('div');
+  const esBot = rol !== 'user';
+  // Bot con texto real (no "Pensando…" ni error) se renderiza como markdown;
+  // el resto va como texto plano (pre-wrap) para no formatear de más.
+  const esMarkdown = esBot && extraClase !== 'pensando' && extraClase !== 'error';
+  div.className = `chat-msg ${esBot ? 'bot' : 'user'}${extraClase ? ' ' + extraClase : ''}`;
+  if (esMarkdown) {
+    div.innerHTML = chatRenderizarMarkdown(texto);
+  } else {
+    div.textContent = texto;
+  }
+  cont.appendChild(div);
+  cont.scrollTop = cont.scrollHeight;
+  return div;
+}
+
+async function chatEnviarPregunta(){
+  const input = document.getElementById('chatInput');
+  const mensaje = input.value.trim();
+  if (!mensaje || chatState.enviando) return;
+  chatState.enviando = true;
+  document.getElementById('chatEnviar').disabled = true;
+  input.value = '';
+  chatAgregarMensaje('user', mensaje);
+  const pensando = chatAgregarMensaje('bot', 'Pensando…', 'pensando');
+  try {
+    const r = await fetch('api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mensaje, contexto: chatContextoActual() })
+    });
+    const data = await r.json();
+    pensando.remove();
+    if (!r.ok) {
+      chatAgregarMensaje('bot', data.error || 'Error al consultar el asistente.', 'error');
+      return;
+    }
+    chatAgregarMensaje('bot', data.respuesta);
+    chatAplicarAccion(data.accion);
+  } catch (e) {
+    pensando.remove();
+    chatAgregarMensaje('bot', 'No se pudo contactar al asistente: ' + e.message, 'error');
+  } finally {
+    chatState.enviando = false;
+    document.getElementById('chatEnviar').disabled = false;
+  }
+}
+
+// Preferencia de tamaño (expandido/minimizado) por navegador — sólo UI, no
+// tiene nada que ver con la sesión de conversación (esa vive en el server).
+const CLAVE_CHAT_UI = 'ventaObjetivo_chatUi';
+function chatGuardarPreferenciaUi(panel){
+  try {
+    localStorage.setItem(CLAVE_CHAT_UI, JSON.stringify({
+      expandido: panel.classList.contains('expandido'),
+      minimizado: panel.classList.contains('minimizado')
+    }));
+  } catch (e) { /* localStorage puede fallar (privado, cuota) — no es crítico */ }
+}
+
+function conectarChat(){
+  const panel = document.getElementById('chatPanel');
+  const btnExpandir = document.getElementById('chatExpandir');
+  const btnMinimizar = document.getElementById('chatMinimizar');
+
+  document.getElementById('chatFab').addEventListener('click', () => {
+    panel.classList.add('abierto');
+    if (!panel.classList.contains('minimizado')) document.getElementById('chatInput').focus();
+    chatCargarHistorial();
+  });
+  document.getElementById('chatCerrar').addEventListener('click', () => {
+    panel.classList.remove('abierto');
+  });
+  document.getElementById('chatLimpiar').addEventListener('click', async () => {
+    document.getElementById('chatMsgs').innerHTML = '';
+    try { await fetch('api/chat/historial', { method: 'DELETE' }); } catch (e) { /* no bloquea la UI */ }
+  });
+  btnExpandir.addEventListener('click', () => {
+    panel.classList.remove('minimizado');
+    panel.classList.toggle('expandido');
+    btnExpandir.textContent = panel.classList.contains('expandido') ? '⤡' : '⤢';
+    btnExpandir.title = panel.classList.contains('expandido') ? 'Restaurar tamaño' : 'Ampliar';
+    btnMinimizar.textContent = '–';
+    chatGuardarPreferenciaUi(panel);
+  });
+  btnMinimizar.addEventListener('click', () => {
+    panel.classList.toggle('minimizado');
+    btnMinimizar.textContent = panel.classList.contains('minimizado') ? '▢' : '–';
+    chatGuardarPreferenciaUi(panel);
+  });
+  // Con el panel minimizado, un clic en cualquier parte libre del header lo restaura.
+  document.getElementById('chatHeaderBar').addEventListener('click', (e) => {
+    if (panel.classList.contains('minimizado') && e.target.tagName !== 'BUTTON') {
+      btnMinimizar.click();
+    }
+  });
+  document.getElementById('chatEnviar').addEventListener('click', chatEnviarPregunta);
+  document.getElementById('chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatEnviarPregunta(); }
+  });
+
+  try {
+    const pref = JSON.parse(localStorage.getItem(CLAVE_CHAT_UI) || '{}');
+    if (pref.expandido) btnExpandir.click();
+    if (pref.minimizado) btnMinimizar.click();
+  } catch (e) { /* preferencia inválida — arranca con el tamaño default */ }
+}
+
 function conectarTabs(){
   document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((x) => x.classList.remove('activo'));
@@ -2150,6 +2451,7 @@ function renderPorEmpresa(){
 async function iniciar(){
   conectarFiltros();
   conectarTabs();
+  conectarChat();
   try {
     await Promise.all([fetchGrilla(), fetchObjetivos(), fetchPermisos()]);
     inicializarAniosPorDefecto();

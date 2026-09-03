@@ -252,7 +252,9 @@ Según esos dos indicadores, la sucursal paga esto por supervisor:
 
 Además del pago por sucursal, existe un **plus por plaza** (plaza = provincia): si **todas** las sucursales Retail asignadas al supervisor en esa provincia llegan a **participación** (sin importar los pesos), el plus es la suma de lo efectivamente pagado por esas sucursales, multiplicado por **0,5**, redondeado a miles. Si una sola sucursal de la plaza falla en participación, no hay plus para esa plaza.
 
-**Millón** (mira solo efectivo): no paga por sucursal. Si **todas** las sucursales Millón asignadas al supervisor en una provincia llegaron por efectivo, la plaza paga **$23.000 una sola vez**.
+**Millón** (mira solo efectivo): no paga por sucursal vía plaza. Si **todas** las sucursales Millón asignadas al supervisor en una provincia llegaron por efectivo, la plaza paga **$23.000 una sola vez**.
+
+Además, desde el 03/09/2026, cada sucursal Millón que **individualmente** llegó por efectivo cobra aparte el concepto **Efectivo**: un monto fijo por categoría (ABM → Supervisor → fila "efectivo" / "por_sucursal"), sin esperar a que el resto de la plaza llegue. Este monto **convive** con el plus de plaza — si la plaza también cumple, se suman los dos.
 
 ## 16. Montos congelados por período
 

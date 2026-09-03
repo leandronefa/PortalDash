@@ -111,13 +111,16 @@ function renderTab() {
     renderVendedorPivot(body);
     return;
   } else if (tab.tipo === 'supervisor') {
-    // consumo=por_sucursal, efectivo=por_plaza — son la misma distinción, mostrar solo los relevantes
+    // consumo=por_sucursal (Retail) y efectivo=por_plaza (Millón, plaza) son la base;
+    // efectivo=por_sucursal (Millón, individual, convive con por_plaza) se agregó 03/09/2026.
     data = allData.supervisor?.filter(r =>
       (r.concepto === 'consumo'  && r.tipo === 'por_sucursal') ||
-      (r.concepto === 'efectivo' && r.tipo === 'por_plaza')
+      (r.concepto === 'efectivo' && r.tipo === 'por_plaza') ||
+      (r.concepto === 'efectivo' && r.tipo === 'por_sucursal')
     ) || [];
     columns = [
       { key: 'concepto',      label: 'Concepto' },
+      { key: 'tipo',          label: 'Tipo' },
       { key: 'categoria_suc', label: 'Categoría' },
       { key: 'monto',         label: 'Monto', editable: true },
     ];

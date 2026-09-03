@@ -14,6 +14,7 @@ const montosSupervisor = [
   { concepto: 'consumo',  tipo: 'por_sucursal', categoria_suc: 'B', monto: 9000,  factor_plaza: 0.5 },
   { concepto: 'consumo',  tipo: 'por_sucursal', categoria_suc: 'C', monto: 8000,  factor_plaza: 0.5 },
   { concepto: 'efectivo', tipo: 'por_plaza',    categoria_suc: 'C', monto: 23000, factor_plaza: 0.5 },
+  { concepto: 'efectivo', tipo: 'por_sucursal', categoria_suc: 'C', monto: 6000,  factor_plaza: 0.5 },
 ];
 
 function makeCtx({ asignaciones, datosConsumo, objConsumo }) {
@@ -164,7 +165,7 @@ test('Millón sin cambios: todas llegan por efectivo → plaza paga 23000 fijo',
   const plaza = sup.plazas.find(p => p.tipo === 'millon');
   assert.equal(plaza.cumplida, true);
   assert.equal(plaza.monto, 23000);
-  assert.equal(sup.sucursales[0].monto_por_suc, 0);  // Millón no paga por sucursal
+  assert.equal(sup.sucursales[0].monto_por_suc, 0);  // Millón no paga por sucursal vía plaza
 });
 
 test('Millón: una no llega por efectivo → plaza no paga', () => {
@@ -177,4 +178,36 @@ test('Millón: una no llega por efectivo → plaza no paga', () => {
   const plaza = sup.plazas.find(p => p.tipo === 'millon');
   assert.equal(plaza.cumplida, false);
   assert.equal(plaza.monto, 0);
+});
+
+// ── Efectivo por sucursal (Millón, convive con la plaza) ───────────────────
+
+test('Millón: sucursal llega por efectivo → cobra 6000 individual aunque la plaza no cumpla', () => {
+  const ctx = makeCtx({
+    asignaciones: [105, 110],
+    datosConsumo: [],
+    objConsumo:   [],
+  });
+  const [sup] = calcularSupervisores(ctx, [sucMillon(105, 1), sucMillon(110, 0)]);  // plaza no cumple
+  const plaza = sup.plazas.find(p => p.tipo === 'millon');
+  assert.equal(plaza.cumplida, false);
+  assert.equal(plaza.monto, 0);                              // plaza no paga
+  assert.equal(sup.sucursales[0].monto_efectivo_suc, 6000);  // 105 sí llegó → cobra individual
+  assert.equal(sup.sucursales[1].monto_efectivo_suc, 0);     // 110 no llegó
+  assert.equal(sup.total_efectivo_sucursal, 6000);
+  assert.equal(sup.monto, 6000);                              // total = 0 (suc) + 0 (plaza) + 6000 (efectivo suc)
+});
+
+test('Millón: plaza cumple y además cada sucursal cobra su Efectivo individual (se suman)', () => {
+  const ctx = makeCtx({
+    asignaciones: [105, 110],
+    datosConsumo: [],
+    objConsumo:   [],
+  });
+  const [sup] = calcularSupervisores(ctx, [sucMillon(105, 1), sucMillon(110, 1)]);  // ambas llegan
+  const plaza = sup.plazas.find(p => p.tipo === 'millon');
+  assert.equal(plaza.cumplida, true);
+  assert.equal(plaza.monto, 23000);
+  assert.equal(sup.total_efectivo_sucursal, 12000);  // 6000 + 6000
+  assert.equal(sup.monto, 35000);                    // 23000 (plaza) + 12000 (efectivo suc)
 });

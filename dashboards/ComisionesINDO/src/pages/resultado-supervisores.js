@@ -120,6 +120,7 @@ export async function renderResultadoSupervisores(container, periodo) {
             <th style="position:sticky;top:0;z-index:1;background:var(--color-surface);text-align:center;padding:8px 10px;white-space:nowrap">Sucursales</th>
             <th style="position:sticky;top:0;z-index:1;background:var(--color-surface);text-align:right;padding:8px 10px;white-space:nowrap" title="Sucursales Retail asignadas que llegaron por consumo: monto ABM por categoría, sin factor">$ por Sucursales</th>
             <th style="position:sticky;top:0;z-index:1;background:var(--color-surface);text-align:right;padding:8px 10px;white-space:nowrap" title="Plazas Retail: suma de la plaza × 0,5 · Plazas Millón: monto fijo ABM sin factor">$ por Plaza</th>
+            <th style="position:sticky;top:0;z-index:1;background:var(--color-surface);text-align:right;padding:8px 10px;white-space:nowrap" title="Sucursales Millón que individualmente llegaron por efectivo: monto ABM por categoría, sin esperar a la plaza">$ Efectivo Suc.</th>
             <th style="position:sticky;top:0;z-index:1;background:var(--color-surface);text-align:right;padding:8px 10px;white-space:nowrap">Total</th>
           </tr>
         </thead>
@@ -131,11 +132,12 @@ export async function renderResultadoSupervisores(container, periodo) {
               <td style="padding:7px 10px;text-align:center">${s.sucursales?.length ?? 0}</td>
               <td style="padding:7px 10px;text-align:right">${fmtMoney(s.total_por_sucursales)}</td>
               <td style="padding:7px 10px;text-align:right">${fmtMoney(s.total_por_plaza)}</td>
+              <td style="padding:7px 10px;text-align:right">${fmtMoney(s.total_efectivo_sucursal)}</td>
               <td style="padding:7px 10px;text-align:right;font-weight:700">${fmtMoney(s.monto)}</td>
             </tr>
             ${expandido === s.id ? `
               <tr>
-                <td colspan="6" style="padding:0 10px 10px 30px;background:var(--color-surface-2,rgba(127,127,127,.06))">
+                <td colspan="7" style="padding:0 10px 10px 30px;background:var(--color-surface-2,rgba(127,127,127,.06))">
                   <div style="font-size:11px;font-weight:600;color:var(--color-muted);margin:8px 0 4px">Plazas (provincia) — Retail: si TODAS llegan a PARTICIPACIÓN, plus = suma pagada de la plaza × factor (0,5) · Millón: si TODAS llegaron por efectivo, monto fijo del ABM (sin factor, uno por plaza)</div>
                   <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px">
                     <thead>
@@ -177,7 +179,7 @@ export async function renderResultadoSupervisores(container, periodo) {
                       })()}
                     </tbody>
                   </table>
-                  <div style="font-size:11px;font-weight:600;color:var(--color-muted);margin:8px 0 4px">Sucursales — Retail paga por consumo: completo con pesos+participación, mitad con pesos sin participación, nada sin pesos · Millón no paga por sucursal, solo cuenta para su plaza (efectivo)</div>
+                  <div style="font-size:11px;font-weight:600;color:var(--color-muted);margin:8px 0 4px">Sucursales — Retail paga por consumo: completo con pesos+participación, mitad con pesos sin participación, nada sin pesos · Millón no paga por sucursal vía plaza, pero cobra aparte el concepto Efectivo si llega individualmente</div>
                   <table style="width:100%;border-collapse:collapse;font-size:12px">
                     <thead>
                       <tr>
@@ -189,8 +191,9 @@ export async function renderResultadoSupervisores(container, periodo) {
                         <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Retail: escalón consumo · Millón: escalón efectivo">Esc</th>
                         <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Retail: llegó a los pesos (escalón consumo ≥ 1) · Millón: llegó por efectivo">¿Pesos?</th>
                         <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Indicador G vs objetivo de participación (tolerancia 4%) — solo Retail">Particip.</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Completo (pesos+particip) · Mitad (pesos sin particip) · — (sin pesos)">Pago</th>
-                        <th style="text-align:right;padding:4px 8px;color:var(--color-muted)">$ Sucursal</th>
+                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Retail: Completo (pesos+particip) · Mitad (pesos sin particip) · — (sin pesos) · Millón: Completo/— según llegó por efectivo">Pago</th>
+                        <th style="text-align:right;padding:4px 8px;color:var(--color-muted)" title="Retail: monto por consumo · Millón: n/a (no paga por sucursal vía este concepto)">$ Sucursal</th>
+                        <th style="text-align:right;padding:4px 8px;color:var(--color-muted)" title="Solo Millón: monto individual del concepto Efectivo, convive con la plaza">$ Efectivo</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -200,8 +203,7 @@ export async function renderResultadoSupervisores(container, periodo) {
                         const particip = esRetail && suc.llega_particip !== undefined
                           ? `${suc.llega_particip ? '✔' : '✘'} <span style="color:var(--color-muted)">(${suc.indicador_g != null ? (suc.indicador_g * 100).toFixed(1) + '%' : 's/obj'})</span>`
                           : dash;
-                        const pagoLbl = { completo: 'Completo', mitad: 'Mitad', nada: dash }[suc.pago]
-                          ?? (esRetail ? dash : '<span style="color:var(--color-muted)" title="Millón no paga por sucursal">n/a</span>');
+                        const pagoLbl = { completo: 'Completo', mitad: 'Mitad', nada: dash }[suc.pago] ?? dash;
                         return `
                         <tr>
                           <td style="padding:3px 8px;color:var(--color-muted)">${suc.sucursal_id}</td>
@@ -213,7 +215,8 @@ export async function renderResultadoSupervisores(container, periodo) {
                           <td style="padding:3px 8px;text-align:center">${(esRetail ? (suc.llega_pesos ?? suc.llego) : suc.llego) ? '✔' : '✘'}</td>
                           <td style="padding:3px 8px;text-align:center">${particip}</td>
                           <td style="padding:3px 8px;text-align:center">${pagoLbl}</td>
-                          <td style="padding:3px 8px;text-align:right">${suc.tipo === 'millon' ? '<span style="color:var(--color-muted)" title="Millón no paga por sucursal">n/a</span>' : fmtMoney(suc.monto_por_suc)}</td>
+                          <td style="padding:3px 8px;text-align:right">${suc.tipo === 'millon' ? '<span style="color:var(--color-muted)" title="Millón no paga por sucursal vía este concepto">n/a</span>' : fmtMoney(suc.monto_por_suc)}</td>
+                          <td style="padding:3px 8px;text-align:right">${suc.tipo === 'millon' ? fmtMoney(suc.monto_efectivo_suc) : dash}</td>
                         </tr>`;
                       }).join('')}
                     </tbody>
@@ -254,6 +257,7 @@ export async function renderResultadoSupervisores(container, periodo) {
         'Sucursales':         s.sucursales?.length ?? 0,
         '$ por Sucursales':   s.total_por_sucursales || 0,
         '$ por Plaza':        s.total_por_plaza || 0,
+        '$ Efectivo Suc.':    s.total_efectivo_sucursal || 0,
         'Total':              s.monto || 0,
       })),
       `SUPERVISORES_${periodo}`

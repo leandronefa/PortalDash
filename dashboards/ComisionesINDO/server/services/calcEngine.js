@@ -690,9 +690,13 @@ export function calcularEncargadosMillon(ctx, sucResultados) {
 //       PARTICIPACIÓN (sin importar pesos) → plus = (suma de lo efectivamente
 //       pagado por esas sucursales) × factor_plaza (0.5), redondeado a miles.
 //   MILLÓN (id >= 100), mirando SOLO efectivo (sin cambios 2026-07-14):
-//     No paga por sucursal. Si TODAS las Millón asignadas de la provincia
-//     llegaron por efectivo (escalon_efectivo >= 1), la plaza paga UNA sola
-//     vez el monto 'efectivo'/'por_plaza' del ABM, SIN factor.
+//     No paga por sucursal vía plaza. Si TODAS las Millón asignadas de la
+//     provincia llegaron por efectivo (escalon_efectivo >= 1), la plaza paga
+//     UNA sola vez el monto 'efectivo'/'por_plaza' del ABM, SIN factor.
+//     Además (2026-09-03), CONVIVE un concepto 'Efectivo' por sucursal: cada
+//     Millón que individualmente llega por efectivo (escalon_efectivo >= 1)
+//     cobra el monto ABM 'efectivo'/'por_sucursal' de su categoría, completo,
+//     redondeado a miles, SIN esperar al resto de la plaza ni factor.
 //   Retail y Millón forman plazas SEPARADAS aunque compartan provincia.
 // ------------------------------------------------------------------
 export function calcularSupervisores(ctx, sucResultados) {
@@ -712,13 +716,14 @@ export function calcularSupervisores(ctx, sucResultados) {
       const asigs = supervisorSucursales.filter(ss => ss.supervisor_id === sup.id);
       if (!asigs.length) return {
         id: sup.id, nombre: sup.nombre, sucursales: [], plazas: [],
-        total_por_sucursales: 0, total_por_plaza: 0, monto: 0
+        total_por_sucursales: 0, total_por_plaza: 0, total_efectivo_sucursal: 0, monto: 0
       };
 
       const sucDetails = [];
       const llegadasPorProvincia = {};   // plazas Retail (consumo)
       const millonPorProvincia   = {};   // plazas Millón (efectivo)
-      let totalPorSucursales = 0;
+      let totalPorSucursales    = 0;
+      let totalEfectivoSucursal = 0;
 
       for (const asig of asigs) {
         const sucRes = sucResultados.find(s => s.sucursal_id === asig.sucursal_id);
@@ -727,13 +732,21 @@ export function calcularSupervisores(ctx, sucResultados) {
         const esMillon  = sucRes.sucursal_id >= 100;
         const provincia = sucRes.provincia || 'SIN PROVINCIA';
 
-        let escalon, llego, subtotal;
+        let escalon, llego, subtotal, montoEfectivoSuc = null;
         let indicadorG = null, llegaPesos = null, llegaParticip = null, pago = null;
         if (esMillon) {
-          // Millón: no paga por sucursal; solo cuenta para su plaza (por efectivo).
+          // Millón: no paga por sucursal vía plaza; solo cuenta para su plaza (por efectivo).
+          // Además cobra, aparte, el concepto 'Efectivo' por sucursal (individual, sin
+          // esperar al resto de la plaza).
           escalon  = sucRes.escalon_efectivo;
           llego    = escalon >= 1;
           subtotal = 0;
+
+          const filaEf = filaSup('efectivo', 'por_sucursal', cat);
+          montoEfectivoSuc = llego ? redondeoMil(filaEf?.monto || 0) : 0;
+          pago = llego ? 'completo' : 'nada';
+          totalEfectivoSucursal += montoEfectivoSuc;
+
           const plaza = (millonPorProvincia[provincia] ??= { llegadas: [] });
           plaza.llegadas.push(llego);
         } else {
@@ -777,7 +790,8 @@ export function calcularSupervisores(ctx, sucResultados) {
           llega_pesos:     llegaPesos,
           llega_particip:  llegaParticip,
           pago,
-          monto_por_suc:   subtotal
+          monto_por_suc:      subtotal,
+          monto_efectivo_suc: montoEfectivoSuc
         });
       }
 
@@ -807,15 +821,16 @@ export function calcularSupervisores(ctx, sucResultados) {
       });
       const plazas = [...plazasRetail, ...plazasMillon];
       const totalPorPlaza = +plazas.reduce((s, p) => s + p.monto, 0).toFixed(2);
-      const monto = +(totalPorSucursales + totalPorPlaza).toFixed(2);
+      const monto = +(totalPorSucursales + totalPorPlaza + totalEfectivoSucursal).toFixed(2);
 
       return {
-        id:                    sup.id,
-        nombre:                sup.nombre,
-        sucursales:            sucDetails,
+        id:                     sup.id,
+        nombre:                 sup.nombre,
+        sucursales:             sucDetails,
         plazas,
-        total_por_sucursales:  +totalPorSucursales.toFixed(2),
-        total_por_plaza:       totalPorPlaza,
+        total_por_sucursales:   +totalPorSucursales.toFixed(2),
+        total_por_plaza:        totalPorPlaza,
+        total_efectivo_sucursal:+totalEfectivoSucursal.toFixed(2),
         monto
       };
     })

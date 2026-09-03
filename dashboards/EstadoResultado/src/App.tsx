@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, Fragment, useRef } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightNav, Moon, Sun, Upload, Download, ArrowUpDown } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, ChevronRight as ChevronRightNav, Moon, Sun, Upload, Download, ArrowUpDown, HelpCircle, X } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
@@ -429,6 +429,93 @@ function MatrixView({ matrix, periodoStr }: { matrix: MatrixPL; periodoStr: stri
   )
 }
 
+// ─── Modal de ayuda: circuito de datos SAP ───────────────────────────────────
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 dark:bg-black/60 p-4 overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full mt-10 mb-10 text-slate-700 dark:text-slate-200"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">¿Cómo funciona la carga de datos?</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4 text-sm leading-relaxed">
+          <section>
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">1. Origen de los datos</h3>
+            <p>
+              SAP deja mensualmente un archivo por empresa (TESI, PUEBLO, INDO) en una carpeta de red.
+              El tablero los revisa solo (todos los días a la 01:00 AM) y también cuando apretás{' '}
+              <strong>Actualizar</strong>. Cada archivo trae varios meses adentro; el selector de mes
+              del header solo cambia qué mes se ve en pantalla, no qué datos hay cargados.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">
+              2. Si SAP vuelve a exportar un mes ya cargado
+            </h3>
+            <p>
+              Ejemplo: hoy ya está cargado Agosto (traído de SAP). Si el 20/9 modificás algo en SAP y
+              se vuelve a exportar, al apretar <strong>Actualizar</strong> (o en el chequeo de la 01:00)
+              Agosto se <strong>reemplaza por la versión nueva</strong> — no se acumula ni se duplica,
+              siempre queda solo la última exportación de ese mes.
+            </p>
+            <p className="mt-1">
+              Excepción: si ese mes fue <strong>ajustado a mano</strong> (ver punto 3), queda protegido
+              y una actualización automática <strong>no lo toca</strong>, aunque SAP tenga una versión
+              más nueva.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">
+              3. Descargar files → editar a mano → Subir files
+            </h3>
+            <p>
+              <strong>Descargar files</strong> baja el archivo tal cual está cargado ahora mismo (mismo
+              formato de SAP), para corregir un importe puntual en una planilla/editor de texto.
+            </p>
+            <p className="mt-1">
+              Al volver a subirlo con <strong>Subir files</strong>, los meses de ese archivo quedan
+              marcados como <strong>ajuste manual</strong> (punto ámbar en el selector de mes) y el
+              tablero pasa a mostrar esa versión editada.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">
+              4. Y si después de ajustar a mano llega una nueva exportación de SAP
+            </h3>
+            <p>
+              El ajuste manual queda protegido: una nueva exportación de SAP para ese mismo mes{' '}
+              <strong>no lo pisa</strong>. Va a seguir mostrando la versión editada a mano hasta que
+              alguien vuelva a subir un archivo manualmente para ese mes.
+            </p>
+            <p className="mt-1">
+              No hay un botón para "volver a traer de SAP" un mes ya ajustado: si hace falta descartar
+              el ajuste manual, hay que pedirlo para restaurarlo a mano desde el archivo original de SAP.
+            </p>
+          </section>
+
+          <p className="text-xs text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700 pt-3">
+            Resumen: <strong>sin ajuste manual</strong> → gana siempre la última exportación de SAP.{' '}
+            <strong>Con ajuste manual</strong> → gana el archivo subido a mano, y SAP deja de pisarlo
+            hasta que se suba otro archivo para ese mes.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 // Origen de cada periodo en el manifest: 'sap' (vino de la red) o 'manual' (ajustado a mano).
 type OrigenPeriodo = { origen: 'sap' | 'manual'; cargadoEn: string }
@@ -453,6 +540,7 @@ export default function App() {
   const [selectedPeriodo, setSelectedPeriodo] = useState<string | null>(null)
   const [manifest, setManifest] = useState<Manifest | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   // Id del setTimeout pendiente que limpia uploadMsg, para poder cancelarlo si llega un mensaje nuevo antes de tiempo.
   const uploadMsgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -793,9 +881,20 @@ export default function App() {
             >
               {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
+
+            {/* Ayuda: circuito de datos SAP */}
+            <button
+              onClick={() => setShowHelp(true)}
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              title="¿Cómo funciona la carga de datos de SAP?"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
+
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
 
       {uploadMsg && (
         <div className={`px-6 py-2 text-sm text-center ${uploadMsg.ok ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>

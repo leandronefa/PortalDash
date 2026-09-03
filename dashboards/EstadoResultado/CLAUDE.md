@@ -13,6 +13,14 @@ Dashboard **Estado de Resultado**: P&L mensual de TESI, PUEBLO e INDO a partir d
 - Logs del servicio: `daemon\dashestadoresultado.out.log` (y `.err.log`).
 - `.env` (solo nombres, no exponer valores): `PORT`, `CHECK_HOUR`, `SAP_NETWORK_PATH`, `SAP_SOURCE_PATH`.
 
+## Botón de ayuda (front)
+
+Header tiene un botón ❓ (`HelpModal` en `src/App.tsx`) que explica en lenguaje llano el
+circuito de datos de la sección de abajo: qué pasa si SAP reexporta un mes ya cargado (se
+reemplaza, no se acumula) vs. qué pasa si ese mes tiene un ajuste manual subido (queda
+protegido, SAP no lo pisa). Agregado el 03/09/2026 a pedido del usuario; si cambia la lógica
+de merge en `server/sap-store.js`, actualizar también el texto de ese modal.
+
 ## Flujo de datos SAP (MUY IMPORTANTE)
 
 SAP deja los `.txt` en `\\10.0.0.115\Cegid` una vez por mes. El botón **Actualizar** del

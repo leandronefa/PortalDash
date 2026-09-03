@@ -13,27 +13,29 @@ const TABS = [
 
 export async function renderTotal(container, periodo) {
   container.innerHTML = `
-    <h2 style="font-size:20px;font-weight:700;margin-bottom:16px">📋 Vista TOTAL — ${periodo}</h2>
-    <div class="toolbar" style="margin-bottom:12px">
-      <button class="btn btn-primary" id="btn-calc" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>▶ Ejecutar cálculo</button>
-      <button class="btn btn-secondary" id="btn-reload">🔄 Cargar último</button>
-      <button class="btn btn-secondary" id="btn-export">⬇ Exportar CSV</button>
-      <span id="calc-info" style="font-size:12px;color:var(--color-muted)"></span>
-    </div>
-    <div style="display:flex;gap:4px;margin-bottom:0;border-bottom:2px solid var(--color-border)">
-      ${TABS.map((t, i) => `
-        <button class="tab-btn${i === 0 ? ' active' : ''}" data-tab="${t.key}"
-          style="padding:8px 18px;font-size:13px;font-weight:600;border:none;border-radius:6px 6px 0 0;cursor:pointer;
-                 background:${i === 0 ? 'var(--color-primary)' : 'var(--color-card)'};
-                 color:${i === 0 ? '#fff' : 'var(--color-text)'};border-bottom:none">
-          ${t.label}
-        </button>
-      `).join('')}
-    </div>
-    <div id="total-wrap" style="margin-top:0">
-      <p style="color:var(--color-muted);text-align:center;padding:40px">
-        Ejecutá el cálculo o cargá el último resultado guardado.
-      </p>
+    <div style="display:flex;flex-direction:column;height:calc(100vh - 48px)">
+      <h2 style="flex-shrink:0;font-size:20px;font-weight:700;margin-bottom:16px">📋 Vista TOTAL — ${periodo}</h2>
+      <div class="toolbar" style="flex-shrink:0;margin-bottom:12px">
+        <button class="btn btn-primary" id="btn-calc" ${isSupervisorReadonly() ? 'style="display:none"' : ''}>▶ Ejecutar cálculo</button>
+        <button class="btn btn-secondary" id="btn-reload">🔄 Cargar último</button>
+        <button class="btn btn-secondary" id="btn-export">⬇ Exportar CSV</button>
+        <span id="calc-info" style="font-size:12px;color:var(--color-muted)"></span>
+      </div>
+      <div style="flex-shrink:0;display:flex;gap:4px;margin-bottom:0;border-bottom:2px solid var(--color-border)">
+        ${TABS.map((t, i) => `
+          <button class="tab-btn${i === 0 ? ' active' : ''}" data-tab="${t.key}"
+            style="padding:8px 18px;font-size:13px;font-weight:600;border:none;border-radius:6px 6px 0 0;cursor:pointer;
+                   background:${i === 0 ? 'var(--color-primary)' : 'var(--color-card)'};
+                   color:${i === 0 ? '#fff' : 'var(--color-text)'};border-bottom:none">
+            ${t.label}
+          </button>
+        `).join('')}
+      </div>
+      <div id="total-wrap" style="flex:1;overflow-y:auto;overflow-x:auto;min-height:0">
+        <p style="color:var(--color-muted);text-align:center;padding:40px">
+          Ejecutá el cálculo o cargá el último resultado guardado.
+        </p>
+      </div>
     </div>
   `;
 
@@ -132,10 +134,10 @@ function simpleTable(wrap, cols, rows) {
   const body  = rows.map(r => `<tr>${cols.map(c => `<td>${c.render ? c.render(r[c.key], r) : (r[c.key] ?? '—')}</td>`).join('')}</tr>`).join('');
   wrap.innerHTML = `
     <div class="card" style="margin-top:0">
-      <div class="table-wrap"><table>
+      <table>
         <thead><tr>${heads}</tr></thead>
         <tbody>${body}</tbody>
-      </table></div>
+      </table>
     </div>`;
 }
 
@@ -243,7 +245,7 @@ function renderSupervisores(wrap, data) {
   `).join('');
   wrap.innerHTML = `
     <div class="card" style="margin-top:0">
-      <div class="table-wrap"><table>
+      <table>
         <thead><tr>
           <th>Supervisor</th><th># Suc.</th><th>Sucursales</th>
           <th style="text-align:right">Por suc. $</th>
@@ -251,6 +253,6 @@ function renderSupervisores(wrap, data) {
           <th style="text-align:right">Total $</th>
         </tr></thead>
         <tbody>${rows}</tbody>
-      </table></div>
+      </table>
     </div>`;
 }

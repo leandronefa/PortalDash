@@ -105,6 +105,43 @@ export async function renderResultadoSupervisores(container, periodo) {
   let filtrados = supervisores;
   let expandido = null;
 
+  // Orden de la sub-tabla "Sucursales" dentro del detalle expandido.
+  // Por defecto viene tal como la arma el backend (Plaza/Provincia → Sucursal).
+  let sucSortKey = null;
+  let sucSortDir = 1;
+
+  const SUC_SORT_FIELDS = {
+    id:         suc => suc.sucursal_id,
+    nombre:     suc => (suc.sucursal_nombre || '').toLowerCase(),
+    tipo:       suc => suc.tipo === 'millon' ? 'Millón' : 'Retail',
+    provincia:  suc => (suc.provincia || ''),
+    categoria:  suc => (suc.categoria || ''),
+    escalon:    suc => suc.escalon ?? -1,
+    pesos:      suc => ((suc.tipo === 'retail' ? (suc.llega_pesos ?? suc.llego) : suc.llego) ? 1 : 0),
+    particip:   suc => suc.indicador_g ?? -Infinity,
+    pago:       suc => ({ completo: 2, mitad: 1, nada: 0 }[suc.pago] ?? -1),
+    monto_suc:  suc => suc.tipo === 'millon' ? -Infinity : (suc.monto_por_suc || 0),
+    monto_ef:   suc => suc.tipo === 'millon' ? (suc.monto_efectivo_suc || 0) : -Infinity
+  };
+
+  function sortSucursales(list) {
+    if (!sucSortKey) return list;
+    const acc = SUC_SORT_FIELDS[sucSortKey];
+    return [...list].sort((a, b) => {
+      const va = acc(a), vb = acc(b);
+      if (va < vb) return -1 * sucSortDir;
+      if (va > vb) return 1 * sucSortDir;
+      return 0;
+    });
+  }
+
+  function sucTh(label, key, align = 'left', title = '') {
+    const active = sucSortKey === key;
+    const arrow = active ? (sucSortDir === 1 ? '▲' : '▼') : '⇅';
+    const titleAttr = title ? `title="${title}"` : '';
+    return `<th class="suc-sort-th" data-sort-key="${key}" style="text-align:${align};padding:4px 8px;color:var(--color-muted);cursor:pointer;user-select:none;white-space:nowrap" ${titleAttr}>${label} <span style="font-size:9px;opacity:${active ? 1 : 0.4}">${arrow}</span></th>`;
+  }
+
   function renderTabla(rows) {
     if (!rows.length) {
       document.getElementById('rsup-body').innerHTML =
@@ -183,21 +220,21 @@ export async function renderResultadoSupervisores(container, periodo) {
                   <table style="width:100%;border-collapse:collapse;font-size:12px">
                     <thead>
                       <tr>
-                        <th style="text-align:left;padding:4px 8px;color:var(--color-muted)">Suc</th>
-                        <th style="text-align:left;padding:4px 8px;color:var(--color-muted)">Sucursal</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)">Tipo</th>
-                        <th style="text-align:left;padding:4px 8px;color:var(--color-muted)">Provincia</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)">Cat</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Retail: escalón consumo · Millón: escalón efectivo">Esc</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Retail: llegó a los pesos (escalón consumo ≥ 1) · Millón: llegó por efectivo">¿Pesos?</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Indicador G vs objetivo de participación (tolerancia 4%) — solo Retail">Particip.</th>
-                        <th style="text-align:center;padding:4px 8px;color:var(--color-muted)" title="Retail: Completo (pesos+particip) · Mitad (pesos sin particip) · — (sin pesos) · Millón: Completo/— según llegó por efectivo">Pago</th>
-                        <th style="text-align:right;padding:4px 8px;color:var(--color-muted)" title="Retail: monto por consumo · Millón: n/a (no paga por sucursal vía este concepto)">$ Sucursal</th>
-                        <th style="text-align:right;padding:4px 8px;color:var(--color-muted)" title="Solo Millón: monto individual del concepto Efectivo, convive con la plaza">$ Efectivo</th>
+                        ${sucTh('Suc', 'id')}
+                        ${sucTh('Sucursal', 'nombre')}
+                        ${sucTh('Tipo', 'tipo', 'center')}
+                        ${sucTh('Provincia', 'provincia')}
+                        ${sucTh('Cat', 'categoria', 'center')}
+                        ${sucTh('Esc', 'escalon', 'center', 'Retail: escalón consumo · Millón: escalón efectivo')}
+                        ${sucTh('¿Pesos?', 'pesos', 'center', 'Retail: llegó a los pesos (escalón consumo ≥ 1) · Millón: llegó por efectivo')}
+                        ${sucTh('Particip.', 'particip', 'center', 'Indicador G vs objetivo de participación (tolerancia 4%) — solo Retail')}
+                        ${sucTh('Pago', 'pago', 'center', 'Retail: Completo (pesos+particip) · Mitad (pesos sin particip) · — (sin pesos) · Millón: Completo/— según llegó por efectivo')}
+                        ${sucTh('$ Sucursal', 'monto_suc', 'right', 'Retail: monto por consumo · Millón: n/a (no paga por sucursal vía este concepto)')}
+                        ${sucTh('$ Efectivo', 'monto_ef', 'right', 'Solo Millón: monto individual del concepto Efectivo, convive con la plaza')}
                       </tr>
                     </thead>
                     <tbody>
-                      ${(s.sucursales || []).map(suc => {
+                      ${sortSucursales(s.sucursales || []).map(suc => {
                         const esRetail = suc.tipo === 'retail';
                         const dash = '<span style="color:var(--color-muted)">—</span>';
                         const particip = esRetail && suc.llega_particip !== undefined
@@ -233,6 +270,16 @@ export async function renderResultadoSupervisores(container, periodo) {
       tr.addEventListener('click', () => {
         const id = parseInt(tr.dataset.id, 10);
         expandido = expandido === id ? null : id;
+        renderTabla(filtrados);
+      });
+    });
+
+    document.querySelectorAll('.suc-sort-th').forEach(th => {
+      th.addEventListener('click', e => {
+        e.stopPropagation();
+        const key = th.dataset.sortKey;
+        if (sucSortKey === key) sucSortDir *= -1;
+        else { sucSortKey = key; sucSortDir = 1; }
         renderTabla(filtrados);
       });
     });

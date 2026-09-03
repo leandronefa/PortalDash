@@ -554,7 +554,10 @@ GROUP BY Empresa, CodArticulo, COLOR, Sku;
 -- viajaba repetido ~34 veces (una por sucursal) dentro de cada fila de detalle. Barato: es un
 -- DISTINCT sobre columnas ya calculadas en #EstadoFinal, sin volver a tocar Vta_detalle ni ninguna
 -- tabla pesada (mismo tipo de operacion que el COUNT(*) ya medido en <1s sobre esta misma tabla).
-SELECT DISTINCT Sku, CodArticulo, COLOR, TALLE, NOMBREART, NOMPROV, NOMLINEA, NOMFLIA, Seccion, Pvp, Costo, MargenU, Temporada, Material, Iva
+-- Genero/Marca (2026-09-03, fix: faltaban en este SELECT desde que se agrego el filtro "Solo mis
+-- lineas" el 2026-08-31 -- #EstadoFinal ya los tenia calculados, pero nunca se agregaron aca, asi
+-- que el navegador siempre recibia null y el filtro quedaba sin efecto para TODO articulo/usuario).
+SELECT DISTINCT Sku, CodArticulo, COLOR, TALLE, NOMBREART, NOMPROV, NOMLINEA, NOMFLIA, Seccion, Genero, Marca, Pvp, Costo, MargenU, Temporada, Material, Iva
 FROM #EstadoFinal WHERE Estado <> 'OK';
 
 DROP TABLE #Universo;

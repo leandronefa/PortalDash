@@ -193,6 +193,51 @@ optimizador que compartir acceso a la tabla base. **No volver a probar esta idea
 descartada con evidencia real, no es una pista a futuro. (Nunca se aplicó a `server.js` ni al SP,
 todo fue comparación directa en scripts descartables.)
 
+## Bugs de "Solo mis líneas" y de "simulador viejo" visible (2026-09-03)
+
+Reportado por un usuario real (Gastón Maldonado, comprador): al loguearse veía artículos de OTROS
+compradores (ej. `JP9771-1074`, asignado a Carlos Parodi/Sebastián Ramos en
+`dbo.TBL_COMPRADOR_LINEA_MARCA`) tanto en "Atención Prioritaria" como en "Ver en detalle". Investigado
+a fondo con datos reales (no alcanzaba con leer el código): dos bugs distintos, ambos corregidos.
+
+**Bug 1 (el de fondo, afectaba a TODOS los usuarios, no solo a Gastón): `server.js`,
+`QUERY_QUIEBRE_DETALLE`, el `SELECT DISTINCT` que arma el recordset "catalogo" nunca incluía
+`Genero`/`Marca`** (agregados el 31/08 para este mismo filtro, calculados bien en `#EstadoFinal`,
+pero nunca sumados a esta lista de columnas puntual). Resultado: el navegador recibía
+`genero: null, marca: null` para el 100% del catálogo, siempre — con esos dos campos vacíos, la
+clave sección+género+familia+línea+proveedor+marca nunca podía coincidir con ninguna fila real de
+`TBL_COMPRADOR_LINEA_MARCA`, así que TODO artículo se trataba como "huérfano" (sin comprador
+asignado) y se mostraba a cualquier usuario, filtro tildado o no. Fix: agregar `Genero, Marca` a ese
+`SELECT DISTINCT` (una sola línea). Verificado con datos reales, forzando un cálculo nuevo (no
+cacheado): 100% de género y 98,4% de marca no-null en 76.045 entradas (los faltantes son huecos
+reales y preexistentes en `cgd_ARTICULOS`, no del bug), `JP9771-1074` queda oculto para Gastón, y la
+forma completa de la respuesta (`resumen`/`detalleColumnas`/`detalle`/`catalogo`) no cambió.
+
+**Bug 2 (aparte, solo en la pantalla Favoritos): `renderCatalogoFavoritos()` arma su lista directo
+desde `ALL`, sin pasar por `base()`** — el checkbox "Solo mis líneas" se mostraba y se podía tildar
+ahí, pero no tenía ningún efecto (nunca leía `misLineasKeys`/`soloMisLineas`). Fix: aplicar el mismo
+criterio exacto de `base()` (oculta solo lo asignado a OTRO comprador, nunca lo huérfano) dentro de
+`renderCatalogoFavoritos()`, sin tocar el filtro de stock>0 existente ni el hecho de no acotarse a
+favoritos ya marcados (ambos a propósito, no son parte de este bug).
+
+**Bug 3 (encontrado de paso, mismo día): los items del "simulador viejo" (`x.sim===true`, datos
+demo/hardcodeados, distintos de los reales que vienen del backend) se mostraban en TODAS las
+pantallas** — `let st={...,sim:true}` y `let sti={...,sim:true}` (los flags que en teoría deciden si
+excluirlos) **arrancan en `true` y no tienen ningún control en la UI que los cambie a `false`** — la
+condición `st.sim?ALL:ALL.filter(x=>!x.sim)` repetida en 7 lugares (`filtered()` código muerto sin
+ningún caller, `base()`, `conCurvaRota()`, `baseInmov()`, `coberturaPorLinea()`, `renderExec()`,
+`renderCatalogoFavoritos()`) era en la práctica siempre `ALL` sin filtrar. Fix: exclusión de `x.sim`
+ahora incondicional en los 7 lugares (no se tocaron los lookups puntuales de un artículo ya
+seleccionado desde una lista, ej. `ALL.find(x=>x.sku===...)` al abrir una ficha — si el item nunca
+aparece en ninguna lista, nunca se llega a abrir su detalle, tocar esos lookups no hacía falta).
+
+**Bug 4 (rendimiento, encontrado al verificar lo de arriba): el buscador de artículo (en "Ver en
+detalle"/"Atención Prioritaria" vía `bindFiltrosCategoria`, y en Favoritos) re-renderizaba la lista
+ENTERA en cada tecla, sin ningún debounce** — con catálogos reales de decenas de miles de artículos,
+cada letra tipeada (o borrada) recalculaba filtro+agrupado+orden+HTML desde cero, sintiéndose como
+demora de segundos por letra. Fix: debounce de 200ms en ambos buscadores (el input en sí nunca se
+retrasa, solo la actualización de la lista de resultados, y solo tras una pausa breve de tipeo).
+
 ## Reglas de trabajo (seguir siempre)
 
 - **Los cambios son siempre quirúrgicos: tocar solo la sección que se pide, sin refactorizar el resto.** No reordenar, renombrar ni "mejorar de paso" código que no forma parte del pedido puntual, aunque se vea una oportunidad de limpieza — proponerla aparte, no mezclarla en el mismo cambio.

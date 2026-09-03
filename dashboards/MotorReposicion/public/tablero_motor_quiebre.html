@@ -1918,7 +1918,7 @@ let st={est:"TODOS",vida:"TODAS",suc:"TODAS",prov:"TODOS",q:"",sortKey:"critico"
 function filtered(){
   let r=ALL.slice();
   r=r.filter(x=>x.estado!=="OK");
-  if(!st.sim) r=r.filter(x=>!x.sim);
+  r=r.filter(x=>!x.sim); // 2026-09-03: exclusion de sim ahora incondicional (st.sim quedaba muerto, sin ningun setter en la UI)
   if(st.est!=="TODOS") r=r.filter(x=>x.estado===st.est);
   if(st.vida!=="TODAS") r=r.filter(x=>x.estado==="QUIEBRE" && x.tipoQ===st.vida);
   if(st.suc!=="TODAS") r=r.filter(x=>x.suc===st.suc);
@@ -2080,7 +2080,7 @@ async function cargarUsuariosPermitidos(){
 // que seguir mostrando lo más urgente de TODA la red aunque haya favoritos marcados (el resto de
 // las solapas sí se acota a favoritos, y ahora también el resumen/KPI -- ver cargarAllReal).
 function base(opts){
-  let b = st.sim?ALL:ALL.filter(x=>!x.sim);
+  let b = ALL.filter(x=>!x.sim); // 2026-09-03: exclusion de sim ahora incondicional (st.sim quedaba muerto, sin ningun setter en la UI)
   // "Fecha de ultima compra" ya no se filtra aca: ahora restringe el universo entero en el
   // backend (ver ucDesde/ucHasta en cargarAllReal) -- ALL ya viene acotado a esa ventana (con
   // NULL siempre incluido, dato no disponible no es "nunca comprado"). Filtrar de nuevo aca seria
@@ -2178,14 +2178,19 @@ function bindFiltrosCategoria(prefix, estado, rerenderFn){
   const buscarPorEl = document.getElementById(`${prefix}-buscarpor`);
   if(buscarPorEl) buscarPorEl.onchange = e=>{ estado.buscarPor = e.target.value; rerenderFn(); };
   const buscarEl = document.getElementById(`${prefix}-buscar`);
-  // Re-renderiza en cada tecla (mismo patron que el resto de estos filtros), pero como el render
-  // reemplaza todo el HTML del modal, el input pierde el foco -- se lo devuelve despues, con el
-  // cursor al final, para poder seguir escribiendo sin que se corte cada letra.
+  // Re-renderiza tras una pausa breve de tipeo (2026-09-03, debounce -- antes re-renderizaba en
+  // CADA tecla, y con catalogos reales de miles de articulos eso demoraba segundos por letra). El
+  // render reemplaza todo el HTML del modal, asi que el input pierde el foco -- se lo devuelve
+  // despues, con el cursor al final, para poder seguir escribiendo sin que se corte cada letra.
+  let debounceBuscar;
   if(buscarEl) buscarEl.oninput = e=>{
     estado.busqueda = e.target.value;
-    rerenderFn();
-    const nuevo = document.getElementById(`${prefix}-buscar`);
-    if(nuevo){ nuevo.focus(); nuevo.setSelectionRange(nuevo.value.length, nuevo.value.length); }
+    clearTimeout(debounceBuscar);
+    debounceBuscar = setTimeout(()=>{
+      rerenderFn();
+      const nuevo = document.getElementById(`${prefix}-buscar`);
+      if(nuevo){ nuevo.focus(); nuevo.setSelectionRange(nuevo.value.length, nuevo.value.length); }
+    }, 200);
   };
   bindMisLineasCheckbox(prefix, rerenderFn);
 }
@@ -2195,7 +2200,7 @@ function conCurvaRota(items){
   // simulados no se notaba; con datos reales (decenas de miles) esto congelaba el navegador
   // (miles de millones de operaciones). Se agrupa UNA sola vez -- O(n) -- y despues es lookup.
   const porModelo = new Map();
-  ALL.forEach(x=>{
+  ALL.filter(x=>!x.sim).forEach(x=>{ // 2026-09-03: excluir sim de este conteo de red (antes lo inflaba con items falsos)
     let g = porModelo.get(x.modelo);
     if(!g){ g = {total:new Set(), roto:new Set()}; porModelo.set(x.modelo, g); }
     g.total.add(x.sku);
@@ -3897,7 +3902,7 @@ const INMOV_COL={CERO:{bg:"#fdecea",fg:"#b3261e",dot:"#d93025"}, BAJA:{bg:"#fef6
 let sti={tipo:"TODOS", suc:"TODAS", prov:"TODOS", q:"", sortKey:"critico", sortDir:"asc", sim:true};
 
 function baseInmov(){
-  let b = (sti.sim?ALL:ALL.filter(x=>!x.sim)).filter(x=>x.inmov);
+  let b = ALL.filter(x=>!x.sim).filter(x=>x.inmov); // 2026-09-03: exclusion de sim ahora incondicional (sti.sim quedaba muerto, sin ningun setter en la UI)
   if(favModelo.size>0 || favSku.size>0){
     b = b.filter(x=>favModelo.has(x.modelo) || favSku.has(x.sku));
   }
@@ -4081,7 +4086,7 @@ renderConfig();
 
 function coberturaPorLinea(){
   const L={};
-  ALL.forEach(x=>{
+  ALL.filter(x=>!x.sim).forEach(x=>{ // 2026-09-03: excluir sim de este resumen (antes lo inflaba con items falsos)
     if(!L[x.linea]) L[x.linea]={linea:x.linea, stock:0, vd:0, valor:0, articulos:new Set()};
     const g=L[x.linea]; g.stock+=x.stock; g.vd+=x.vd; g.valor+=x.stock*x.costo; g.articulos.add(x.modelo);
   });
@@ -4110,7 +4115,7 @@ function lineaCobHTML(destino){
 }
 
 function renderExec(){
-  const A=ALL.slice();
+  const A=ALL.filter(x=>!x.sim); // 2026-09-03: excluir sim de este resumen (antes lo inflaba con items falsos)
   const q=A.filter(x=>x.estado==="QUIEBRE"||x.estado==="RIESGO");
   const margenDia=q.reduce((a,x)=>a+x.impacto,0);
   const inm=A.filter(x=>x.inmov);
@@ -5499,13 +5504,23 @@ function renderCatalogoFavoritos(){
   const cont = document.getElementById('fav-catalogo');
   if(!cont) return;
   const porArticuloColor = {};
-  ALL.forEach(x=>{
+  ALL.filter(x=>!x.sim).forEach(x=>{ // 2026-09-03: excluir sim (antes se mostraba en Favoritos sin ningun filtro)
     const key = x.modelo+"|"+x.color;
-    if(!porArticuloColor[key]) porArticuloColor[key] = {modelo:x.modelo, color:x.color, nombre:x.nombre, prov:x.prov, seccion:x.seccion, familia:x.familia, linea:x.linea, sim:x.sim, stockTotal:0, vdSum:0, n:0};
+    if(!porArticuloColor[key]) porArticuloColor[key] = {modelo:x.modelo, color:x.color, nombre:x.nombre, prov:x.prov, seccion:x.seccion, familia:x.familia, linea:x.linea, genero:x.genero, marca:x.marca, sim:x.sim, stockTotal:0, vdSum:0, n:0};
     const g = porArticuloColor[key];
     g.stockTotal += x.stock; g.vdSum += x.vd; g.n += 1;
   });
-  const vivos = Object.values(porArticuloColor).filter(g=>g.stockTotal>0).map(g=>({...g, vdProm: g.vdSum/g.n}));
+  let vivos = Object.values(porArticuloColor).filter(g=>g.stockTotal>0).map(g=>({...g, vdProm: g.vdSum/g.n}));
+  // "Solo mis líneas" (2026-09-03, fix: esta pantalla mostraba el checkbox pero nunca filtraba nada
+  // -- a diferencia del resto del tablero, armaba su lista directo desde ALL sin pasar por base()).
+  // Mismo criterio exacto que base() (ver el comentario completo ahi): oculta solo lo asignado a
+  // OTRO comprador, nunca lo huerfano.
+  if(soloMisLineas && misLineasKeys.size>0){
+    vivos = vivos.filter(g=>{
+      const clave = claveLineaComprador(g.seccion, g.genero, g.familia, g.linea, g.prov, g.marca);
+      return misLineasKeys.has(clave) || !lineasAsignadasKeys.has(clave);
+    });
+  }
   // En cascada (mismo criterio que Ver quiebres/Ver riesgos/Reposición).
   const secciones = opcionesCascada(vivos, 'seccion', []);
   const familias = opcionesCascada(vivos, 'familia', [['seccion', catSeccion]]);
@@ -5550,13 +5565,19 @@ function renderCatalogoFavoritos(){
   document.getElementById('fav-cat-linea').onchange = e=>{ catLinea = e.target.value; catProveedor="TODOS"; renderCatalogoFavoritos(); };
   document.getElementById('fav-cat-prov').onchange = e=>{ catProveedor = e.target.value; renderCatalogoFavoritos(); };
   document.getElementById('fav-cat-buscarpor').onchange = e=>{ catBuscarPor = e.target.value; renderCatalogoFavoritos(); };
-  // Re-renderiza en cada tecla; como reemplaza todo el HTML de la lista, el input pierde el foco --
-  // se lo devuelve despues (mismo patron que el buscador de Reposición).
+  // Re-renderiza tras una pausa breve de tipeo (2026-09-03, debounce -- antes re-renderizaba en
+  // CADA tecla, y con catalogos reales de miles de articulos eso demoraba segundos por letra); como
+  // reemplaza todo el HTML de la lista, el input pierde el foco -- se lo devuelve despues (mismo
+  // patron que el buscador de Reposición).
+  let debounceFavBuscar;
   document.getElementById('fav-cat-buscar').oninput = e=>{
     catBusqueda = e.target.value;
-    renderCatalogoFavoritos();
-    const nuevo = document.getElementById('fav-cat-buscar');
-    if(nuevo){ nuevo.focus(); nuevo.setSelectionRange(nuevo.value.length, nuevo.value.length); }
+    clearTimeout(debounceFavBuscar);
+    debounceFavBuscar = setTimeout(()=>{
+      renderCatalogoFavoritos();
+      const nuevo = document.getElementById('fav-cat-buscar');
+      if(nuevo){ nuevo.focus(); nuevo.setSelectionRange(nuevo.value.length, nuevo.value.length); }
+    }, 200);
   };
   document.querySelectorAll('#fav-catalogo .pcard').forEach(c=>c.onclick=()=>abrirCoberturaArticulo(c.dataset.mod, ()=>irASolapa('favoritos'), c.dataset.color));
   bindFavStars(renderCatalogoFavoritos, cont);

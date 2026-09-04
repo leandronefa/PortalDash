@@ -4903,17 +4903,35 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // casos reales con nombres de sucursal más largos que los usados al medir originalmente -- se
   // sube a 110px de margen y el techo a 980px (mismo ancho máximo que ya usa el popover
   // principal, .desglose-popover) para dar más aire sin volverse desproporcionado. Con `grande`
-  // (2026-09-04, misma queja de nuevo -- "evitar scroll o desplazamiento a la derecha, se debe
-  // ver todo"): el techo fijo de 1180px seguia sin alcanzar para "sugerido" (6 columnas, la mas
-  // ancha de todas) con nombres de sucursal largos -- se saca el techo fijo y se deja crecer hasta
-  // el ancho de pantalla disponible (mismo limite que ya impone .desglose-popover via
-  // max-width:calc(100vw - 24px), asi que nunca se sale de la pantalla).
+  // (2026-09-04, misma queja 2 veces seguidas -- primero "evitar scroll o desplazamiento a la
+  // derecha", después "hacer mas bastante mas ancha... para no necesitar desplazar a la derecha y
+  // que se vea todo"): ajustar el ancho SOLO al contenido medido (anchoNatural+110) no alcanzaba
+  // -- para "sugerido" (6 columnas, la más ancha de todas) con nombres de sucursal largos, ese
+  // cálculo daba un ancho angosto de sobra. Se abandona la lógica "ajustado al contenido" para
+  // `grande`: el ancho pasa a ser directamente el máximo disponible en pantalla (mismo límite que
+  // ya impone .desglose-popover vía max-width:calc(100vw - 24px)), con un piso de 1200px en
+  // pantallas grandes -- así la ventana queda ancha y estable sin importar cuántas sucursales o
+  // qué tan largos sean sus nombres, y nunca hace falta desplazar para verla completa.
   const tabla = popDet.querySelector('table');
   tabla.style.width = 'auto';
   const anchoNatural = tabla.scrollWidth;
   tabla.style.width = '100%';
-  const anchoTope = grande ? (window.innerWidth - 40) : 980;
-  popDet.style.width = Math.max(480, Math.min(anchoTope, anchoNatural + 110)) + 'px';
+  if(grande){
+    const anchoDisponible = window.innerWidth - 40;
+    popDet.style.width = Math.min(anchoDisponible, Math.max(1200, anchoNatural + 110)) + 'px';
+  } else {
+    popDet.style.width = Math.max(480, Math.min(980, anchoNatural + 110)) + 'px';
+  }
+  // Recuadro con color propio (2026-09-04, a pedido explicito -- "dar a recuadro de ventana un
+  // color"): borde y sombra en el mismo verde del total/encabezado, en vez del gris genérico que
+  // ya usa .desglose-popover para todas las demás cajitas (esas NO se tocan).
+  if(grande){
+    popDet.style.border = '2px solid #1e7d4f';
+    popDet.style.boxShadow = '0 10px 36px rgba(30,125,79,.25)';
+  } else {
+    popDet.style.border = '';
+    popDet.style.boxShadow = '';
+  }
   popDet.style.display = 'block';
   // Centrada en pantalla (2026-09-04, a pedido explicito) en vez de pegada a la celda clickeada --
   // al ser mucho mas grande que el resto de las cajitas, pegarla a un botón chico (el "Sugerido" de

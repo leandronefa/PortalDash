@@ -126,13 +126,26 @@ esas siguen exactamente con el tamaño chico original y pegadas a la celda click
 centrado son exclusivos de este flujo. **"A comprar" (`repoDetalleHtml`) sigue mostrando el
 popover completo de 2 escenarios sin cambios** — solo se simplificó Edición de recompra.
 
-**Ancho sin techo fijo, acotado solo por la pantalla (2026-09-04, misma queja repetida — "evitar
-scroll o desplazamiento a la derecha, se debe ver todo"):** el primer intento de `grande` fijaba un
-techo de 1180px, que seguía sin alcanzar para "sugerido" (6 columnas, la más ancha de las cajitas)
-con nombres de sucursal largos — la tabla quedaba con scroll horizontal adentro de todos modos.
-Se sacó ese techo fijo: con `grande=true`, el ancho del popover crece hasta `window.innerWidth - 40`
-(el único límite real ya lo pone `.desglose-popover` vía `max-width:calc(100vw - 24px)`, así que
-nunca se sale de la pantalla igual).
+**Ancho de `grande` — 2 vueltas hasta llegar al diseño final (misma queja repetida 2 veces,
+2026-09-04, "evitar scroll o desplazamiento a la derecha, se debe ver todo" / "hacer mas bastante
+mas ancha... para no necesitar desplazar a la derecha y que se vea todo"):**
+- Intento 1 (descartado): techo fijo de 1180px — seguía sin alcanzar para "sugerido" (6 columnas,
+  la más ancha de las cajitas) con nombres de sucursal largos, scroll horizontal seguía apareciendo.
+- Intento 2 (descartado): sacar el techo fijo pero seguir AJUSTANDO el ancho al contenido medido
+  (`anchoNatural + 110`) — mejoró, pero seguía dando un ancho angosto de sobra para lo que el
+  usuario pedía ("bastante más ancha").
+- **Final:** con `grande=true` se abandona el ajuste-al-contenido — el ancho pasa a ser
+  `Math.min(window.innerWidth - 40, Math.max(1200, anchoNatural + 110))`: un piso de 1200px en
+  pantallas grandes, acotado solo por lo que realmente entra en pantalla (mismo límite que ya
+  impone `.desglose-popover` vía `max-width:calc(100vw - 24px)`). Las cajitas chicas (`grande`
+  ausente/false) NO se tocaron — siguen ajustadas a su contenido, techo 980px.
+
+**Color propio en el recuadro de la ventana grande (2026-09-04, a pedido explícito: "dar a
+recuadro de ventana un color"):** con `grande=true`, `popDet.style.border`/`boxShadow` pasan a un
+verde (`#1e7d4f`, mismo tono del total/encabezado) en vez del gris genérico de `.desglose-popover`
+— se resetean a vacío (recuperan el gris de la clase) cuando `grande` es false, porque el popover
+es un único elemento reusado entre aperturas (si no se resetea, una cajita chica abierta después de
+una ventana grande se queda con el borde verde pegado).
 
 **Bug de TOTAL corregido de paso (existía desde antes de `grande`, quedó expuesto al hacerlo más
 visible): la fila/bloque TOTAL de la cajita "sugerido" sumaba la columna "OC pendiente

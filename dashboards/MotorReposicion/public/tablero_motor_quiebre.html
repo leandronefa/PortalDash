@@ -4821,7 +4821,12 @@ function fmtCelda(v, decimales){
 // la vez) con la tabla de detalle real de UNA cajita (ej. GAP bruto), fila por fila de cada
 // sucursal que compone ese total. Se crea una sola vez y se reusa (mover a otra cajita solo
 // cambia su contenido y su posicion, no abre una tercera ventana).
-function abrirDetalleCajita(d, campo, elCaja){
+// `grande` (2026-09-05, a pedido explicito -- desde que "Sugerido" en Edicion de recompra abre
+// esto DIRECTO, sin el popover de 2 escenarios detras, ver bindEdicionDetalleEvents): ventana mas
+// grande y con un total bien visible arriba (ademas de la fila TOTAL que ya tenia la tabla) --
+// SOLO para ese caso puntual, no para las cajitas chicas del popover de "A comprar" (GAP bruto,
+// velocidad, etc.), que siguen con el tamaño original.
+function abrirDetalleCajita(d, campo, elCaja, grande){
   const cfg = CAMPO_DETALLE[campo];
   if(!cfg || !d.porSucursal) return;
   let popDet = document.getElementById('desglose-detalle-popover');
@@ -4832,6 +4837,7 @@ function abrirDetalleCajita(d, campo, elCaja){
     document.body.appendChild(popDet);
     habilitarDragPopover(popDet);
   }
+  const fuenteTabla = grande ? '13.5px' : '12.5px';
   // white-space:nowrap en TODAS las celdas, no solo los encabezados (2026-09-08, a pedido
   // explicito: "continua no viendose sin desplazarse a la derecha") -- la celda de Sucursal era
   // la UNICA sin nowrap, asi que ante cualquier apriete de espacio el navegador la usaba como
@@ -4853,16 +4859,25 @@ function abrirDetalleCajita(d, campo, elCaja){
       ? `<td style="text-align:right;padding:6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalUltima,dec)}</td>`
       : `<td style="text-align:right;padding:6px;color:#c2ccd1;white-space:nowrap">—</td>`
   ).join('')}</tr>`;
+  // Total bien visible arriba (solo `grande`) -- mismo estilo que el bloque "Propuesta oficial"
+  // (fondo verde, numero grande), para que quede claro de un vistazo sin tener que bajar hasta la
+  // fila TOTAL de la tabla. Usa la MISMA columna/valor que esa fila (totalUltima), nunca un
+  // calculo aparte.
+  const totalGrandeHtml = grande ? `<div style="background:#eef7f0;border:1px solid #cfe8d6;border-radius:10px;padding:12px 16px;margin:12px 0;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-weight:800;font-size:13.5px;color:#1a2730">Total — ${cfg.cols[ultimoIdx][0]}</span>
+    <span style="font-size:26px;font-weight:800;color:#1e7d4f">${fmtCelda(totalUltima, cfg.cols[ultimoIdx][2])} unidades</span>
+  </div>` : '';
   popDet.innerHTML = `
     <div class="desglose-popover-hd">
       <div>
-        <div class="desglose-popover-title" style="font-size:14px">${cfg.titulo}</div>
+        <div class="desglose-popover-title" style="font-size:${grande?'16px':'14px'}">${cfg.titulo}</div>
         <div class="desglose-popover-sub">${d.modelo} · ${d.color==='—'?'Color único':d.color} · Talle ${d.talle==='U'?'Único':d.talle} · ${d.empresa} SA</div>
       </div>
       <button class="desglose-popover-close" id="desglose-detalle-popover-x" title="Cerrar">✕</button>
     </div>
-    <div style="max-height:340px;overflow:auto;margin-top:10px">
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    ${totalGrandeHtml}
+    <div style="max-height:${grande?'520px':'340px'};overflow:auto;margin-top:10px">
+      <table style="width:100%;border-collapse:collapse;font-size:${fuenteTabla}">
         <thead><tr style="text-align:right"><th style="text-align:left;padding:4px 6px;white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:4px 6px;white-space:nowrap">${lbl}</th>`).join('')}</tr></thead>
         <tbody>${filas}${filaTotal}</tbody>
       </table>
@@ -4880,12 +4895,13 @@ function abrirDetalleCajita(d, campo, elCaja){
   // desplazarse a la derecha"): el buffer de 64px (padding propio + scrollbar) resultó justo en
   // casos reales con nombres de sucursal más largos que los usados al medir originalmente -- se
   // sube a 110px de margen y el techo de 900 a 980px (mismo ancho máximo que ya usa el popover
-  // principal, .desglose-popover) para dar más aire sin volverse desproporcionado.
+  // principal, .desglose-popover) para dar más aire sin volverse desproporcionado. Con `grande`
+  // (2026-09-05), el techo sube a 1180px -- ventana mas grande a pedido explicito.
   const tabla = popDet.querySelector('table');
   tabla.style.width = 'auto';
   const anchoNatural = tabla.scrollWidth;
   tabla.style.width = '100%';
-  popDet.style.width = Math.max(480, Math.min(980, anchoNatural + 110)) + 'px';
+  popDet.style.width = Math.max(480, Math.min(grande?1180:980, anchoNatural + 110)) + 'px';
   popDet.style.display = 'block';
   posicionarJuntoA(popDet, elCaja);
   document.getElementById('desglose-detalle-popover-x').onclick = cerrarDetalleCajitaPopover;
@@ -5047,33 +5063,6 @@ function pintarFormulaDesglose(pop, d){
     📦 <b>Stock actual</b> no se resta directo del Objetivo — cada sucursal se compara contra SU PROPIO stock.
     🛒 <b>GAP bruto</b> ya sale calculado sucursal por sucursal (no es Objetivo menos Stock) — desde ahí, restando el depósito y luego el tránsito, sí es una resta directa hasta la Necesidad de compra. Lo pendiente en OC (🚚) es informativo aparte, no participa de esa resta. Mismo criterio en los dos escenarios de abajo.
   </div>`;
-  // Propuesta OFICIAL (2026-09-05, a pedido explicito): el popover mostraba los 2 escenarios pero
-  // NUNCA el numero que realmente se usa para "a comprar" en el resto de la app (d.sugerido, ver
-  // calcularNecesidadOficial) -- por eso costaba entender por que la celda de la grilla no
-  // coincidia con ninguno de los 2 totales de arriba. Con mas de 1 sucursal consolidada, cada una
-  // ya eligio su propio menor entre los 2 escenarios ANTES de repartir deposito/transito (una sola
-  // vez, sobre esa decision ya tomada -- nunca comparando resultados finales de 2 repartos
-  // separados, ver el comentario completo en calcularNecesidadOficial) -- por eso el total puede
-  // ser MENOR a los 2 totales de arriba, sin que sea un error (casos reales: KJ1736-1074/talle 6/
-  // PUEBLO, Evidencia histórica=72 y Real=50, propuesta oficial=42; DINK-6128/Calzados 35,
-  // Evidencia histórica=2 y Real=5, esa sucursal puntual usa su propio menor, 2).
-  const notaPropuestaOficial = d.nSucursales>1
-    ? `<div style="font-size:11px;color:#7c8a92;font-style:italic;line-height:1.4;margin-top:6px">
-        Cada una de las ${d.nSucursales} sucursales usa su propio menor entre Evidencia histórica y Real, y el depósito/tránsito se reparte una sola vez sobre esa decisión ya tomada — por eso el total puede quedar por debajo de los 2 totales de arriba. No es un error: es más conservador que aplicar un solo escenario a todo el grupo.
-      </div>`
-    : '';
-  // Clickeable = ver el desglose por sucursal (2026-09-05, a pedido explicito) -- mismo mecanismo
-  // que ya usan las cajitas de cada escenario (ver CAMPO_DETALLE.sugerido/abrirDetalleCajita), y
-  // los MISMOS datos de d.porSucursal (ya son el resultado oficial -- info=mapa.get(...) en
-  // construirArticulosEdicion ya sale de calcularNecesidadOficial, no del viejo it.vd) -- no hace
-  // falta ningun calculo nuevo. Solo con mas de 1 sucursal, igual que el resto de las cajitas (con
-  // 1 sola sucursal el numero ya es una cuenta directa, no hay nada nuevo que desglosar).
-  const propuestaEsClickeable = d.nSucursales>1 && d.porSucursal;
-  const propuestaOficialHtml = `<div style="background:#eef7f0;border:1px solid #cfe8d6;border-radius:10px;padding:12px 14px;margin:10px 0${propuestaEsClickeable?';cursor:pointer':''}" id="desglose-propuesta-oficial"${propuestaEsClickeable?' title="Ver detalle por sucursal"':''}>
-    <div style="font-weight:800;font-size:12.5px;color:#1a2730;margin-bottom:4px">✅ Propuesta oficial (la que se usa para comprar)</div>
-    <div style="font-size:23px;font-weight:800;color:#1e7d4f">${fmt(d.sugerido)} unidades</div>
-    ${notaPropuestaOficial}
-  </div>`;
   pop.innerHTML = `
     <div class="desglose-popover-hd">
       <div class="desglose-popover-title">Cálculo de la necesidad de compra
@@ -5087,7 +5076,6 @@ function pintarFormulaDesglose(pop, d){
       ${tarjetaEscenario('#f4f6f7', '#e3e9ec', etiquetaEscenario('📌', 'Evidencia histórica', '') + formulaBoxesHtml(d.escenarioHistorico, true, 'conservador'))}
       ${tarjetaEscenario('#eef6fb', '#cfe4ee', etiquetaEscenario('📊', 'Real', '(días reales)') + formulaBoxesHtml(d.escenarioReal, true, 'real'))}
     </div>
-    ${propuestaOficialHtml}
     <div class="desglose-oc-bloque">
       <div style="font-weight:800;font-size:12px;color:#9a5b00;margin-bottom:6px">🚚 Órdenes de compra pendientes (${d.empresa} SA)</div>
       <div id="desglose-oc-lista">Cargando…</div>
@@ -5099,12 +5087,6 @@ function pintarFormulaDesglose(pop, d){
     const datosClick = el.dataset.escenario === 'real' ? d.escenarioReal : d.escenarioHistorico;
     el.onclick = ()=>abrirDetalleCajita(datosClick, el.dataset.campo, el);
   });
-  // Propuesta oficial clickeable (2026-09-05): binding aparte del loop de arriba porque este usa
-  // `d` directo (no un escenario) -- d.porSucursal ya trae el resultado oficial por sucursal.
-  if(propuestaEsClickeable){
-    const elProp = document.getElementById('desglose-propuesta-oficial');
-    if(elProp) elProp.onclick = ()=>abrirDetalleCajita(d, 'sugerido', elProp);
-  }
   // Ordenes de compra pendientes REALES (2026-09-05, a pedido explicito -- reemplaza la vieja
   // cajita "Pendiente en OC (sin restar)", que mostraba un numero fruto del reparto de
   // calcularNecesidadPorBarra entre sucursales, no un dato real). La OC pendiente es a nivel
@@ -5416,7 +5398,7 @@ function bindEdicionDetalleEvents(art, root){
       e.stopPropagation();
       const d = desgloseSugerido.get(el.dataset.key);
       if(!d) return;
-      abrirDetalleCajita(d, 'sugerido', el);
+      abrirDetalleCajita(d, 'sugerido', el, true);
       // Cerrar con click afuera / Escape (2026-09-05): mismo mecanismo que ya usa el popover
       // completo (ver abrirDesgloseSugerido) -- sin esto, la unica forma de cerrar seria su
       // propia "X", ya que estos listeners globales solo se registraban ahi. cerrarDesglosePopover

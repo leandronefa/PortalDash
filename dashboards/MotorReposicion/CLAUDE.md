@@ -97,28 +97,36 @@ mostrar 5 en vez de su propio menor, 2). Verificado también que el sistema ANTE
 reales probados, un total que tampoco coincidía con ninguno de los 2 escenarios — el problema no lo
 introdujo este cambio, solo lo hizo más visible al mostrar los 2 totales uno al lado del otro.
 
-**El popover ahora SIEMPRE muestra el número oficial** (bloque verde "✅ Propuesta oficial", debajo
-de las 2 tarjetas de escenario, ver `propuestaOficialHtml` en `pintarFormulaDesglose`) — antes solo
-se veían los 2 escenarios y nunca el número que realmente se usa para comprar, lo que hacía parecer
-un error que la celda de la grilla no coincidiera con ninguno de los 2. Con más de 1 sucursal, este
-bloque incluye la nota explicando por qué el total puede ser menor a los 2 de arriba, y es
-clickeable (`abrirDetalleCajita(d, 'sugerido', ...)`, mismo mecanismo que ya usan las cajitas de
-cada escenario, reusando `d.porSucursal` — que ya trae el resultado oficial, no el viejo `it.vd`,
-así que no hace falta ningún cálculo nuevo) para ver cómo se compone el total por sucursal.
+**El bloque verde "✅ Propuesta oficial" que se agregó el 2026-09-05 dentro del popover de 2
+escenarios (`propuestaOficialHtml` en `pintarFormulaDesglose`) se QUITÓ el mismo día, a pedido
+explícito** ("quitar de ventana de calculo de necesidad que mostramos por sucursal la información
+que agregamos hoy de propuesta oficial") — el popover de "A comprar" volvió a mostrar solo las 2
+tarjetas de escenario + OC pendientes, igual que antes de ese agregado. Motivo: quedó redundante en
+cuanto Edición de recompra (el caso donde de verdad hacía falta ver el número oficial) pasó a abrir
+el detalle por sucursal DIRECTO (ver el punto siguiente) — mantenerlo en "A comprar" solo duplicaba
+información ya visible (con 1 sola sucursal, que es siempre el caso en "A comprar", el oficial ya
+es igual a uno de los 2 totales de arriba). El cálculo (`calcularNecesidadOficial`, el mínimo entre
+escenarios) NO se tocó — este quite es solo de la UI del popover.
 
-**En Edición de recompra, clickear "Sugerido" ya NO abre este popover de 2 escenarios (2026-09-05,
+**En Edición de recompra, clickear "Sugerido" ya NO abre el popover de 2 escenarios (2026-09-05,
 a pedido explícito: "es muy confuso que esos valores no coincidan con el de la edición") — va
-directo al detalle por sucursal** (`bindEdicionDetalleEvents`, llama a `abrirDetalleCajita(d,
-'sugerido', el)` directo, sin pasar por `pintarFormulaDesglose`/`abrirDesgloseSugerido`) — mismo
-mecanismo que ya usa la Propuesta oficial clickeable de arriba, sin cálculo nuevo. **"A comprar"
-(`repoDetalleHtml`) sigue mostrando el popover completo sin cambios** — solo se simplificó Edición
-de recompra, donde la comparación entre escenarios totales ya no aporta (el total ahí es siempre
-consolidado de varias sucursales, así que puede diferir de ambos totales de escenario — ver la
-sección de arriba). **Ojo si se toca este flujo de nuevo:** al abrir el detalle directo (sin pasar
-por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar con click afuera /
-Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de cerrar la ventanita
-es su propia "✕", porque esos listeners globales antes solo se registraban al abrir el popover
-completo.
+directo al detalle por sucursal, en una ventana más grande y con un total bien visible arriba**
+(`bindEdicionDetalleEvents`, llama a `abrirDetalleCajita(d, 'sugerido', el, true)` — el 4º
+parámetro `grande` — sin pasar por `pintarFormulaDesglose`/`abrirDesgloseSugerido`). Con
+`grande=true`, `abrirDetalleCajita` (mismo pedido, "ventana más grande y de forma más vistosa que
+además tenga el total"): sube el ancho máximo de 980px a 1180px, el alto de la tabla de 340px a
+520px, agranda un poco la tipografía, y agrega un bloque destacado (mismo estilo verde que tenía la
+"Propuesta oficial" quitada del popover) con el total arriba de la tabla — ADEMÁS de la fila TOTAL
+que ya traía la tabla al pie, no en su reemplazo. **Este 4º parámetro es opcional y por defecto
+`false`/`undefined` en TODOS los demás usos de `abrirDetalleCajita`** (las cajitas de cada
+escenario dentro de "A comprar", ver el loop `.desglose-caja-click` en `pintarFormulaDesglose`) —
+esas siguen exactamente con el tamaño chico original; el agrandado es exclusivo de este flujo. **"A
+comprar" (`repoDetalleHtml`) sigue mostrando el popover completo de 2 escenarios sin cambios** —
+solo se simplificó Edición de recompra. **Ojo si se toca este flujo de nuevo:** al abrir el detalle
+directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar
+con click afuera / Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de
+cerrar la ventanita es su propia "✕", porque esos listeners globales antes solo se registraban al
+abrir el popover completo.
 
 **Nota "piso de 7 días — real: 1 día" cuando el período no detectó ningún día pero hubo venta real
 (2026-09-05, a pedido explícito, caso real KJ1736-1074/talle 5/Sucursal 000028) — SOLO la nota, no
@@ -163,6 +171,10 @@ Al hacer clic en "Sugerido"/un talle, se abre un popover armado por `pintarFormu
   sola sucursal el número ya es una cuenta directa visible, no hay nada nuevo que desglosar.
 - **Ventana de detalle:** `abrirDetalleCajita`/`#desglose-detalle-popover`, arrastrable
   (`habilitarDragPopover`), separada del popover principal (los dos quedan visibles a la vez).
+  Tiene una variante "grande" (4º parámetro `grande`, ver sección de arriba) usada SOLO por
+  Edición de recompra — ventana más ancha/alta, tipografía más grande y un total destacado extra
+  arriba de la tabla; las demás cajitas (dentro de "A comprar") siguen con el tamaño chico
+  original.
 - **Botón "Volver a la cobertura"** (desde Reposición, tras venir de "Ver propuesta de recompra"):
   nace `position:absolute` pegado al recuadro de la tarjeta (sigue el scroll normal de la
   página), y se congela a `position:fixed` en su posición actual justo después del scroll

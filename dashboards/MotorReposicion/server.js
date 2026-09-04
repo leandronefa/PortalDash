@@ -381,7 +381,16 @@ SELECT
     -- completo en el SP) -- marca combos que nunca tuvieron una foto de stock >0 NI una aceptacion
     -- real de deposito, en toda su vida. El frontend decide cuando mostrarla (solo si ademas hay
     -- algo real para comprar en esta fila) -- aca solo se expone el dato crudo.
-    ISNULL(eh.SinEvidenciaRealStock, 0) AS SinEvidenciaRealStock
+    ISNULL(eh.SinEvidenciaRealStock, 0) AS SinEvidenciaRealStock,
+    -- Evidencia historica SIEMPRE expuesta, sin condicion (2026-09-04, a pedido explicito: el
+    -- popover de "Calculo de la necesidad de compra" ahora muestra el escenario "Evidencia
+    -- historica" siempre, independientemente de si UsaEvidenciaHistorica dispara el reemplazo de
+    -- Vd o no) -- mismos eh.VentasHistoricoTotal/eh.DiasConStockHistorico ya unidos arriba (ver el
+    -- LEFT JOIN a MotorReposicion_EvidenciaHistorica), solo que antes solo se exponian via el CASE
+    -- condicional de VentasVdMostrado/DiasStockVdMostrado. NULL si el combo no tiene fila en esa
+    -- tabla (nunca tuvo evidencia real) -- el frontend ya sabe tratar eso como "sin datos".
+    eh.VentasHistoricoTotal AS VentasHistoricoSiempre,
+    eh.DiasConStockHistorico AS DiasConStockHistoricoSiempre
 INTO #Resultado
 FROM #Universo u
 INNER JOIN Sucursales s ON s.Sucursal = u.Sucursal
@@ -530,7 +539,8 @@ SELECT Sucursal, NomSucursal, Empresa, Sku, Vd, StockTienda, StockDeposito, Depo
     Cob, Estado, Impacto, DiasConVenta, VentasRango, DiasQuiebreEstimado, UltimaVenta, FechaUltimaCompra,
     VentasVd, DiasStockVd, UsoVelocidadAmplia, DiasStockVdReal, UsoEvidenciaHistorica,
     VentasVdMostrado, DiasStockVdMostrado, SinEvidenciaRealStock,
-    CantidadVentasPromo, NombrePromo, DescuentoPromo
+    CantidadVentasPromo, NombrePromo, DescuentoPromo,
+    VentasHistoricoSiempre, DiasConStockHistoricoSiempre
 FROM #EstadoFinal WHERE Estado <> 'OK';
 
 -- Desglose por articulo (Empresa+CodArticulo+Sku, TODOS los estados incluido OK) -- esto es lo que
@@ -862,7 +872,16 @@ SELECT
     -- completo en el SP) -- marca combos que nunca tuvieron una foto de stock >0 NI una aceptacion
     -- real de deposito, en toda su vida. El frontend decide cuando mostrarla (solo si ademas hay
     -- algo real para comprar en esta fila) -- aca solo se expone el dato crudo.
-    ISNULL(eh.SinEvidenciaRealStock, 0) AS SinEvidenciaRealStock
+    ISNULL(eh.SinEvidenciaRealStock, 0) AS SinEvidenciaRealStock,
+    -- Evidencia historica SIEMPRE expuesta, sin condicion (2026-09-04, a pedido explicito: el
+    -- popover de "Calculo de la necesidad de compra" ahora muestra el escenario "Evidencia
+    -- historica" siempre, independientemente de si UsaEvidenciaHistorica dispara el reemplazo de
+    -- Vd o no) -- mismos eh.VentasHistoricoTotal/eh.DiasConStockHistorico ya unidos arriba (ver el
+    -- LEFT JOIN a MotorReposicion_EvidenciaHistorica), solo que antes solo se exponian via el CASE
+    -- condicional de VentasVdMostrado/DiasStockVdMostrado. NULL si el combo no tiene fila en esa
+    -- tabla (nunca tuvo evidencia real) -- el frontend ya sabe tratar eso como "sin datos".
+    eh.VentasHistoricoTotal AS VentasHistoricoSiempre,
+    eh.DiasConStockHistorico AS DiasConStockHistoricoSiempre
 INTO #Resultado
 FROM #Universo u
 INNER JOIN Sucursales s ON s.Sucursal = u.Sucursal
@@ -1066,6 +1085,13 @@ const DETALLE_COLUMNAS = [
   // en 0 = no estuvo en promo en el período; si es mayor a 0, nombrePromo/descuentoPromo traen un
   // ejemplo (puede haber habido más de una promoción distinta, se guarda una sola de referencia).
   'cantidadVentasPromo', 'nombrePromo', 'descuentoPromo',
+  // Evidencia historica SIEMPRE presente, sin condicion (2026-09-04, a pedido explicito -- ver el
+  // comentario completo junto a VentasHistoricoSiempre/DiasConStockHistoricoSiempre en
+  // QUERY_QUIEBRE_DETALLE): el popover de "Calculo de la necesidad de compra" usa esto para el
+  // escenario "Evidencia historica", que ahora se muestra siempre (antes solo aparecia si
+  // usoEvidenciaHistorica ya habia reemplazado la Vd). null si el combo nunca tuvo evidencia real
+  // (no es lo mismo que 0 -- el frontend lo trata como "sin datos historicos", velocidad 0).
+  'ventasHistoricoSiempre', 'diasConStockHistoricoSiempre',
 ];
 function construirCatalogoYDetalle(detalleRows) {
   const catalogo = {};
@@ -1125,6 +1151,7 @@ function construirCatalogoYDetalle(detalleRows) {
       r.FechaUltimaAceptacion ? r.FechaUltimaAceptacion.toISOString().slice(0, 10) : null,
       r.CantidadUltimaAceptacion,
       r.CantidadVentasPromo, r.NombrePromo || null, r.DescuentoPromo || null,
+      r.VentasHistoricoSiempre, r.DiasConStockHistoricoSiempre,
     ];
   });
   return { catalogo, detalle };
@@ -1184,6 +1211,7 @@ function construirDetalleDesdeFilas(detalleRows) {
     r.FechaUltimaAceptacion ? r.FechaUltimaAceptacion.toISOString().slice(0, 10) : null,
     r.CantidadUltimaAceptacion,
     r.CantidadVentasPromo, r.NombrePromo || null, r.DescuentoPromo || null,
+    r.VentasHistoricoSiempre, r.DiasConStockHistoricoSiempre,
   ]);
 }
 

@@ -4371,52 +4371,43 @@ ucDias.onchange = async ()=>{
 };
 
 // ══════════════ REPOSICIÓN ══════════════
-// Ajustes conocidos de la formula de necesidad de compra (2026-08-19): la formula, para poder dar
-// un numero estable, a veces reemplaza un valor real por otro mas conservador (ej. el piso de 7
-// dias con stock). Esta lista es GENERICA a proposito -- cada entrada sabe detectar si el ajuste
-// se disparo para un item real (x, tal como llega de la API) y como recalcular ese mismo item SIN
-// el ajuste -- para poder sumar otro ajuste el dia de mañana sin tocar el resto del mecanismo de
-// "escenario real" (ver vdReal/itemsConVdReal, y el bloque "Escenario real" en
-// pintarFormulaDesglose). Hoy el UNICO ajuste conocido en esta formula es el piso de 7 dias -- el
-// redondeo hacia arriba del Objetivo (Math.ceil) NO entra en esta lista: no es una correccion por
-// poca evidencia, es una necesidad fisica (no se puede comprar una fraccion de unidad).
-// "evidenciaHistorica" (2026-09-11, a pedido explicito, caso real DINK-6128/NEGRO/Calzados 35):
-// cuando el articulo ya existia antes del periodo elegido pero casi no hay evidencia DENTRO del
-// periodo (mismo umbral que el piso de 7 dias), el backend ya reemplazo x.vd por la velocidad de
-// TODO el historial (ver UsoEvidenciaHistorica en server.js) -- este ajuste solo expone el
-// "escenario real" alternativo (la velocidad del periodo elegido, la que se hubiera usado sin el
-// reemplazo) para el popover. Va ANTES que piso7dias en la lista a proposito: para una fila donde
-// dispara evidenciaHistorica, el piso de 7 dias del periodo YA NO es el ajuste relevante (mostrar
-// "sin piso" ahi daria un numero literal de dias todavia mas inestable, ej. 3 ventas/3 dias=1/dia)
-// -- vdReal devuelve en el primer match, asi que alcanza con el orden para que no se pisen.
-const AJUSTES_FORMULA = [
-  {
-    id: 'evidenciaHistorica',
-    motivo: '(evidencia histórica)',
-    aplica: x => !!x.usoEvidenciaHistorica,
-    real: x => ({ ventasVd:x.ventasVd, diasStockVd:x.diasStockVd, vd: x.diasStockVd ? x.ventasVd/x.diasStockVd : 0 }),
-  },
-  {
-    id: 'piso7dias',
-    motivo: '(piso de 7 días)',
-    aplica: x => x.diasStockVdReal!=null && x.diasStockVdReal>0 && x.diasStockVdReal<7,
-    real: x => ({ ventasVd:x.ventasVd, diasStockVd:x.diasStockVdReal, vd:x.ventasVd/x.diasStockVdReal }),
-  },
-];
-// Si algun ajuste de AJUSTES_FORMULA aplica a este item, devuelve como quedaria SIN ese ajuste
-// (mismo shape que usa desgloseSugerido: ventasVd/diasStockVd/vd, mas motivo para el rotulo del
-// popover) -- null si ninguno aplica (el escenario real coincidiria exacto con el conservador, no
-// hay nada distinto que mostrar).
-function vdReal(x){
-  for(const aj of AJUSTES_FORMULA){ if(aj.aplica(x)) return {...aj.real(x), motivo:aj.motivo}; }
-  return null;
+// Popover "Cálculo de la necesidad de compra": 2 escenarios SIEMPRE visibles (2026-09-04, a pedido
+// explícito -- antes se mostraba un solo bloque "Conservador" con lo que el backend haya decidido
+// usar (período o, si UsaEvidenciaHistorica disparaba, todo el historial), y un segundo bloque
+// "Real" aparecía SOLO si se detectaba el ajuste del piso de 7 días o la sustitución histórica).
+// Ahora son 2 cálculos fijos, sin ninguna condición para mostrarse:
+// - "Evidencia histórica" (izquierda): velocidad de TODO el historial disponible del combo
+//   (VentasHistoricoSiempre/DiasConStockHistoricoSiempre, dbo.MotorReposicion_EvidenciaHistorica,
+//   que el backend ahora expone siempre, no solo cuando dispara el reemplazo de Vd -- ver el
+//   comentario completo junto a esos dos campos en QUERY_QUIEBRE_DETALLE en server.js).
+// - "Real" (derecha, días reales): velocidad del PERÍODO elegido, con los días con stock reales
+//   SIN ningún piso (ventasVd/diasStockVdReal, ya expuestos de antes).
+// Ninguno de los dos toca x.vd -- la velocidad que el backend ya usa para el número real de
+// "a comprar" en el resto del tablero (fuera de este popover) sigue exactamente igual.
+function vdHistoricoSiempre(x){
+  const dias = x.diasConStockHistoricoSiempre;
+  const ventas = x.ventasHistoricoSiempre||0;
+  return { ventasVd: ventas, diasStockVd: dias||0, vd: (dias && dias>0) ? ventas/dias : 0 };
 }
-// Mismos items, con x.vd reemplazado por la version SIN ajuste donde corresponda -- pensado para
-// pasarle a calcularNecesidadPorBarra tal cual, asi el reparto de deposito/OC del "escenario real"
-// queda igual de consistente entre sucursales que el conservador (mismo agrupamiento sku+empresa,
-// misma logica de reparto -- sin duplicar el codigo de calcularNecesidadPorBarra).
-function itemsConVdReal(items){
-  return items.map(x=>{ const r = vdReal(x); return r ? {...x, vd:r.vd} : x; });
+// Mismos items, con x.vd reemplazado por la velocidad de TODO el historial -- pensado para pasarle
+// a calcularNecesidadPorBarra tal cual, asi el reparto de deposito/OC de este escenario queda
+// igual de consistente entre sucursales (mismo agrupamiento sku+empresa, misma logica de reparto).
+function itemsConVdHistoricoSiempre(items){
+  return items.map(x=>{ const r = vdHistoricoSiempre(x); return {...x, vd:r.vd}; });
+}
+// Divisor de "dias reales" (2026-09-04, a pedido explicito, para que coincida exacto con lo que
+// esta pantalla ya mostraba en el caso de evidencia historica): con usoEvidenciaHistorica activo,
+// el periodo real sigue siendo diasStockVd (que puede tener el piso de 7 dias aplicado -- mismo
+// numero que ya mostraba el bloque "Real" antes de este cambio, ver notaDias en formulaBoxesHtml
+// para el aviso de que el piso sigue aplicado). Sin evidencia historica, es diasStockVdReal (sin
+// ningun piso) -- mismo calculo que ya hacia el ajuste "piso7dias" de antes.
+function vdDiasReales(x){
+  const dias = x.usoEvidenciaHistorica ? x.diasStockVd : x.diasStockVdReal;
+  const ventas = x.ventasVd||0;
+  return { ventasVd: ventas, diasStockVd: dias||0, vd: (dias && dias>0) ? ventas/dias : 0 };
+}
+function itemsConVdDiasReales(items){
+  return items.map(x=>{ const r = vdDiasReales(x); return {...x, vd:r.vd}; });
 }
 // Por cada barra (SKU × sucursal): objetivo = velocidad × días de cobertura deseados.
 // El stock de depósito (98 TESI / 99 PUEBLO) es COMPARTIDO por todas las sucursales de esa
@@ -4540,11 +4531,12 @@ function repoDetalleHtml(modelo, diasObjetivo, color){
   const completos = cacheArticuloCompleto.get(modelo);
   const itemsBase = ((completos && completos.length) ? completos : itemsRed).filter(x=>x.color===color);
   const mapa = calcularNecesidadPorBarra(diasObjetivo, itemsBase);
-  // mapaReal: mismo reparto de deposito/OC, pero con la velocidad SIN los ajustes de
-  // AJUSTES_FORMULA donde aplique (hoy, el piso de 7 dias) -- calculado sobre itemsBase completo
-  // (todas las sucursales de este articulo) para que el reparto entre sucursales sea consistente,
-  // igual que el conservador (ver itemsConVdReal).
-  const mapaReal = calcularNecesidadPorBarra(diasObjetivo, itemsConVdReal(itemsBase));
+  // mapaReal/mapaHistorico: mismo reparto de deposito/OC que el conservador, pero con la velocidad
+  // de cada escenario del popover (ver vdDiasReales/vdHistoricoSiempre) -- calculado sobre
+  // itemsBase completo (todas las sucursales de este articulo) para que el reparto entre
+  // sucursales sea consistente, igual que el conservador.
+  const mapaReal = calcularNecesidadPorBarra(diasObjetivo, itemsConVdDiasReales(itemsBase));
+  const mapaHistorico = calcularNecesidadPorBarra(diasObjetivo, itemsConVdHistoricoSiempre(itemsBase));
   const talles = [...new Set(itemsBase.map(x=>x.talle))].sort(compararTalles);
   // 2 columnas mas al final (100px cada una) para Aceptaciones/Venta totales por sucursal, mismo
   // criterio que la grilla de stock (ver renderMatrix) -- a pedido explicito (2026-08-24).
@@ -4606,29 +4598,32 @@ function repoDetalleHtml(modelo, diasObjetivo, color){
         // UNA sola sucursal (no un consolidado), así que nSucursales siempre es 1. Prefijo "suc|"
         // en la clave para no colisionar con las claves de Edición de recompra (otro formato).
         const dkey = "suc|"+it.sku+"|"+it.suc;
-        // Escenario real: solo si el piso (u otro ajuste futuro) realmente se disparo para ESTE
-        // item -- si no, es null y el popover no muestra ningun bloque extra (ver
-        // pintarFormulaDesglose). infoReal viene del mismo reparto de deposito/OC que el
-        // conservador, recalculado sobre la velocidad real (ver mapaReal arriba).
-        const ajusteReal = vdReal(it);
-        const infoReal = ajusteReal ? mapaReal.get(it.sku+"|"+it.suc) : null;
-        const escenarioReal = (ajusteReal && infoReal) ? {
-          velocidad: ajusteReal.vd, diasObjetivo, ventasVd: ajusteReal.ventasVd, diasStockVd: ajusteReal.diasStockVd,
+        // Los 2 escenarios del popover, siempre presentes (ver el comentario completo junto a
+        // vdDiasReales/vdHistoricoSiempre, mas arriba en este archivo) -- infoReal/infoHistorico
+        // vienen del mismo reparto de deposito/OC que el conservador, recalculado sobre cada
+        // velocidad (ver mapaReal/mapaHistorico arriba).
+        const real = vdDiasReales(it);
+        const infoReal = mapaReal.get(it.sku+"|"+it.suc) || {};
+        const escenarioReal = {
+          velocidad: real.vd, diasObjetivo, ventasVd: real.ventasVd, diasStockVd: real.diasStockVd,
           // Dias con stock CRUDO (sin ningun piso), para que formulaBoxesHtml pueda avisar si el
           // "diasStockVd" de arriba en este mismo escenario real TODAVIA tiene el piso de 7 dias
-          // aplicado por debajo (2026-08-31, a pedido explicito, caso real DINK-6128/Calzados 13:
-          // con evidencia historica activa, el escenario "Real" mostraba diasStockVd=7 -- el piso
-          // del periodo -- como si fueran dias reales, cuando la evidencia cruda real era 2 dias).
+          // aplicado por debajo (con evidencia historica activa, vdDiasReales usa diasStockVd del
+          // periodo, que puede seguir teniendo el piso -- ver el comentario completo en vdDiasReales).
           diasStockVdCrudo: it.diasStockVdReal,
-          objetivo: infoReal.objetivo, stock: it.stock, gapBruto: infoReal.gapBruto,
-          deposito: infoReal.cubiertoDeposito, transito: infoReal.cubiertoTransito, oc: infoReal.cubiertoOC, sugerido: infoReal.comprar,
+          objetivo: infoReal.objetivo||0, stock: it.stock, gapBruto: infoReal.gapBruto||0,
+          deposito: infoReal.cubiertoDeposito||0, transito: infoReal.cubiertoTransito||0, oc: infoReal.cubiertoOC||0, sugerido: infoReal.comprar||0,
           nSucursales: 1,
-        } : null;
-        // ventasVd/diasStockVd del bloque conservador: ventasVdMostrado/diasStockVdMostrado, NO
-        // it.ventasVd/it.diasStockVd directo -- cuando dispara evidencia historica esos dos ya son
-        // los totales de TODO el historial (los mismos que arman it.vd), y el escenario real (arriba)
-        // sigue mostrando el periodo elegido tal cual via ajusteReal.
-        desgloseSugerido.set(dkey, {modelo, empresa:it.empresa, color, talle:t, suc:it.suc, velocidad:it.vd, diasObjetivo, objetivo:info.objetivo, stock:it.stock, gapBruto:info.gapBruto, deposito:info.cubiertoDeposito, transito:info.cubiertoTransito, oc:info.cubiertoOC, sugerido:comprar, nSucursales:1, ventasVd:it.ventasVdMostrado, diasStockVd:it.diasStockVdMostrado, escenarioReal, motivoAjuste: ajusteReal?.motivo});
+        };
+        const hist = vdHistoricoSiempre(it);
+        const infoHistorico = mapaHistorico.get(it.sku+"|"+it.suc) || {};
+        const escenarioHistorico = {
+          velocidad: hist.vd, diasObjetivo, ventasVd: hist.ventasVd, diasStockVd: hist.diasStockVd,
+          objetivo: infoHistorico.objetivo||0, stock: it.stock, gapBruto: infoHistorico.gapBruto||0,
+          deposito: infoHistorico.cubiertoDeposito||0, transito: infoHistorico.cubiertoTransito||0, oc: infoHistorico.cubiertoOC||0, sugerido: infoHistorico.comprar||0,
+          nSucursales: 1,
+        };
+        desgloseSugerido.set(dkey, {modelo, empresa:it.empresa, color, talle:t, suc:it.suc, velocidad:it.vd, diasObjetivo, objetivo:info.objetivo, stock:it.stock, gapBruto:info.gapBruto, deposito:info.cubiertoDeposito, transito:info.cubiertoTransito, oc:info.cubiertoOC, sugerido:comprar, nSucursales:1, ventasVd:it.ventasVdMostrado, diasStockVd:it.diasStockVdMostrado, escenarioReal, escenarioHistorico});
         // Siempre el número real (0 incluido) -- antes un "0 a comprar" (sano, no hace falta
         // pedir nada) se mostraba como guión, indistinguible visualmente de una celda sin datos.
         const promo = promoCeldaExtra(it);
@@ -4888,19 +4883,20 @@ function formulaBoxesHtml(datos, clickeable, escenario){
   // mostrar la cuenta. Consolidando varias sucursales cada una tiene su propio numerador y
   // denominador y la velocidad final es la SUMA de esas divisiones individuales, no una división
   // conjunta -- mostrar "ventas totales ÷ días totales" ahí daría un número que no es el usado.
-  // Si esta tarjeta es el bloque conservador y disparo "evidencia historica" (ver AJUSTES_FORMULA),
-  // ventasVd/diasStockVd ya NO son del periodo elegido sino de todo el historial disponible (ver
-  // ventasVdMostrado/diasStockVdMostrado en server.js) -- la etiqueta lo aclara para no sugerir que
-  // son del periodo cuando no lo son.
-  const esHistorico = datos.motivoAjuste === '(evidencia histórica)';
+  // Cual escenario es esta tarjeta decide si las unidades/dias mostrados son del historial
+  // completo o del periodo elegido (2026-09-04: los 2 escenarios ahora son fijos -- 'conservador'
+  // siempre es "Evidencia histórica", 'real' siempre es el período con días reales -- ver el
+  // comentario completo junto a vdHistoricoSiempre/vdDiasReales, mas arriba en este archivo).
+  const esHistorico = escenario === 'conservador';
   const etiquetaVentas = esHistorico ? 'Unidades vendidas (histórico)' : 'Unidades vendidas (período)';
   const etiquetaDias = esHistorico ? 'Días con stock (histórico)' : 'Días con stock';
   // Aviso de piso de 7 días TODAVIA activo por debajo del numero mostrado (2026-08-31, a pedido
   // explicito, caso real DINK-6128/Calzados 13): con evidencia historica disparada, el escenario
   // "Real" muestra diasStockVd del PERIODO -- que puede tener el piso de 7 dias aplicado igual,
-  // aunque el rotulo de la tarjeta diga "(dias reales)". diasStockVdCrudo (solo presente en
-  // escenarioReal, ver repoDetalleHtml) es el valor SIN ningun piso -- si es menor al que se esta
-  // mostrando, quiere decir que el piso sigue aplicado y el numero de arriba no es la cuenta real.
+  // aunque el rotulo de la tarjeta diga "(dias reales)" (ver vdDiasReales, mas arriba en este
+  // archivo). diasStockVdCrudo (solo presente en escenarioReal de "A comprar", 1 sola sucursal) es
+  // el valor SIN ningun piso -- si es menor al que se esta mostrando, quiere decir que el piso
+  // sigue aplicado y el numero de arriba no es la cuenta real.
   const notaDias = (datos.diasStockVdCrudo!=null && datos.diasStockVdCrudo>0 && datos.diasStockVdCrudo<datos.diasStockVd)
     ? `piso de 7 días — real: ${fmt(datos.diasStockVdCrudo)} día${datos.diasStockVdCrudo===1?'':'s'}`
     : null;
@@ -4979,11 +4975,11 @@ function pintarFormulaDesglose(pop, d){
         return `<div class="desglose-nota-superior">📊 <b>${d.nSucursales} sucursales</b> · Ventana de ventas: ${fmtF(pDesde)}–${fmtF(pHasta)} (${pDias} días) · velocidad = suma de la velocidad de venta de cada sucursal por separado</div>`;
       })()
     : '';
-  // Etiquetas de escenario SOLO si hay un "real" que mostrar (algun ajuste de AJUSTES_FORMULA se
-  // disparo en al menos una sucursal) -- si no, el popover queda exactamente igual que siempre,
-  // sin ningun rotulo de escenario (no hay nada que contrastar). Cada escenario va dentro de su
-  // propia tarjeta con fondo propio (gris para conservador, celeste para real) -- antes los dos
-  // quedaban con el mismo fondo blanco, uno debajo del otro sin ningun corte visual, y con todo
+  // Etiquetas de escenario: siempre las 2 (2026-09-04, a pedido explicito -- antes solo se
+  // mostraban si un ajuste conocido se disparaba en al menos una sucursal). Cada escenario va
+  // dentro de su propia tarjeta con fondo propio (gris para evidencia historica, celeste para
+  // real) -- antes los dos quedaban con el mismo fondo blanco, uno debajo del otro sin ningun
+  // corte visual, y con todo
   // el resto de la info (nota superior, 3 bloques x 2) se veia todo amontonado (2026-08-19, a
   // pedido explicito).
   const etiquetaEscenario = (emoji, texto, nota) => `<div style="font-weight:800;font-size:12.5px;color:#1a2730;margin-bottom:8px">${emoji} ${texto} <span style="font-weight:400;color:#7c8a92;font-size:11px">${nota}</span></div>`;
@@ -4991,10 +4987,10 @@ function pintarFormulaDesglose(pop, d){
   // Notas de "Stock actual" y "Resultado" UNA sola vez, compartidas para los dos escenarios --
   // antes se repetian palabra por palabra dentro de cada tarjeta (2026-08-19, a pedido explicito
   // tras ver que ocupaban el doble de lugar sin agregar nada distinto la segunda vez).
-  const notasCompartidas = d.escenarioReal ? `<div style="font-size:11px;color:#7c8a92;font-style:italic;line-height:1.4;margin-bottom:10px">
+  const notasCompartidas = `<div style="font-size:11px;color:#7c8a92;font-style:italic;line-height:1.4;margin-bottom:10px">
     📦 <b>Stock actual</b> no se resta directo del Objetivo — cada sucursal se compara contra SU PROPIO stock.
     🛒 <b>GAP bruto</b> ya sale calculado sucursal por sucursal (no es Objetivo menos Stock) — desde ahí, restando el depósito y luego el tránsito, sí es una resta directa hasta la Necesidad de compra. Lo pendiente en OC (🚚) es informativo aparte, no participa de esa resta. Mismo criterio en los dos escenarios de abajo.
-  </div>` : '';
+  </div>`;
   pop.innerHTML = `
     <div class="desglose-popover-hd">
       <div class="desglose-popover-title">Cálculo de la necesidad de compra
@@ -5004,21 +5000,19 @@ function pintarFormulaDesglose(pop, d){
     </div>
     ${notaVelocidadSuperior}
     ${notasCompartidas}
-    ${d.escenarioReal
-      ? `<div style="display:flex;flex-wrap:wrap;gap:10px">
-          ${tarjetaEscenario('#f4f6f7', '#e3e9ec', etiquetaEscenario('📌', 'Conservador', d.motivoAjuste || '(piso de 7 días)') + formulaBoxesHtml(d, true, 'conservador'))}
-          ${tarjetaEscenario('#eef6fb', '#cfe4ee', etiquetaEscenario('📊', 'Real', '(días reales)') + formulaBoxesHtml(d.escenarioReal, true, 'real'))}
-        </div>`
-      : formulaBoxesHtml(d, true, 'conservador')}
+    <div style="display:flex;flex-wrap:wrap;gap:10px">
+      ${tarjetaEscenario('#f4f6f7', '#e3e9ec', etiquetaEscenario('📌', 'Evidencia histórica', '') + formulaBoxesHtml(d.escenarioHistorico, true, 'conservador'))}
+      ${tarjetaEscenario('#eef6fb', '#cfe4ee', etiquetaEscenario('📊', 'Real', '(días reales)') + formulaBoxesHtml(d.escenarioReal, true, 'real'))}
+    </div>
     <div class="desglose-oc-bloque">
       <div style="font-weight:800;font-size:12px;color:#9a5b00;margin-bottom:6px">🚚 Órdenes de compra pendientes (${d.empresa} SA)</div>
       <div id="desglose-oc-lista">Cargando…</div>
     </div>`;
   document.getElementById('desglose-popover-x').onclick = cerrarDesglosePopover;
   pop.querySelectorAll('.desglose-caja-click').forEach(el=>{
-    // data-escenario decide si esta cajita en particular abre el detalle del conservador (d) o
-    // del real (d.escenarioReal) -- ver el comentario en formulaBoxesHtml.
-    const datosClick = el.dataset.escenario === 'real' ? d.escenarioReal : d;
+    // data-escenario decide si esta cajita en particular abre el detalle del historico
+    // (d.escenarioHistorico) o del real (d.escenarioReal) -- ver el comentario en formulaBoxesHtml.
+    const datosClick = el.dataset.escenario === 'real' ? d.escenarioReal : d.escenarioHistorico;
     el.onclick = ()=>abrirDetalleCajita(datosClick, el.dataset.campo, el);
   });
   // Ordenes de compra pendientes REALES (2026-09-05, a pedido explicito -- reemplaza la vieja
@@ -5129,9 +5123,10 @@ function construirArticulosEdicion(clavesFiltro){
     const nombre = itemsRed[0].nombre.replace(" (SIM)","");
     const costo = itemsRed[0].costo;
     const mapa = calcularNecesidadPorBarra(edicionDias, itemsRed);
-    // mapaReal: mismo reparto de deposito/OC, pero con la velocidad SIN los ajustes de
-    // AJUSTES_FORMULA donde aplique (hoy, el piso de 7 dias) -- ver itemsConVdReal.
-    const mapaReal = calcularNecesidadPorBarra(edicionDias, itemsConVdReal(itemsRed));
+    // mapaReal/mapaHistorico: mismo reparto de deposito/OC que el conservador, pero con la
+    // velocidad de cada escenario del popover -- ver vdDiasReales/vdHistoricoSiempre.
+    const mapaReal = calcularNecesidadPorBarra(edicionDias, itemsConVdDiasReales(itemsRed));
+    const mapaHistorico = calcularNecesidadPorBarra(edicionDias, itemsConVdHistoricoSiempre(itemsRed));
     const empresasArt = [...new Set(itemsRed.map(x=>x.empresa))].sort(); // TESI, PUEBLO — las que correspondan
     const coloresArt = [...new Set(itemsRed.map(x=>x.color))].sort();
     // Talles por color: la curva COMPLETA del artículo para ese color, calculada UNA sola vez
@@ -5171,23 +5166,19 @@ function construirArticulosEdicion(clavesFiltro){
           // calcularNecesidadPorBarra, que YA corrio para armar la grilla), asi que guardarlo aca
           // no agrega ninguna consulta ni calculo nuevo -- solo sumar campos que ya existen.
           let velocidad=0, objetivo=0, stock=0, gapBruto=0, deposito=0, transito=0, oc=0, ventasVd=0, diasStockVd=0;
-          // Escenario real: mismos totales de arriba, pero recalculados SIN los ajustes que
-          // hayan aplicado en CADA sucursal (hoy, el piso de 7 dias) -- solo tiene sentido
-          // mostrarlo si al menos una sucursal de este talle tuvo algun ajuste real (sino,
-          // coincidiria exacto con el conservador). infoReal viene de mapaReal (mismo reparto de
-          // deposito/OC, recalculado sobre la velocidad real).
+          // Los otros 2 escenarios del popover, siempre presentes (ver el comentario completo
+          // junto a vdDiasReales/vdHistoricoSiempre, mas arriba en este archivo) -- mismos totales
+          // de arriba, pero recalculados con la velocidad de cada escenario en CADA sucursal.
+          // infoReal/infoHistorico vienen de mapaReal/mapaHistorico (mismo reparto de deposito/OC,
+          // recalculado sobre esa velocidad).
           let velocidadReal=0, objetivoReal=0, gapBrutoReal=0, depositoReal=0, transitoReal=0, ocReal=0, ventasVdReal=0, diasStockVdReal=0;
-          let algunAjuste = false;
-          // Motivo del ajuste para el rotulo del popover (ver etiquetaEscenario en
-          // pintarFormulaDesglose) -- se queda con el PRIMERO que aparezca entre las sucursales de
-          // este talle (mismo criterio simplificado que algunAjuste: alcanza con saber que hubo
-          // algun ajuste real, no hace falta desglosar motivo por sucursal).
-          let motivoAjusteConsolidado = null;
+          let velocidadHist=0, objetivoHist=0, gapBrutoHist=0, depositoHist=0, transitoHist=0, ocHist=0, ventasVdHist=0, diasStockVdHist=0;
           // porSucursal: fila por fila de donde sale cada total de arriba -- alimenta el detalle
           // clickeable de cada cajita del popover (ver abrirDetalleCajita), sin ningun calculo
           // nuevo (los mismos valores que ya se suman abajo, solo sin sumar todavia).
           const porSucursal = [];
           const porSucursalReal = [];
+          const porSucursalHistorico = [];
           itemsTalle.forEach(x=>{
             const info = mapa.get(x.sku+"|"+x.suc) || {};
             // ventasVd/diasStockVd del conservador: ventasVdMostrado/diasStockVdMostrado (ver el
@@ -5199,34 +5190,45 @@ function construirArticulosEdicion(clavesFiltro){
               objetivo:info.objetivo||0, gapBruto:info.gapBruto||0, deposito:info.cubiertoDeposito||0,
               transito:info.cubiertoTransito||0, oc:info.cubiertoOC||0, comprar:info.comprar||0,
             });
-            const ajuste = vdReal(x);
+
+            const real = vdDiasReales(x);
             const infoReal = mapaReal.get(x.sku+"|"+x.suc) || {};
-            if(ajuste) algunAjuste = true;
-            if(ajuste && !motivoAjusteConsolidado) motivoAjusteConsolidado = ajuste.motivo;
-            velocidadReal += ajuste ? ajuste.vd : x.vd;
-            ventasVdReal += (ajuste ? ajuste.ventasVd : x.ventasVd) || 0;
-            diasStockVdReal += (ajuste ? ajuste.diasStockVd : x.diasStockVd) || 0;
+            velocidadReal += real.vd; ventasVdReal += real.ventasVd||0; diasStockVdReal += real.diasStockVd||0;
             objetivoReal += infoReal.objetivo||0; gapBrutoReal += infoReal.gapBruto||0;
             depositoReal += infoReal.cubiertoDeposito||0; transitoReal += infoReal.cubiertoTransito||0; ocReal += infoReal.cubiertoOC||0;
-            // Misma fila que porSucursal, pero con los valores del escenario real -- alimenta el
-            // detalle clickeable de las cajitas de "Escenario real" (a pedido explicito,
-            // 2026-08-19: antes solo el conservador tenia lupita).
             porSucursalReal.push({
-              suc:x.suc, ventasVd:(ajuste?ajuste.ventasVd:x.ventasVd)||0, diasStockVd:ajuste?ajuste.diasStockVd:x.diasStockVd,
-              velocidad:ajuste?ajuste.vd:x.vd, stock:x.stock,
+              suc:x.suc, ventasVd:real.ventasVd||0, diasStockVd:real.diasStockVd, velocidad:real.vd, stock:x.stock,
               objetivo:infoReal.objetivo||0, gapBruto:infoReal.gapBruto||0, deposito:infoReal.cubiertoDeposito||0,
               transito:infoReal.cubiertoTransito||0, oc:infoReal.cubiertoOC||0, comprar:infoReal.comprar||0,
+            });
+
+            const hist = vdHistoricoSiempre(x);
+            const infoHist = mapaHistorico.get(x.sku+"|"+x.suc) || {};
+            velocidadHist += hist.vd; ventasVdHist += hist.ventasVd||0; diasStockVdHist += hist.diasStockVd||0;
+            objetivoHist += infoHist.objetivo||0; gapBrutoHist += infoHist.gapBruto||0;
+            depositoHist += infoHist.cubiertoDeposito||0; transitoHist += infoHist.cubiertoTransito||0; ocHist += infoHist.cubiertoOC||0;
+            porSucursalHistorico.push({
+              suc:x.suc, ventasVd:hist.ventasVd||0, diasStockVd:hist.diasStockVd, velocidad:hist.vd, stock:x.stock,
+              objetivo:infoHist.objetivo||0, gapBruto:infoHist.gapBruto||0, deposito:infoHist.cubiertoDeposito||0,
+              transito:infoHist.cubiertoTransito||0, oc:infoHist.cubiertoOC||0, comprar:infoHist.comprar||0,
             });
           });
           porSucursal.sort((a,b)=>(a.suc||'').localeCompare(b.suc||''));
           porSucursalReal.sort((a,b)=>(a.suc||'').localeCompare(b.suc||''));
-          const escenarioReal = algunAjuste ? {
+          porSucursalHistorico.sort((a,b)=>(a.suc||'').localeCompare(b.suc||''));
+          const escenarioReal = {
             velocidad:velocidadReal, diasObjetivo:edicionDias, ventasVd:ventasVdReal, diasStockVd:diasStockVdReal,
             objetivo:objetivoReal, stock, gapBruto:gapBrutoReal, deposito:depositoReal, transito:transitoReal, oc:ocReal, porSucursal:porSucursalReal,
             sugerido: itemsTalle.reduce((a,x)=>a+(mapaReal.get(x.sku+"|"+x.suc)?.comprar||0), 0),
             nSucursales: itemsTalle.length,
-          } : null;
-          desgloseSugerido.set(key, {modelo, empresa, color, talle:t, velocidad, diasObjetivo:edicionDias, objetivo, stock, gapBruto, deposito, transito, oc, sugerido, nSucursales:itemsTalle.length, ventasVd, diasStockVd, porSucursal, escenarioReal, motivoAjuste: motivoAjusteConsolidado});
+          };
+          const escenarioHistorico = {
+            velocidad:velocidadHist, diasObjetivo:edicionDias, ventasVd:ventasVdHist, diasStockVd:diasStockVdHist,
+            objetivo:objetivoHist, stock, gapBruto:gapBrutoHist, deposito:depositoHist, transito:transitoHist, oc:ocHist, porSucursal:porSucursalHistorico,
+            sugerido: itemsTalle.reduce((a,x)=>a+(mapaHistorico.get(x.sku+"|"+x.suc)?.comprar||0), 0),
+            nSucursales: itemsTalle.length,
+          };
+          desgloseSugerido.set(key, {modelo, empresa, color, talle:t, velocidad, diasObjetivo:edicionDias, objetivo, stock, gapBruto, deposito, transito, oc, sugerido, nSucursales:itemsTalle.length, ventasVd, diasStockVd, porSucursal, escenarioReal, escenarioHistorico});
           return {talle:t, sugerido, editado, key};
         });
         return {color, celdas};

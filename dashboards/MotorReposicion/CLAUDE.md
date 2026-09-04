@@ -51,10 +51,16 @@ Patrón estándar de estos scripts: `require('dotenv').config()` + `mssql` + `as
 Al hacer clic en "Sugerido"/un talle, se abre un popover armado por `pintarFormulaDesglose` +
 `formulaBoxesHtml` (buscar esos nombres en `tablero_motor_quiebre.html`). Piezas clave:
 
-- **Escenario conservador vs. real:** `AJUSTES_FORMULA` (lista genérica de ajustes conocidos —
-  hoy solo el piso de 7 días en días con stock) + `vdReal`/`itemsConVdReal` recalculan la fórmula
-  completa sin el ajuste. Si algún ajuste se disparó en al menos una sucursal, `d.escenarioReal`
-  no es null y se muestran las dos columnas lado a lado (conservador gris, real celeste).
+- **2 escenarios SIEMPRE visibles (2026-09-04, a pedido explícito — reemplaza el mecanismo
+  condicional anterior de `AJUSTES_FORMULA`/`vdReal`/`itemsConVdReal`):** `d.escenarioHistorico`
+  (izquierda, título fijo "📌 Evidencia histórica") = velocidad de TODO el historial disponible
+  (`ventasHistoricoSiempre`/`diasConStockHistoricoSiempre`, expuestos siempre por el backend, ver
+  `vdHistoricoSiempre`/`itemsConVdHistoricoSiempre`). `d.escenarioReal` (derecha, "📊 Real (días
+  reales)") = velocidad del período elegido (`vdDiasReales`/`itemsConVdDiasReales`) — usa
+  `diasStockVd` (con el piso de 7 días) si `usoEvidenciaHistorica` está activo para ese item, o
+  `diasStockVdReal` (sin piso) si no — mismo divisor que ya mostraba esta pantalla antes del
+  cambio, a propósito, para no alterar el número ya conocido. Ninguno de los dos toca `it.vd` (la
+  velocidad real que usa el resto del tablero para "a comprar" fuera de este popover).
 - **Formato en bloques, no una sola ecuación:** Objetivo/Stock/GAP bruto NO se dibujan como una
   resta continua (`Objetivo − Stock = GAP bruto` es matemáticamente falso cuando hay más de una
   sucursal, porque GAP bruto es la suma de `máx(0, objetivo−stock)` por sucursal). Van en bloques
@@ -237,6 +243,41 @@ ENTERA en cada tecla, sin ningún debounce** — con catálogos reales de decena
 cada letra tipeada (o borrada) recalculaba filtro+agrupado+orden+HTML desde cero, sintiéndose como
 demora de segundos por letra. Fix: debounce de 200ms en ambos buscadores (el input en sí nunca se
 retrasa, solo la actualización de la lista de resultados, y solo tras una pausa breve de tipeo).
+
+## Fix "días con stock" en evidencia histórica cuando se vende casi enseguida (2026-09-04)
+
+Reportado por un usuario real (Claudia): `KJ1736-1074/CORE BLACK-CLOUD WHITE-SILVER METAL/talle
+5/Sucursal 000028` — recibió 1 unidad el 25/11/2025 y la vendió el 26/11/2025 (2 días reales de
+stock), pero el popover mostraba "5 días con stock" en Evidencia histórica. Investigado con datos
+reales (`MotorReposicion_EvidenciaHistorica`/`_DiasConStockPorSemana`/`_StockSemanal`,
+`dis_transf_recibidas`, `Vta_detalle` directamente, no solo leyendo el código).
+
+**Causa raíz:** la Etapa 3 del precálculo nocturno (`MotorReposicion_sp_PreCalcularStockSemanal.sql`),
+al detectar una "racha nueva" (semana con stock que arranca de cero), ya tenía una corrección del
+mismo día (`RecepcionArranqueH`) que acota el INICIO del conteo a la fecha real de recepción — pero
+seguía contando hasta el CIERRE de esa semana como si el stock hubiera durado toda la semana
+(`DATEDIFF(recepción, cierre_semana) + 1` = `DATEDIFF(25/11,29/11)+1 = 5`), sin considerar que el
+artículo se vendió apenas 1 día después.
+
+**Fix:** nueva CTE `PrimeraVentaTrasRecepcionH` — si hay una venta real dentro de la misma semana,
+después de la recepción, se acota también el FIN del conteo a esa venta en vez del cierre de
+semana (mismo criterio ya usado para el inicio). Verificado: el caso puntual pasó de 5 a 2 días
+exactos; sanity check general de la tabla completa (2.022.971 filas, 0 negativos, promedio 37.2
+días) sin cambios anómalos; un caso con racha continua de varias semanas (sin este ajuste
+puntual) no se modificó.
+
+**Índice nuevo, `IX_VtaDetalle_Sucursal_Articulo_Fecha` (Sucursal/CodArticulo/COLOR/TALLE/FECHA):**
+el fix necesita, para cada "arranque" (656.771 casos en toda la base), buscar la primera venta real
+dentro de esa semana en `Vta_detalle` (8,75 millones de filas) — ninguno de los índices existentes
+sirve para esa búsqueda puntual (todos intercalan otras columnas entre las claves y FECHA). **Sin
+este índice, la corrida no llegó a terminar ni en 20 minutos** (probado y revertido el mismo día,
+antes de crear el índice). Con el índice: el JOIN aislado bajó a ~83s, y el SP completo corrió OK
+en ~22,8 minutos. A diferencia de `IX_VtaDetalle_Fecha_Cubriente` (2026-09-01, revertido — llevaba
+FECHA primero, para un patrón de "escanear un rango ancho"), este índice lleva las columnas de
+igualdad primero y FECHA al final (patrón de "muchos grupos chicos, cada uno con un rango angosto")
+— **decisión distinta a la del 1/09** porque acá el uso es para el cálculo nocturno (una escritura
+por noche en `Vta_detalle` paga el costo de mantenimiento del índice), no para una consulta en
+vivo — el usuario confirmó explícitamente agregar el índice sabiendo este trade-off.
 
 ## Reglas de trabajo (seguir siempre)
 

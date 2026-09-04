@@ -280,26 +280,6 @@ BEGIN
           ON ss.Sucursal=dt.destino AND ss.CodArticulo=dt.arprove AND ss.COLOR=dt.color AND ss.TALLE=dt.talle
          AND dt.fecha <= ss.FechaSemana AND dt.fecha > DATEADD(DAY,-7,ss.FechaSemana)
       GROUP BY dt.destino, dt.arprove, dt.color, dt.talle, ss.FechaSemana
-  ),
-  -- CORRECCION 2 (2026-09-04, a pedido explicito de Claudia, mismo caso KJ1736-1074/CORE
-  -- BLACK-CLOUD WHITE-SILVER METAL/talle 5/Sucursal 000028: recibio 1 unidad el 25/11/2025 y la
-  -- vendio el 26/11/2025, pero RecepcionArranqueH (arriba) solo acota el INICIO del conteo a la
-  -- recepcion real -- seguia contando hasta el cierre de semana completo (29/11) como si el stock
-  -- hubiera durado toda la semana, dando 5 dias en vez de los 2 dias reales (25-26). Si hay una
-  -- venta real DESPUES de la recepcion pero DENTRO de la misma semana, se acota tambien el FIN del
-  -- conteo a esa venta -- misma logica de "usar evidencia real en vez de contar a ciegas" que ya
-  -- aplica RecepcionArranqueH para el inicio. Requiere IX_VtaDetalle_Sucursal_Articulo_Fecha (ver
-  -- sql/2026-09-04_indice_vta_detalle_evidencia_historica.sql) -- sin ese indice este JOIN contra
-  -- Vta_detalle (8,75 millones de filas, 656.771 casos de arranque) no llega a terminar en 20
-  -- minutos (probado y revertido el mismo dia antes de crear el indice).
-  PrimeraVentaTrasRecepcionH AS (
-      SELECT re.Sucursal, re.CodArticulo, re.COLOR, re.TALLE, re.FechaSemana,
-             MIN(vd.FECHA) AS FechaPrimeraVentaTrasRecepcion
-      FROM RecepcionArranqueH re
-      INNER JOIN Vta_detalle vd
-          ON vd.ESTAB=re.Sucursal AND vd.ARTCEGID=re.CodArticulo AND vd.COLOR=re.COLOR AND vd.TALLE=re.TALLE
-         AND vd.FECHA >= re.FechaRecepcionSemana AND vd.FECHA <= re.FechaSemana
-      GROUP BY re.Sucursal, re.CodArticulo, re.COLOR, re.TALLE, re.FechaSemana
   )
   SELECT ca.Sucursal, ca.CodArticulo, ca.COLOR, ca.TALLE, ca.FechaSemana,
          (CASE
@@ -307,11 +287,7 @@ BEGIN
                  AND (pa.PrimeraAceptacion IS NULL OR ca.FechaAnterior >= pa.PrimeraAceptacion)
               THEN DATEDIFF(DAY, ca.FechaAnterior, ca.FechaSemana)
             WHEN ca.StockSemana > 0 AND (pa.PrimeraAceptacion IS NULL OR ca.FechaSemana >= pa.PrimeraAceptacion)
-              THEN CASE WHEN re.FechaRecepcionSemana IS NOT NULL
-                        THEN DATEDIFF(DAY, re.FechaRecepcionSemana,
-                             CASE WHEN pv.FechaPrimeraVentaTrasRecepcion IS NOT NULL AND pv.FechaPrimeraVentaTrasRecepcion < ca.FechaSemana
-                                  THEN pv.FechaPrimeraVentaTrasRecepcion ELSE ca.FechaSemana END) + 1
-                        ELSE 7 END
+              THEN CASE WHEN re.FechaRecepcionSemana IS NOT NULL THEN DATEDIFF(DAY, re.FechaRecepcionSemana, ca.FechaSemana) + 1 ELSE 7 END
             ELSE 0
           END) + ISNULL(c.DiasVentaEnSemanaSinStock,0) AS DiasConStockContribucion,
          CASE
@@ -324,8 +300,7 @@ BEGIN
   FROM ConAnteriorH ca
   LEFT JOIN PrimeraAceptacionH pa ON pa.Sucursal=ca.Sucursal AND pa.CodArticulo=ca.CodArticulo AND pa.COLOR=ca.COLOR AND pa.TALLE=ca.TALLE
   LEFT JOIN CorreccionH c ON c.Sucursal=ca.Sucursal AND c.CodArticulo=ca.CodArticulo AND c.COLOR=ca.COLOR AND c.TALLE=ca.TALLE AND c.FechaSemana=ca.FechaSemana
-  LEFT JOIN RecepcionArranqueH re ON re.Sucursal=ca.Sucursal AND re.CodArticulo=ca.CodArticulo AND re.COLOR=ca.COLOR AND re.TALLE=ca.TALLE AND re.FechaSemana=ca.FechaSemana
-  LEFT JOIN PrimeraVentaTrasRecepcionH pv ON pv.Sucursal=ca.Sucursal AND pv.CodArticulo=ca.CodArticulo AND pv.COLOR=ca.COLOR AND pv.TALLE=ca.TALLE AND pv.FechaSemana=ca.FechaSemana;
+  LEFT JOIN RecepcionArranqueH re ON re.Sucursal=ca.Sucursal AND re.CodArticulo=ca.CodArticulo AND re.COLOR=ca.COLOR AND re.TALLE=ca.TALLE AND re.FechaSemana=ca.FechaSemana;
 
   BEGIN TRANSACTION;
     TRUNCATE TABLE dbo.MotorReposicion_DiasConStockPorSemana;

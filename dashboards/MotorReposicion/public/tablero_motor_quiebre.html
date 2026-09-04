@@ -4479,43 +4479,39 @@ function calcularNecesidadPorBarra(diasObjetivo, itemsBase){
 // reales, ver itemsConVdDiasReales, sin cambios en su cálculo) -- y se toma el MENOR entre los
 // dos. Reemplaza calcularNecesidadPorBarra(diasObjetivo, items) en TODO lugar que calcule el
 // número real de "a comprar" (celdas, totales, favoritos, Edición de recompra) -- no solo el
-// popover. Devuelve también mapaHistorico/mapaReal (el popover los sigue necesitando para el
-// desglose por escenario, ver pintarFormulaDesglose).
-// CORREGIDO (2026-09-05, a pedido explicito, caso real KJ1736-1074/talle 5/Sucursal
-// consolidado PUEBLO: Edición de recompra mostraba "Sugerido"=32, que no coincidía ni con
-// Evidencia histórica=53 ni con Real=44 -- la primera version comparaba el minimo SUCURSAL POR
-// SUCURSAL, pero el deposito/OC se reparte en conjunto entre TODAS las sucursales del mismo
-// grupo articulo+color+talle+empresa (ver el agrupamiento "sku|empresa" dentro de
-// calcularNecesidadPorBarra) -- mezclar "gana historico en esta sucursal, gana real en aquella"
-// parte el pool de deposito entre 2 corridas independientes y da un total que no es ninguno de
-// los dos escenarios reales. Ahora se comparan los TOTALES de cada escenario para el grupo
-// COMPLETO (misma agrupacion que ya usa el reparto de deposito) y se aplican TODOS los numeros
-// de UN SOLO escenario -- el de menor total -- a cada sucursal del grupo, sin mezclar.
+// popover.
+//
+// CLAVE DEL DISEÑO (2026-09-05, tras 2 intentos previos fallidos -- ver ambos casos reales abajo):
+// la velocidad menor de las 2 (Evidencia histórica vs Real) se decide FILA POR FILA (sucursal por
+// sucursal), ANTES de calcular objetivo/gapBruto -- y el reparto de depósito/OC se corre UNA SOLA
+// VEZ sobre esa velocidad ya elegida (ver itemsConVdOficial). Es la ÚNICA forma que da, a la vez:
+// (a) cada fila con su propia velocidad menor (una velocidad menor siempre da un objetivo/gapBruto
+// menor o igual, nunca mayor -- son funciones monótonas, así que decidir por velocidad equivale a
+// decidir por gapBruto), y (b) un reparto de depósito consistente para todo el grupo compartido
+// (artículo+color+talle+empresa).
+// Intento 1 (descartado): comparar mapaHistorico.comprar vs mapaReal.comprar SUCURSAL POR SUCURSAL
+// -- cada uno ya venía de una corrida de calcularNecesidadPorBarra COMPLETA e INDEPENDIENTE (todo
+// el depósito real disponible para ESE escenario solo). Mezclar filas de 2 corridas independientes
+// reparte el mismo depósito real dos veces -- caso real KJ1736-1074/talle 5/PUEBLO consolidado de
+// 15 sucursales: daba "Sugerido"=32, que no coincidía ni con el total de Evidencia histórica (53)
+// ni con el de Real (44).
+// Intento 2 (descartado): comparar los TOTALES de cada escenario para el grupo completo y aplicar
+// TODOS los números de UN SOLO escenario ganador a cada sucursal, sin mezclar -- daba un total
+// coherente (44 en ese mismo caso), pero para el grupo completo, no fila por fila -- caso real
+// DINK-6128/Calzados 35 (grupo de 13 sucursales): esa fila puntual tenía Evidencia histórica=2 y
+// Real=5, pero como el total del GRUPO completo favorecía a Real, la fila terminaba mostrando 5 en
+// vez de su propio menor (2).
+function itemsConVdOficial(items){
+  return items.map(x=>{
+    const h = vdHistoricoSiempre(x), r = vdDiasReales(x);
+    return {...x, vd: Math.min(h.vd, r.vd)};
+  });
+}
 function calcularNecesidadOficial(diasObjetivo, itemsBase){
   const items = itemsBase || base();
+  const mapa = calcularNecesidadPorBarra(diasObjetivo, itemsConVdOficial(items));
   const mapaHistorico = calcularNecesidadPorBarra(diasObjetivo, itemsConVdHistoricoSiempre(items));
   const mapaReal = calcularNecesidadPorBarra(diasObjetivo, itemsConVdDiasReales(items));
-  const totalPorGrupo = {}; // "sku|empresa" -> {hist, real} (mismo agrupamiento que el reparto de deposito)
-  items.forEach(x=>{
-    const grupoKey = x.sku+"|"+x.empresa;
-    const skuSuc = x.sku+"|"+x.suc;
-    if(!totalPorGrupo[grupoKey]) totalPorGrupo[grupoKey] = {hist:0, real:0, vistos:new Set()};
-    const g = totalPorGrupo[grupoKey];
-    if(g.vistos.has(skuSuc)) return; // por si itemsBase repite la misma barra mas de una vez
-    g.vistos.add(skuSuc);
-    g.hist += mapaHistorico.get(skuSuc)?.comprar || 0;
-    g.real += mapaReal.get(skuSuc)?.comprar || 0;
-  });
-  const mapa = new Map();
-  items.forEach(x=>{
-    const grupoKey = x.sku+"|"+x.empresa;
-    const skuSuc = x.sku+"|"+x.suc;
-    if(mapa.has(skuSuc)) return;
-    const g = totalPorGrupo[grupoKey];
-    const usarHistorico = g.hist <= g.real;
-    const info = (usarHistorico ? mapaHistorico : mapaReal).get(skuSuc);
-    if(info) mapa.set(skuSuc, info);
-  });
   return { mapa, mapaHistorico, mapaReal };
 }
 function calcularReposicion(diasObjetivo){

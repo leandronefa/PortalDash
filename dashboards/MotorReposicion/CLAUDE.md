@@ -55,15 +55,25 @@ Edición de recompra, ficha de artículo) — no solo en el popover. Calcula los
 histórica siempre + Real/días reales) y toma el MENOR — más conservador que confiar en un solo
 escenario elegido por el backend vía `usoEvidenciaHistorica`.
 
-**La comparación es por GRUPO completo (artículo+color+talle+empresa, mismo agrupamiento que ya usa
-el reparto de depósito/OC dentro de `calcularNecesidadPorBarra`), NUNCA sucursal por sucursal**
-(corregido 2026-09-05, caso real KJ1736-1074/talle 5/PUEBLO consolidado de 15 sucursales: la
-primera versión comparaba sucursal por sucursal y daba "Sugerido"=32, que no coincidía ni con
-Evidencia histórica=53 ni con Real=44 — mezclar "gana histórico en esta sucursal, gana real en
-aquella" parte el pool de depósito compartido entre 2 corridas independientes y da un total que no
-es ninguno de los dos escenarios reales). Se suman los totales de cada escenario para el grupo
-completo, se compara esa suma, y se aplican TODOS los números de UN SOLO escenario — el de menor
-total — a cada sucursal del grupo, sin mezclar.
+**Diseño final (2026-09-05, tras 2 intentos previos fallidos — ver `itemsConVdOficial` en el
+código): la velocidad menor se decide FILA POR FILA (sucursal por sucursal), ANTES de calcular
+objetivo/gapBruto, y el reparto de depósito/OC se corre UNA SOLA VEZ sobre esa velocidad ya
+elegida** (no se corren 2 repartos completos por separado y se comparan/mezclan los resultados
+finales después). Una velocidad menor siempre da un objetivo/gapBruto menor o igual (son funciones
+monótonas), así que decidir por velocidad equivale a decidir por gapBruto — y correr el reparto una
+sola vez evita partir el mismo depósito real entre 2 corridas independientes.
+
+- **Intento 1 (descartado):** comparar `mapaHistorico.comprar` vs `mapaReal.comprar` sucursal por
+  sucursal — cada uno ya venía de una corrida COMPLETA e independiente de
+  `calcularNecesidadPorBarra` (todo el depósito real disponible para ESE escenario solo). Caso real
+  KJ1736-1074/talle 5/PUEBLO (consolidado de 15 sucursales): daba "Sugerido"=32, que no coincidía
+  ni con el total de Evidencia histórica (53) ni con el de Real (44).
+- **Intento 2 (descartado):** comparar los TOTALES de cada escenario para el grupo completo
+  (artículo+color+talle+empresa, mismo agrupamiento que el reparto de depósito) y aplicar TODOS los
+  números de UN SOLO escenario ganador a cada sucursal, sin mezclar — daba un total coherente (44 en
+  ese mismo caso), pero por GRUPO, no fila por fila. Caso real DINK-6128/Calzados 35 (grupo de 13
+  sucursales): esa fila puntual tenía Evidencia histórica=2 y Real=5, pero como el total del grupo
+  completo favorecía a Real, la fila terminaba mostrando 5 en vez de su propio menor (2).
 
 Devuelve `{mapa, mapaHistorico, mapaReal}` — `mapa` es el oficial (el que hay que usar en cualquier
 lugar nuevo que necesite "cuánto comprar"), `mapaHistorico`/`mapaReal` los sigue necesitando el

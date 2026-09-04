@@ -154,7 +154,27 @@ visible): la fila/bloque TOTAL de la cajita "sugerido" sumaba la columna "OC pen
 última es "OC pendiente" (agregada después, como dato aparte, sin correr el resto del orden). Fix:
 `CAMPO_DETALLE.sugerido` suma un `totalCol:'comprar'` explícito — si está presente, `abrirDetalleCajita`
 totaliza esa columna en vez de la última; los demás campos (que no lo tienen) siguen igual que
-antes. **Ojo si se toca este flujo de nuevo:** al abrir el detalle
+antes.
+
+**3 ajustes más a la ventana `grande` (2026-09-04, mismo día, a pedido explícito):**
+- **Fila TOTAL con TODAS las columnas sumadas** ("colocar abajo el total de todas las columnas") —
+  con `grande=true`, la fila TOTAL al pie de la tabla ahora suma cada columna por separado (antes
+  solo la de `totalIdx`, las demás en "—"). Seguro solo para "sugerido" (el único campo que usa
+  `grande`): sus 5 columnas (GAP bruto/Depósito/Tránsito/A comprar/OC pendiente) son cantidades
+  genuinamente sumables, a diferencia de columnas de otras cajitas como "Velocidad (u/día)" o "Días
+  con stock" (tasas — mismo motivo por el que la nota de velocidad nunca las sumó). Las cajitas
+  chicas (`grande` false) NO se tocaron, siguen mostrando "—" fuera de `totalIdx`.
+- **Columna "OC pendiente (informativo)" más angosta** ("hacer menos ancha") — `CAMPO_DETALLE.sugerido`
+  suma un 4º elemento por columna, `anchoPx` (solo la columna `oc` lo trae, en 90): si está presente,
+  el `<th>` de esa columna fija `width`/`max-width:90px` y permite wrap (`white-space:normal`) en vez
+  del `nowrap` que usan las demás — su etiqueta larga ("OC pendiente (informativo)") pasa a 2 líneas
+  en vez de forzar una columna ancha de una sola línea. Las demás columnas de cualquier cajita no
+  tienen este 4º elemento, siguen `nowrap` sin cambios.
+- **Color alternado por fila (zebra)** ("color linea por cada sucursal") — con `grande=true`, las
+  filas de sucursal alternan fondo blanco/gris muy claro (`#f5f8f7`) para separarlas visualmente;
+  las cajitas chicas siguen con fondo blanco liso (solo borde superior, como antes).
+
+**Ojo si se toca este flujo de nuevo:** al abrir el detalle
 directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar
 con click afuera / Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de
 cerrar la ventanita es su propia "✕", porque esos listeners globales antes solo se registraban al

@@ -4817,7 +4817,10 @@ const CAMPO_DETALLE = {
   // despues como dato informativo aparte, sin correr el orden de las demas. Sin este campo, el
   // total mostrado era el de OC pendiente (casi siempre 0), no el de A comprar. Los demas campos
   // de este objeto no lo necesitan: su ultima columna YA es la que corresponde totalizar.
-  sugerido:  { titulo:'Necesidad de compra — por sucursal', cols:[['GAP bruto','gapBruto'],['Depósito','deposito'],['Tránsito','transito'],['A comprar','comprar'],['OC pendiente (informativo)','oc']], totalCol:'comprar' },
+  // anchoPx en la columna "oc" (2026-09-04, a pedido explicito -- "hacer menos ancha" esa columna):
+  // es la unica etiqueta larga de esta tabla ("OC pendiente (informativo)") -- con un ancho fijo
+  // angosto + wrap de 2 lineas en el encabezado, ocupa mucho menos que dejarla en una sola linea.
+  sugerido:  { titulo:'Necesidad de compra — por sucursal', cols:[['GAP bruto','gapBruto'],['Depósito','deposito'],['Tránsito','transito'],['A comprar','comprar'],['OC pendiente (informativo)','oc',undefined,90]], totalCol:'comprar' },
 };
 function fmtCelda(v, decimales){
   if(v===null || v===undefined) return 'sin evidencia';
@@ -4852,21 +4855,32 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // por no haber presion de espacio) del ancho REAL ya renderizado a width:100% dentro del
   // popover (donde esa celda SI podia envolverse si faltaban unos pocos pixeles). Sin ninguna
   // celda que pueda ceder envolviendose, las dos mediciones coinciden siempre.
-  const filas = d.porSucursal.map(f => `<tr style="border-top:1px solid #eef2f4"><td style="padding:5px 6px;white-space:nowrap">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:5px 6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
-  // Columna a totalizar -- por defecto la ULTIMA de cfg.cols (la que da el numero de la cajita
-  // clickeada), salvo que cfg.totalCol diga otra cosa (ver el comentario en CAMPO_DETALLE.sugerido
-  // -- ahi la ultima columna es "OC pendiente", informativa, no "A comprar"). Sumar esa columna
-  // reproduce EXACTO el numero de la cajita, asi que sirve para verificar. Las demas columnas
-  // quedan en "—" a proposito en la fila TOTAL -- sumarlas tambien invitaria al mismo error que ya
-  // se corrigio en la nota de velocidad (ej. sumar "dias con stock" de todas las sucursales no es
-  // un total que se pueda usar para nada).
+  // Color de fondo alternado por fila (zebra), solo en `grande` (2026-09-04, a pedido explicito --
+  // "color linea por cada sucursal") -- en las cajitas chicas no se toca, siguen con fondo blanco y
+  // solo el borde superior de siempre.
+  const filas = d.porSucursal.map((f,i) => `<tr style="border-top:1px solid #eef2f4${grande?`;background:${i%2?'#f5f8f7':'#ffffff'}`:''}"><td style="padding:5px 6px;white-space:nowrap">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:5px 6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
+  // Columna "oficial" a totalizar en el bloque grande de arriba -- por defecto la ULTIMA de
+  // cfg.cols (la que da el numero de la cajita clickeada), salvo que cfg.totalCol diga otra cosa
+  // (ver el comentario en CAMPO_DETALLE.sugerido -- ahi la ultima columna es "OC pendiente",
+  // informativa, no "A comprar"). Sumar esa columna reproduce EXACTO el numero de la cajita.
   const totalIdx = cfg.totalCol ? cfg.cols.findIndex(c=>c[1]===cfg.totalCol) : cfg.cols.length - 1;
   const totalValor = d.porSucursal.reduce((a,f)=>a+(f[cfg.cols[totalIdx][1]]||0), 0);
-  const filaTotal = `<tr style="border-top:2px solid #d7dfe3;font-weight:700"><td style="padding:6px;white-space:nowrap">TOTAL</td>${cfg.cols.map(([,,dec],i)=>
-    i===totalIdx
+  // Fila TOTAL al pie de la tabla: en `grande` (2026-09-04, a pedido explicito -- "colocar abajo
+  // el total de todas las columnas") se suman TODAS las columnas, no solo la de totalIdx -- en
+  // "sugerido" (unico campo que usa `grande`) las 5 son cantidades genuinamente sumables (GAP
+  // bruto/Depósito/Tránsito/A comprar/OC pendiente), a diferencia de columnas de otras cajitas
+  // como "Velocidad (u/día)" o "Días con stock" (tasas, no sumables -- mismo motivo por el que la
+  // nota de velocidad nunca sumó esas). Las cajitas chicas (`grande` false) siguen mostrando "—"
+  // en las columnas que no son la totalizada, sin cambios.
+  const filaTotal = `<tr style="border-top:2px solid #d7dfe3;font-weight:700${grande?';background:#eef3f1':''}"><td style="padding:6px;white-space:nowrap">TOTAL</td>${cfg.cols.map(([,c,dec],i)=>{
+    if(grande){
+      const totalCol = d.porSucursal.reduce((a,f)=>a+(f[c]||0), 0);
+      return `<td style="text-align:right;padding:6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalCol,dec)}</td>`;
+    }
+    return i===totalIdx
       ? `<td style="text-align:right;padding:6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalValor,dec)}</td>`
-      : `<td style="text-align:right;padding:6px;color:#c2ccd1;white-space:nowrap">—</td>`
-  ).join('')}</tr>`;
+      : `<td style="text-align:right;padding:6px;color:#c2ccd1;white-space:nowrap">—</td>`;
+  }).join('')}</tr>`;
   // Total bien visible arriba (solo `grande`) -- fondo verde, numero grande, para que quede claro
   // de un vistazo sin tener que bajar hasta la fila TOTAL de la tabla. Usa la MISMA columna/valor
   // que esa fila (totalValor), nunca un calculo aparte.
@@ -4885,7 +4899,10 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
     ${totalGrandeHtml}
     <div style="max-height:${grande?'62vh':'340px'};overflow:auto;margin-top:10px">
       <table style="width:100%;border-collapse:collapse;font-size:${fuenteTabla}">
-        <thead><tr style="text-align:right"><th style="text-align:left;padding:4px 6px;white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:4px 6px;white-space:nowrap">${lbl}</th>`).join('')}</tr></thead>
+        <thead><tr style="text-align:right"><th style="text-align:left;padding:4px 6px;white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl,,,anchoPx])=>anchoPx
+          ? `<th style="padding:4px 6px;width:${anchoPx}px;max-width:${anchoPx}px;white-space:normal;line-height:1.25">${lbl}</th>`
+          : `<th style="padding:4px 6px;white-space:nowrap">${lbl}</th>`
+        ).join('')}</tr></thead>
         <tbody>${filas}${filaTotal}</tbody>
       </table>
     </div>`;

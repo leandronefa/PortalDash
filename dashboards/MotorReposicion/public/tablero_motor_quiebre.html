@@ -5404,8 +5404,31 @@ function articuloEdicionDetalleHtml(art){
 // en el resumen general (fuera de la ventana) -- para eso alcanza con volver a pintar la lista
 // compacta de Edición, que es liviana (ya no dibuja la grilla completa de cada artículo).
 function bindEdicionDetalleEvents(art, root){
+  // Click en "Sugerido" (2026-09-05, a pedido explicito): en Edicion de recompra ya NO abre el
+  // popover completo de "Calculo de la necesidad de compra" (los 2 escenarios + propuesta oficial)
+  // -- va directo al detalle por sucursal (mismo mecanismo que ya usa la Propuesta oficial
+  // clickeable, ver abrirDetalleCajita/CAMPO_DETALLE.sugerido) -- d.porSucursal ya trae el
+  // resultado oficial (el menor entre los 2 escenarios, ya repartido), no hace falta ningun
+  // calculo nuevo. La ventana con los 2 escenarios completos sigue igual en "A comprar" (ver
+  // repoDetalleHtml/abrirDesgloseSugerido, sin cambios).
   root.querySelectorAll('.tpv-sugerido-click').forEach(el=>{
-    el.onclick = (e) => { e.stopPropagation(); abrirDesgloseSugerido(el.dataset.key, el); };
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const d = desgloseSugerido.get(el.dataset.key);
+      if(!d) return;
+      abrirDetalleCajita(d, 'sugerido', el);
+      // Cerrar con click afuera / Escape (2026-09-05): mismo mecanismo que ya usa el popover
+      // completo (ver abrirDesgloseSugerido) -- sin esto, la unica forma de cerrar seria su
+      // propia "X", ya que estos listeners globales solo se registraban ahi. cerrarDesglosePopover
+      // ya sabe cerrar la ventanita de detalle sola (oculta el popover principal, que aca nunca se
+      // muestra -- no-op inofensivo -- y cierra #desglose-detalle-popover).
+      document.removeEventListener('mousedown', onClickAfueraDesglose, true);
+      document.removeEventListener('keydown', onEscapeDesglose, true);
+      setTimeout(()=>{
+        document.addEventListener('mousedown', onClickAfueraDesglose, true);
+        document.addEventListener('keydown', onEscapeDesglose, true);
+      }, 0);
+    };
   });
   root.querySelectorAll('.edicion-input').forEach(inp=>{
     inp.oninput = ()=>{

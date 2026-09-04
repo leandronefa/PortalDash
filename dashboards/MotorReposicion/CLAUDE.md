@@ -106,6 +106,20 @@ clickeable (`abrirDetalleCajita(d, 'sugerido', ...)`, mismo mecanismo que ya usa
 cada escenario, reusando `d.porSucursal` — que ya trae el resultado oficial, no el viejo `it.vd`,
 así que no hace falta ningún cálculo nuevo) para ver cómo se compone el total por sucursal.
 
+**En Edición de recompra, clickear "Sugerido" ya NO abre este popover de 2 escenarios (2026-09-05,
+a pedido explícito: "es muy confuso que esos valores no coincidan con el de la edición") — va
+directo al detalle por sucursal** (`bindEdicionDetalleEvents`, llama a `abrirDetalleCajita(d,
+'sugerido', el)` directo, sin pasar por `pintarFormulaDesglose`/`abrirDesgloseSugerido`) — mismo
+mecanismo que ya usa la Propuesta oficial clickeable de arriba, sin cálculo nuevo. **"A comprar"
+(`repoDetalleHtml`) sigue mostrando el popover completo sin cambios** — solo se simplificó Edición
+de recompra, donde la comparación entre escenarios totales ya no aporta (el total ahí es siempre
+consolidado de varias sucursales, así que puede diferir de ambos totales de escenario — ver la
+sección de arriba). **Ojo si se toca este flujo de nuevo:** al abrir el detalle directo (sin pasar
+por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar con click afuera /
+Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de cerrar la ventanita
+es su propia "✕", porque esos listeners globales antes solo se registraban al abrir el popover
+completo.
+
 **Nota "piso de 7 días — real: 1 día" cuando el período no detectó ningún día pero hubo venta real
 (2026-09-05, a pedido explícito, caso real KJ1736-1074/talle 5/Sucursal 000028) — SOLO la nota, no
 el cálculo:** en `repoDetalleHtml`, `diasStockVdCrudo` pasa a ser `1` (en vez de `null`) cuando

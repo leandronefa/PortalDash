@@ -4960,9 +4960,14 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   tabla.style.width = 'auto';
   const anchoNatural = tabla.scrollWidth;
   tabla.style.width = '100%';
+  // Ancho fijo mas angosto para `grande` (2026-09-04, a pedido explicito -- "mejoro, hacerla menos
+  // ancha... para que se vea sin desplazarse"): el piso de 1200px quedaba mas ancho de lo
+  // necesario. Baja a 960px -- ya no depende de `anchoNatural` (esa medicion dejo de ser relevante
+  // desde que las columnas usan `colgroup` + `table-layout:fixed`, ver mas arriba: con columnas a
+  // porcentaje fijo, CUALQUIER ancho de ventana se reparte proporcional y sin scroll horizontal,
+  // el contenido nunca desborda). Sigue acotado por la pantalla (`window.innerWidth - 40`).
   if(grande){
-    const anchoDisponible = window.innerWidth - 40;
-    popDet.style.width = Math.min(anchoDisponible, Math.max(1200, anchoNatural + 110)) + 'px';
+    popDet.style.width = Math.min(window.innerWidth - 40, 960) + 'px';
   } else {
     popDet.style.width = Math.max(480, Math.min(980, anchoNatural + 110)) + 'px';
   }

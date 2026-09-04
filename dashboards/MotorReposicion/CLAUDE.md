@@ -218,6 +218,13 @@ de separacion... no se ven"):**
   mismo patrón ya usado en otras tablas de la app (`.doc-tbl th`), no un diseño nuevo inventado.
   Las cajitas chicas no se tocaron — su encabezado sigue con el estilo global tal cual estaba.
 
+**Ancho final más angosto (mismo día, "mejoro, hacerla menos ancha... para que se vea sin
+desplazarse"):** el piso de 1200px pasa a un ancho fijo de 960px (acotado igual por
+`window.innerWidth - 40` en pantallas chicas) — ya no depende de la medición `anchoNatural`, que
+dejó de ser relevante desde que las columnas usan `colgroup` + `table-layout:fixed` (ver arriba):
+con columnas a porcentaje fijo, cualquier ancho de ventana se reparte proporcional y sin scroll
+horizontal — el contenido nunca desborda, sin importar qué tan angosta quede la ventana.
+
 **Ojo si se toca este flujo de nuevo:** al abrir el detalle
 directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar
 con click afuera / Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de

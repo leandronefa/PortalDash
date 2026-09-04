@@ -165,14 +165,42 @@ antes.
   con stock" (tasas — mismo motivo por el que la nota de velocidad nunca las sumó). Las cajitas
   chicas (`grande` false) NO se tocaron, siguen mostrando "—" fuera de `totalIdx`.
 - **Columna "OC pendiente (informativo)" más angosta** ("hacer menos ancha") — `CAMPO_DETALLE.sugerido`
-  suma un 4º elemento por columna, `anchoPx` (solo la columna `oc` lo trae, en 90): si está presente,
-  el `<th>` de esa columna fija `width`/`max-width:90px` y permite wrap (`white-space:normal`) en vez
-  del `nowrap` que usan las demás — su etiqueta larga ("OC pendiente (informativo)") pasa a 2 líneas
-  en vez de forzar una columna ancha de una sola línea. Las demás columnas de cualquier cajita no
-  tienen este 4º elemento, siguen `nowrap` sin cambios.
+  suma un 4º elemento por columna, `anchoPx` (solo la columna `oc` lo trae, en 90): marca esa
+  columna como "angosta" para el reparto de ancho (ver el punto siguiente) y hace que su `<th>`
+  permita wrap (`white-space:normal`) en vez del `nowrap` que usan las demás — su etiqueta larga
+  ("OC pendiente (informativo)") pasa a 2 líneas en vez de forzar una columna ancha de una sola
+  línea.
 - **Color alternado por fila (zebra)** ("color linea por cada sucursal") — con `grande=true`, las
-  filas de sucursal alternan fondo blanco/gris muy claro (`#f5f8f7`) para separarlas visualmente;
-  las cajitas chicas siguen con fondo blanco liso (solo borde superior, como antes).
+  filas de sucursal alternan fondo blanco/verde-grisáceo muy suave; las cajitas chicas siguen con
+  fondo blanco liso (solo borde superior, como antes).
+
+**Rediseño de la tabla de la ventana `grande` (2026-09-04, mismo día, a pedido explícito — "esta
+fea esta ventana... columna sucursal [muy ancha]... lineas de separacion... no se ven... dale un
+color de fondo discreto... mejora el diseño"):**
+- **Bug de fondo: la columna Sucursal se quedaba con TODO el ancho sobrante.** Con
+  `table-layout:auto` (el que usan todas las cajitas), el ancho extra que dejó la ventana mucho
+  más ancha (ver el punto de arriba, piso de 1200px) no se repartía entre columnas — al ser
+  Sucursal la única sin ancho propio, se lo quedaba entero ella sola. Fix: **solo con
+  `grande=true`**, la tabla pasa a `table-layout:fixed` + un `<colgroup>` con porcentajes fijos por
+  columna — Sucursal y cada columna de datos "normal" (sin su propio `anchoPx`, ver el punto
+  anterior) comparten EXACTAMENTE el mismo porcentaje (calculado dinámicamente:
+  `(100 - 10×cantidad_de_columnas_angostas) / cantidad_de_columnas_normales`, no un número fijo a
+  mano), y las columnas marcadas `anchoPx` (la de OC) se quedan con un 10% fijo, más angostas a
+  propósito. Las cajitas chicas (`grande` false) siguen con `table-layout:auto` sin `colgroup`, tal
+  cual estaban.
+- **Separadores entre filas más visibles**: con `grande=true`, el borde entre filas de sucursal
+  pasa de `#eef2f4` (casi invisible, más aún sobre el fondo zebra) a `#dde6e6`. Las cajitas chicas
+  no se tocaron.
+- **Encabezado con fondo propio y pegajoso (`sticky`)**: con `grande=true`, el `<thead>` queda fijo
+  arriba al scrollear la tabla (fondo `#eef3f1`, el mismo tono verde-grisáceo del resto del diseño,
+  con una línea inferior marcada vía `box-shadow` en vez de `border` para que no se corte al hacer
+  sticky). Las cajitas chicas no tienen `<thead>` sticky.
+- **Fila TOTAL con acento verde**: borde superior y fondo pasan al mismo verde de marca (`#1e7d4f`
+  borde, `#e3f2e9` fondo) en vez del gris genérico — solo en `grande`.
+- **Contenedor con borde redondeado**: el `<div>` que scrollea la tabla suma `border:1px solid
+  #dfe7e8;border-radius:10px` en `grande`, en vez de quedar sin borde propio (antes sólo tenía el
+  del popover general). Padding de celda también sube un poco (`7px 8px` en vez de `5px 6px`) para
+  que no se sienta apretado en una ventana más grande.
 
 **Ojo si se toca este flujo de nuevo:** al abrir el detalle
 directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar

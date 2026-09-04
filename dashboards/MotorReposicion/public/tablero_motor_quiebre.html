@@ -4854,11 +4854,30 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // eso desalineaba el ancho medido (tabla.scrollWidth con width:auto, donde nada se envuelve
   // por no haber presion de espacio) del ancho REAL ya renderizado a width:100% dentro del
   // popover (donde esa celda SI podia envolverse si faltaban unos pocos pixeles). Sin ninguna
-  // celda que pueda ceder envolviendose, las dos mediciones coinciden siempre.
-  // Color de fondo alternado por fila (zebra), solo en `grande` (2026-09-04, a pedido explicito --
-  // "color linea por cada sucursal") -- en las cajitas chicas no se toca, siguen con fondo blanco y
-  // solo el borde superior de siempre.
-  const filas = d.porSucursal.map((f,i) => `<tr style="border-top:1px solid #eef2f4${grande?`;background:${i%2?'#f5f8f7':'#ffffff'}`:''}"><td style="padding:5px 6px;white-space:nowrap">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:5px 6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
+  // celda que pueda ceder envolviendose, las dos mediciones coinciden siempre. Esto sigue igual
+  // para las cajitas chicas (`grande` false) -- ver mas abajo el reparto por `colgroup` que
+  // reemplaza este mecanismo SOLO para `grande`.
+  const padCelda = grande ? '7px 8px' : '5px 6px';
+  // Reparto de ancho por columna, solo en `grande` (2026-09-04, a pedido explicito -- "quedo muy
+  // ancha la columna sucursal ... hacela con tamaño dinamico si es necesario para dejar todas las
+  // columnas con mismo ancho"): con table-layout:auto (el que siguen usando las cajitas chicas) el
+  // ancho sobrante del popover le caia TODO a Sucursal, la unica columna sin ancho propio -- en vez
+  // de repartirse. Fix: `colgroup` + `table-layout:fixed` con porcentajes -- Sucursal y cada
+  // columna de datos "normal" (sin su propio `anchoPx`) comparten el MISMO porcentaje, calculado
+  // dinamicamente segun cuantas columnas haya (no un numero fijo a mano); las columnas marcadas con
+  // `anchoPx` (ej. "OC pendiente", ver CAMPO_DETALLE.sugerido) se quedan mas angostas a proposito,
+  // como ya se habia pedido antes -- este reparto no las toca.
+  const pctAngosta = 10;
+  const numAngostas = cfg.cols.filter(c=>c[3]).length;
+  const numIguales = 1 + cfg.cols.length - numAngostas; // Sucursal + columnas "normales"
+  const pctIgual = (100 - pctAngosta * numAngostas) / numIguales;
+  const colgroupHtml = grande ? `<colgroup><col style="width:${pctIgual}%">${cfg.cols.map(c=>`<col style="width:${c[3]?pctAngosta:pctIgual}%">`).join('')}</colgroup>` : '';
+  // Color de fondo alternado por fila (zebra) + separador entre filas mas visible, solo en
+  // `grande` (2026-09-04, a pedido explicito -- "color linea por cada sucursal" / "las lineas de
+  // separacion... no se ven"; el borde `#eef2f4` original era casi invisible, mas aun sobre la
+  // fila zebra) -- en las cajitas chicas no se toca, siguen con fondo blanco y ese mismo borde
+  // suave de siempre.
+  const filas = d.porSucursal.map((f,i) => `<tr style="border-bottom:1px solid ${grande?'#dde6e6':'#eef2f4'}${grande?`;background:${i%2?'#f3f8f7':'#ffffff'}`:''}"><td style="padding:${padCelda};white-space:${grande?'normal':'nowrap'}">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
   // Columna "oficial" a totalizar en el bloque grande de arriba -- por defecto la ULTIMA de
   // cfg.cols (la que da el numero de la cajita clickeada), salvo que cfg.totalCol diga otra cosa
   // (ver el comentario en CAMPO_DETALLE.sugerido -- ahi la ultima columna es "OC pendiente",
@@ -4872,14 +4891,14 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // como "Velocidad (u/día)" o "Días con stock" (tasas, no sumables -- mismo motivo por el que la
   // nota de velocidad nunca sumó esas). Las cajitas chicas (`grande` false) siguen mostrando "—"
   // en las columnas que no son la totalizada, sin cambios.
-  const filaTotal = `<tr style="border-top:2px solid #d7dfe3;font-weight:700${grande?';background:#eef3f1':''}"><td style="padding:6px;white-space:nowrap">TOTAL</td>${cfg.cols.map(([,c,dec],i)=>{
+  const filaTotal = `<tr style="border-top:2px solid ${grande?'#1e7d4f':'#d7dfe3'};font-weight:700${grande?';background:#e3f2e9':''}"><td style="padding:${padCelda};white-space:nowrap">TOTAL</td>${cfg.cols.map(([,c,dec],i)=>{
     if(grande){
       const totalCol = d.porSucursal.reduce((a,f)=>a+(f[c]||0), 0);
-      return `<td style="text-align:right;padding:6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalCol,dec)}</td>`;
+      return `<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalCol,dec)}</td>`;
     }
     return i===totalIdx
-      ? `<td style="text-align:right;padding:6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalValor,dec)}</td>`
-      : `<td style="text-align:right;padding:6px;color:#c2ccd1;white-space:nowrap">—</td>`;
+      ? `<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalValor,dec)}</td>`
+      : `<td style="text-align:right;padding:${padCelda};color:#c2ccd1;white-space:nowrap">—</td>`;
   }).join('')}</tr>`;
   // Total bien visible arriba (solo `grande`) -- fondo verde, numero grande, para que quede claro
   // de un vistazo sin tener que bajar hasta la fila TOTAL de la tabla. Usa la MISMA columna/valor
@@ -4897,12 +4916,16 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
       <button class="desglose-popover-close" id="desglose-detalle-popover-x" title="Cerrar">✕</button>
     </div>
     ${totalGrandeHtml}
-    <div style="max-height:${grande?'62vh':'340px'};overflow:auto;margin-top:10px">
-      <table style="width:100%;border-collapse:collapse;font-size:${fuenteTabla}">
-        <thead><tr style="text-align:right"><th style="text-align:left;padding:4px 6px;white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl,,,anchoPx])=>anchoPx
-          ? `<th style="padding:4px 6px;width:${anchoPx}px;max-width:${anchoPx}px;white-space:normal;line-height:1.25">${lbl}</th>`
-          : `<th style="padding:4px 6px;white-space:nowrap">${lbl}</th>`
-        ).join('')}</tr></thead>
+    <div style="max-height:${grande?'62vh':'340px'};overflow:auto;margin-top:10px${grande?';border:1px solid #dfe7e8;border-radius:10px':''}">
+      <table style="width:100%;border-collapse:collapse;font-size:${fuenteTabla}${grande?';table-layout:fixed':''}">
+        ${colgroupHtml}
+        <thead><tr style="text-align:right">${grande
+          ? `<th style="text-align:left;padding:${padCelda};white-space:normal;position:sticky;top:0;background:#eef3f1;box-shadow:inset 0 -2px 0 #cfe0da">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:${padCelda};white-space:normal;position:sticky;top:0;background:#eef3f1;box-shadow:inset 0 -2px 0 #cfe0da;line-height:1.25">${lbl}</th>`).join('')}`
+          : `<th style="text-align:left;padding:${padCelda};white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl,,,anchoPx])=>anchoPx
+              ? `<th style="padding:${padCelda};width:${anchoPx}px;max-width:${anchoPx}px;white-space:normal;line-height:1.25">${lbl}</th>`
+              : `<th style="padding:${padCelda};white-space:nowrap">${lbl}</th>`
+            ).join('')}`
+        }</tr></thead>
         <tbody>${filas}${filaTotal}</tbody>
       </table>
     </div>`;

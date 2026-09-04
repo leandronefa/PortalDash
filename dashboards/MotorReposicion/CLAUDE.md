@@ -84,6 +84,25 @@ fuera de esta función** — son 6 lugares ya migrados (`calcularReposicion`, `t
 no volver a tener números de "a comprar" distintos entre pantallas para el mismo artículo (ya pasó
 una vez con `totalComprarCompleto`, ver su comentario).
 
+**Con más de 1 sucursal, el total oficial PUEDE quedar por debajo de los 2 totales de escenario
+mostrados arriba — esto es matemático, no un error, y se decidió mantenerlo así a propósito
+(2026-09-05):** cada sucursal ya usó su propio menor antes del reparto de depósito, así que sumar
+el menor de cada una da, en general, menos que el menor de los 2 totales completos (ej.
+KJ1736-1074/talle 6/PUEBLO: Evidencia histórica=72, Real=50, oficial=42). Se evaluó la alternativa
+("un solo escenario gana para todo el grupo", que sí hace coincidir el total con uno de los 2
+mostrados) y se descartó explícitamente — probada contra el caso DINK-6128/Calzados 35, esa
+alternativa revierte exactamente el bug que motivó el diseño actual (esa sucursal volvería a
+mostrar 5 en vez de su propio menor, 2). Verificado también que el sistema ANTERIOR a este cambio
+(sin ningún escenario, usando `it.vd` tal cual decidido por el backend) YA daba, en 2 de 3 casos
+reales probados, un total que tampoco coincidía con ninguno de los 2 escenarios — el problema no lo
+introdujo este cambio, solo lo hizo más visible al mostrar los 2 totales uno al lado del otro.
+
+**El popover ahora SIEMPRE muestra el número oficial** (bloque verde "✅ Propuesta oficial", debajo
+de las 2 tarjetas de escenario, ver `propuestaOficialHtml` en `pintarFormulaDesglose`) — antes solo
+se veían los 2 escenarios y nunca el número que realmente se usa para comprar, lo que hacía parecer
+un error que la celda de la grilla no coincidiera con ninguno de los 2. Con más de 1 sucursal, este
+bloque incluye la nota explicando por qué el total puede ser menor a los 2 de arriba.
+
 ## Popover "Cálculo de la necesidad de compra" (Reposición/Edición de recompra)
 
 Al hacer clic en "Sugerido"/un talle, se abre un popover armado por `pintarFormulaDesglose` +

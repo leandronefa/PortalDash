@@ -5036,6 +5036,26 @@ function pintarFormulaDesglose(pop, d){
     📦 <b>Stock actual</b> no se resta directo del Objetivo — cada sucursal se compara contra SU PROPIO stock.
     🛒 <b>GAP bruto</b> ya sale calculado sucursal por sucursal (no es Objetivo menos Stock) — desde ahí, restando el depósito y luego el tránsito, sí es una resta directa hasta la Necesidad de compra. Lo pendiente en OC (🚚) es informativo aparte, no participa de esa resta. Mismo criterio en los dos escenarios de abajo.
   </div>`;
+  // Propuesta OFICIAL (2026-09-05, a pedido explicito): el popover mostraba los 2 escenarios pero
+  // NUNCA el numero que realmente se usa para "a comprar" en el resto de la app (d.sugerido, ver
+  // calcularNecesidadOficial) -- por eso costaba entender por que la celda de la grilla no
+  // coincidia con ninguno de los 2 totales de arriba. Con mas de 1 sucursal consolidada, cada una
+  // ya eligio su propio menor entre los 2 escenarios ANTES de repartir deposito/transito (una sola
+  // vez, sobre esa decision ya tomada -- nunca comparando resultados finales de 2 repartos
+  // separados, ver el comentario completo en calcularNecesidadOficial) -- por eso el total puede
+  // ser MENOR a los 2 totales de arriba, sin que sea un error (casos reales: KJ1736-1074/talle 6/
+  // PUEBLO, Evidencia histórica=72 y Real=50, propuesta oficial=42; DINK-6128/Calzados 35,
+  // Evidencia histórica=2 y Real=5, esa sucursal puntual usa su propio menor, 2).
+  const notaPropuestaOficial = d.nSucursales>1
+    ? `<div style="font-size:11px;color:#7c8a92;font-style:italic;line-height:1.4;margin-top:6px">
+        Cada una de las ${d.nSucursales} sucursales usa su propio menor entre Evidencia histórica y Real, y el depósito/tránsito se reparte una sola vez sobre esa decisión ya tomada — por eso el total puede quedar por debajo de los 2 totales de arriba. No es un error: es más conservador que aplicar un solo escenario a todo el grupo.
+      </div>`
+    : '';
+  const propuestaOficialHtml = `<div style="background:#eef7f0;border:1px solid #cfe8d6;border-radius:10px;padding:12px 14px;margin:10px 0">
+    <div style="font-weight:800;font-size:12.5px;color:#1a2730;margin-bottom:4px">✅ Propuesta oficial (la que se usa para comprar)</div>
+    <div style="font-size:23px;font-weight:800;color:#1e7d4f">${fmt(d.sugerido)} unidades</div>
+    ${notaPropuestaOficial}
+  </div>`;
   pop.innerHTML = `
     <div class="desglose-popover-hd">
       <div class="desglose-popover-title">Cálculo de la necesidad de compra
@@ -5049,6 +5069,7 @@ function pintarFormulaDesglose(pop, d){
       ${tarjetaEscenario('#f4f6f7', '#e3e9ec', etiquetaEscenario('📌', 'Evidencia histórica', '') + formulaBoxesHtml(d.escenarioHistorico, true, 'conservador'))}
       ${tarjetaEscenario('#eef6fb', '#cfe4ee', etiquetaEscenario('📊', 'Real', '(días reales)') + formulaBoxesHtml(d.escenarioReal, true, 'real'))}
     </div>
+    ${propuestaOficialHtml}
     <div class="desglose-oc-bloque">
       <div style="font-weight:800;font-size:12px;color:#9a5b00;margin-bottom:6px">🚚 Órdenes de compra pendientes (${d.empresa} SA)</div>
       <div id="desglose-oc-lista">Cargando…</div>

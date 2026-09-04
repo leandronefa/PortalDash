@@ -106,6 +106,21 @@ clickeable (`abrirDetalleCajita(d, 'sugerido', ...)`, mismo mecanismo que ya usa
 cada escenario, reusando `d.porSucursal` — que ya trae el resultado oficial, no el viejo `it.vd`,
 así que no hace falta ningún cálculo nuevo) para ver cómo se compone el total por sucursal.
 
+**Nota "piso de 7 días — real: 1 día" cuando el período no detectó ningún día pero hubo venta real
+(2026-09-05, a pedido explícito, caso real KJ1736-1074/talle 5/Sucursal 000028) — SOLO la nota, no
+el cálculo:** en `repoDetalleHtml`, `diasStockVdCrudo` pasa a ser `1` (en vez de `null`) cuando
+`it.diasStockVdReal` es null pero `it.ventasVd>0` — la venta misma es evidencia de que hubo al
+menos 1 día real, aunque el precálculo semanal no lo haya podido contar (ver la investigación
+completa de por qué en la charla de esa fecha: el "relleno de huecos" de la Etapa 1 solo cubre el
+rango entre la primera y la última semana con foto positiva de cada combo — si esa venta cayó en
+una semana fuera de ese rango, ni siquiera existe una fila para corregir). **Confirmado con datos
+reales que esto aplica a los 1.259 combos (0,27% del catálogo) que comparten exactamente este
+patrón — no hay forma de distinguir "este caso puntual" de los demás, todos tienen la misma
+situación de fondo, así que el fix aplica parejo a todos.** El `1` solo alimenta el texto de la
+nota (`notaDias` en `formulaBoxesHtml`) — el `diasStockVd` real usado para velocidad/objetivo sigue
+en 7 sin cambios (usar 1 como divisor real multiplicaría la velocidad ×7, mucho más agresivo que el
+piso — evaluado y descartado explícitamente, ver la charla de esa fecha).
+
 ## Popover "Cálculo de la necesidad de compra" (Reposición/Edición de recompra)
 
 Al hacer clic en "Sugerido"/un talle, se abre un popover armado por `pintarFormulaDesglose` +

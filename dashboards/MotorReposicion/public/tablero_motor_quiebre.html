@@ -4648,7 +4648,15 @@ function repoDetalleHtml(modelo, diasObjetivo, color){
           // "diasStockVd" de arriba en este mismo escenario real TODAVIA tiene el piso de 7 dias
           // aplicado por debajo (con evidencia historica activa, vdDiasReales usa diasStockVd del
           // periodo, que puede seguir teniendo el piso -- ver el comentario completo en vdDiasReales).
-          diasStockVdCrudo: it.diasStockVdReal,
+          // Cuando NO hay ningun dia detectado en el periodo (diasStockVdReal null) pero SI hubo una
+          // venta real (2026-09-05, a pedido explicito, mismo caso KJ1736-1074/talle 5/Sucursal
+          // 000028): la venta misma es evidencia de que hubo AL MENOS 1 dia real con stock, aunque el
+          // precalculo semanal no haya podido contarlo -- se usa 1 SOLO para esta nota (avisa "piso
+          // de 7 dias -- real: 1 dia" en vez del generico "sin evidencia"), NO para el calculo de
+          // velocidad -- ese sigue usando el piso de 7 dias sin cambios (usar 1 como divisor real
+          // multiplicaria la velocidad x7, mucho mas agresivo que el piso -- ver la charla del
+          // 2026-09-05 sobre por que se descarto esa alternativa).
+          diasStockVdCrudo: it.diasStockVdReal!=null ? it.diasStockVdReal : (it.ventasVd>0 ? 1 : null),
           objetivo: infoReal.objetivo||0, stock: it.stock, gapBruto: infoReal.gapBruto||0,
           deposito: infoReal.cubiertoDeposito||0, transito: infoReal.cubiertoTransito||0, oc: infoReal.cubiertoOC||0, sugerido: infoReal.comprar||0,
           nSucursales: 1,
@@ -4935,11 +4943,14 @@ function formulaBoxesHtml(datos, clickeable, escenario){
   // archivo). diasStockVdCrudo (solo presente en escenarioReal de "A comprar", 1 sola sucursal) es
   // el valor SIN ningun piso -- si es menor al que se esta mostrando, quiere decir que el piso
   // sigue aplicado y el numero de arriba no es la cuenta real.
-  // Caso sin ningun dato crudo (2026-09-04, a pedido explicito, caso real KJ1736-1074/talle
-  // 5/Sucursal 000028): si el periodo no detecto NINGUN dia con stock pero hubo una venta real,
-  // diasStockVdCrudo llega null (no hay ni siquiera un numero chico para mostrar) y diasStockVd=7
-  // por el mismo piso -- antes esto no avisaba nada, como si el "7" fuera un dato real. Se avisa
-  // igual, sin numero exacto, en vez de quedarse callado.
+  // Caso sin ningun dato crudo detectado en el periodo, pero CON venta real (2026-09-04/05, a
+  // pedido explicito, caso real KJ1736-1074/talle 5/Sucursal 000028): cuando el periodo no
+  // detecto NINGUN dia con stock pero hubo una venta real, la venta misma es evidencia de que
+  // hubo AL MENOS 1 dia -- repoDetalleHtml ya pone diasStockVdCrudo=1 en ese caso (ver el
+  // comentario completo ahi) para que esta nota avise el numero real en vez de "sin evidencia".
+  // La rama de abajo (diasStockVdCrudo==null) queda como respaldo defensivo -- no deberia
+  // dispararse en la practica (si diasStockVd llego a 7 por el piso, siempre hubo una venta real
+  // que ya dispara el "1" de arriba), pero se deja por si algun caso futuro llega sin ese dato.
   const notaDias = (datos.diasStockVdCrudo!=null && datos.diasStockVdCrudo>0 && datos.diasStockVdCrudo<datos.diasStockVd)
     ? `piso de 7 días — real: ${fmt(datos.diasStockVdCrudo)} día${datos.diasStockVdCrudo===1?'':'s'}`
     : (datos.diasStockVdCrudo==null && datos.diasStockVd===7)

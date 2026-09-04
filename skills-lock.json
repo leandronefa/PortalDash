@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "skills": {
+    "fmway-arch": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-arch/SKILL.md",
+      "computedHash": "73d0ebe06708eb5ce9caddfee9b91c5271b1957c6051069b7b4f876fb05d46c9"
+    },
+    "fmway-bugs": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-bugs/SKILL.md",
+      "computedHash": "b8c781d0550c6fa2b6feae556057b22893906e867429000c49a3af8771f9a39d"
+    },
+    "fmway-dev": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-dev/SKILL.md",
+      "computedHash": "7acea4c3ec81f248352a7a9d69f50bd92f5c41dbf70121350a03d5148fbaad8a"
+    },
+    "fmway-docs": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-docs/SKILL.md",
+      "computedHash": "b9b346b21a3998b37c4753f9361a1213ca181fbb9f4c5dfd428e21bd1b1dc8a2"
+    },
+    "fmway-init": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-init/SKILL.md",
+      "computedHash": "9acdc4a44f85c6b64a228a37204b9a5f326c574d88773023f2dbf3fd650af7a8"
+    },
+    "fmway-po": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-po/SKILL.md",
+      "computedHash": "fae828e5d9306ed3d057c396391d21f17758507bdc49744f548c7054fa2cfef1"
+    },
+    "fmway-pr": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-pr/SKILL.md",
+      "computedHash": "1d16841f779be846b7dc6e422fcedb7284f0136f543bdd8cc8bf7dab9e3f0fee"
+    },
+    "fmway-threat-model": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-threat-model/SKILL.md",
+      "computedHash": "5e3eb429058f8bd54c782b490206b1647b922c765ae682738a6aed62b3813651"
+    },
+    "fmway-vuln": {
+      "source": "leomnefa/grupofm-way",
+      "sourceType": "github",
+      "skillPath": "skills/fmway-vuln/SKILL.md",
+      "computedHash": "b043a3df959bf500cdc9ecb2520f9803b8195481e8f4c71a59d5d8b8c677acc5"
+    }
+  }
+}

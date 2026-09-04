@@ -46,6 +46,24 @@ Patrón estándar de estos scripts: `require('dotenv').config()` + `mssql` + `as
 4. Correr el SP manualmente una vez (no esperar a las 06:30) y medir tiempo.
 5. Verificar impacto con un script de un solo uso contra datos reales, no solo leer el código.
 
+## Necesidad de compra OFICIAL = mínimo entre 2 escenarios (2026-09-04, a pedido explícito)
+
+**`calcularNecesidadOficial(diasObjetivo, itemsBase)`** (en `tablero_motor_quiebre.html`, justo
+después de `calcularNecesidadPorBarra`) reemplazó a `calcularNecesidadPorBarra` como la función que
+calcula el número REAL de "a comprar" en TODA la app (celdas de grilla, badges, tarjetas, favoritos,
+Edición de recompra, ficha de artículo) — no solo en el popover. Calcula los 2 escenarios (Evidencia
+histórica siempre + Real/días reales) y toma, sucursal por sucursal, el MENOR resultado de compra
+entre los dos — más conservador que confiar en un solo escenario elegido por el backend vía
+`usoEvidenciaHistorica`. Devuelve `{mapa, mapaHistorico, mapaReal}` — `mapa` es el oficial (el que
+hay que usar en cualquier lugar nuevo que necesite "cuánto comprar"), `mapaHistorico`/`mapaReal` los
+sigue necesitando el popover para el desglose por escenario. **Nunca llamar a
+`calcularNecesidadPorBarra` directamente fuera de esta función** — son 6 lugares ya migrados
+(`calcularReposicion`, `totalComprarCompleto`, `repoDetalleHtml`, `construirArticulosEdicion`,
+`renderRepoFavoritos`, la ficha de artículo en `openDetalle`) — si aparece un séptimo lugar,
+pasarlo por `calcularNecesidadOficial` también, para no volver a tener números de "a comprar"
+distintos entre pantallas para el mismo artículo (ya pasó una vez con `totalComprarCompleto`, ver su
+comentario).
+
 ## Popover "Cálculo de la necesidad de compra" (Reposición/Edición de recompra)
 
 Al hacer clic en "Sugerido"/un talle, se abre un popover armado por `pintarFormulaDesglose` +
@@ -59,8 +77,12 @@ Al hacer clic en "Sugerido"/un talle, se abre un popover armado por `pintarFormu
   reales)") = velocidad del período elegido (`vdDiasReales`/`itemsConVdDiasReales`) — usa
   `diasStockVd` (con el piso de 7 días) si `usoEvidenciaHistorica` está activo para ese item, o
   `diasStockVdReal` (sin piso) si no — mismo divisor que ya mostraba esta pantalla antes del
-  cambio, a propósito, para no alterar el número ya conocido. Ninguno de los dos toca `it.vd` (la
-  velocidad real que usa el resto del tablero para "a comprar" fuera de este popover).
+  cambio, a propósito, para no alterar el número ya conocido. El "sugerido" de cada escenario SÍ
+  es el que ahora decide el número oficial de "a comprar" — ver `calcularNecesidadOficial`, arriba.
+- **Aviso de piso de 7 días sin dato crudo (2026-09-04):** si el período no detectó NINGÚN día con
+  stock pero hubo una venta real, `diasStockVdCrudo` llega `null` (no hay ni un número chico para
+  mostrar) y `diasStockVd=7` por el mismo piso — el aviso avisa igual ("sin evidencia real de días
+  detectada en el período"), sin inventar un número, en vez de quedarse callado como antes.
 - **Formato en bloques, no una sola ecuación:** Objetivo/Stock/GAP bruto NO se dibujan como una
   resta continua (`Objetivo − Stock = GAP bruto` es matemáticamente falso cuando hay más de una
   sucursal, porque GAP bruto es la suma de `máx(0, objetivo−stock)` por sucursal). Van en bloques

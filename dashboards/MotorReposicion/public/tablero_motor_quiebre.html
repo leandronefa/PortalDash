@@ -2713,7 +2713,7 @@ function openDetalle(modelo, suc, skuClic){
   // reparto de depósito/OC entre sucursales depende de la necesidad de TODAS las barras del grupo.
   const diasObjetivo = Math.max(1, Math.min(365, Number(document.getElementById('repo-dias')?.value)||15));
   const poolArticulo = (cacheArticuloCompleto.get(modelo)||[]).length ? cacheArticuloCompleto.get(modelo) : ALL.filter(x=>x.modelo===modelo);
-  const necesidad = calcularNecesidadPorBarra(diasObjetivo, poolArticulo).get(item.sku+"|"+item.suc) || {objetivo:0, comprar:0};
+  const necesidad = calcularNecesidadOficial(diasObjetivo, poolArticulo).mapa.get(item.sku+"|"+item.suc) || {objetivo:0, comprar:0};
   const minSugerido = necesidad.objetivo;
   const gap = necesidad.comprar;
   const periodoTxt = `${fechaISO(FECHAS_HIST[horizIDesde]).split('-').reverse().join('/')} – ${fechaISO(FECHAS_HIST[horizIHasta]).split('-').reverse().join('/')}`;
@@ -4473,8 +4473,28 @@ function calcularNecesidadPorBarra(diasObjetivo, itemsBase){
   });
   return mapa;
 }
+// Necesidad de compra OFICIAL (2026-09-04, a pedido explicito -- reemplaza confiar en un solo
+// escenario elegido por el backend via usoEvidenciaHistorica): se calculan los 2 escenarios del
+// popover -- "Evidencia histórica" (siempre, ver itemsConVdHistoricoSiempre) y "Real" (días
+// reales, ver itemsConVdDiasReales, sin cambios en su cálculo) -- y se toma, SUCURSAL POR
+// SUCURSAL, el MENOR resultado de compra entre los dos (más conservador que confiar en uno solo).
+// Reemplaza calcularNecesidadPorBarra(diasObjetivo, items) en TODO lugar que calcule el número
+// real de "a comprar" (celdas, totales, favoritos, Edición de recompra) -- no solo el popover.
+// Devuelve también mapaHistorico/mapaReal (el popover los sigue necesitando para el desglose por
+// escenario, ver pintarFormulaDesglose).
+function calcularNecesidadOficial(diasObjetivo, itemsBase){
+  const items = itemsBase || base();
+  const mapaHistorico = calcularNecesidadPorBarra(diasObjetivo, itemsConVdHistoricoSiempre(items));
+  const mapaReal = calcularNecesidadPorBarra(diasObjetivo, itemsConVdDiasReales(items));
+  const mapa = new Map();
+  new Set([...mapaHistorico.keys(), ...mapaReal.keys()]).forEach(key=>{
+    const h = mapaHistorico.get(key), r = mapaReal.get(key);
+    mapa.set(key, (h && r) ? (h.comprar <= r.comprar ? h : r) : (h || r));
+  });
+  return { mapa, mapaHistorico, mapaReal };
+}
 function calcularReposicion(diasObjetivo){
-  const mapa = calcularNecesidadPorBarra(diasObjetivo);
+  const { mapa } = calcularNecesidadOficial(diasObjetivo);
   const b = base();
   return b.map(x=>{
     const info = mapa.get(x.sku+"|"+x.suc);
@@ -4499,7 +4519,7 @@ function totalComprarCompleto(modelo, diasObjetivo, empresaFiltro, colorFiltro){
   let items = (empresaFiltro && empresaFiltro!=='TOTAL') ? completos.filter(x=>x.empresa===empresaFiltro) : completos;
   if(colorFiltro) items = items.filter(x=>x.color===colorFiltro);
   if(!items.length) return null;
-  const mapa = calcularNecesidadPorBarra(diasObjetivo, items);
+  const { mapa } = calcularNecesidadOficial(diasObjetivo, items);
   let unidades = 0, costo = 0;
   items.forEach(x=>{
     const c = mapa.get(x.sku+"|"+x.suc)?.comprar || 0;
@@ -4530,13 +4550,10 @@ function repoDetalleHtml(modelo, diasObjetivo, color){
   const itemsRed = ALL.filter(x=>x.modelo===modelo && x.color===color);
   const completos = cacheArticuloCompleto.get(modelo);
   const itemsBase = ((completos && completos.length) ? completos : itemsRed).filter(x=>x.color===color);
-  const mapa = calcularNecesidadPorBarra(diasObjetivo, itemsBase);
-  // mapaReal/mapaHistorico: mismo reparto de deposito/OC que el conservador, pero con la velocidad
-  // de cada escenario del popover (ver vdDiasReales/vdHistoricoSiempre) -- calculado sobre
-  // itemsBase completo (todas las sucursales de este articulo) para que el reparto entre
-  // sucursales sea consistente, igual que el conservador.
-  const mapaReal = calcularNecesidadPorBarra(diasObjetivo, itemsConVdDiasReales(itemsBase));
-  const mapaHistorico = calcularNecesidadPorBarra(diasObjetivo, itemsConVdHistoricoSiempre(itemsBase));
+  // mapa: "a comprar" OFICIAL (2026-09-04 -- menor entre Evidencia histórica y Real, ver
+  // calcularNecesidadOficial). mapaReal/mapaHistorico: mismo reparto de depósito/OC, con la
+  // velocidad de cada escenario del popover -- los sigue necesitando el desglose por escenario.
+  const { mapa, mapaReal, mapaHistorico } = calcularNecesidadOficial(diasObjetivo, itemsBase);
   const talles = [...new Set(itemsBase.map(x=>x.talle))].sort(compararTalles);
   // 2 columnas mas al final (100px cada una) para Aceptaciones/Venta totales por sucursal, mismo
   // criterio que la grilla de stock (ver renderMatrix) -- a pedido explicito (2026-08-24).
@@ -4897,8 +4914,15 @@ function formulaBoxesHtml(datos, clickeable, escenario){
   // archivo). diasStockVdCrudo (solo presente en escenarioReal de "A comprar", 1 sola sucursal) es
   // el valor SIN ningun piso -- si es menor al que se esta mostrando, quiere decir que el piso
   // sigue aplicado y el numero de arriba no es la cuenta real.
+  // Caso sin ningun dato crudo (2026-09-04, a pedido explicito, caso real KJ1736-1074/talle
+  // 5/Sucursal 000028): si el periodo no detecto NINGUN dia con stock pero hubo una venta real,
+  // diasStockVdCrudo llega null (no hay ni siquiera un numero chico para mostrar) y diasStockVd=7
+  // por el mismo piso -- antes esto no avisaba nada, como si el "7" fuera un dato real. Se avisa
+  // igual, sin numero exacto, en vez de quedarse callado.
   const notaDias = (datos.diasStockVdCrudo!=null && datos.diasStockVdCrudo>0 && datos.diasStockVdCrudo<datos.diasStockVd)
     ? `piso de 7 días — real: ${fmt(datos.diasStockVdCrudo)} día${datos.diasStockVdCrudo===1?'':'s'}`
+    : (datos.diasStockVdCrudo==null && datos.diasStockVd===7)
+    ? `piso de 7 días — sin evidencia real de días detectada en el período`
     : null;
   const cajasVelocidad = (datos.nSucursales===1 && datos.diasStockVd)
     ? `${caja('#c98a1c', fmt(datos.ventasVd), etiquetaVentas)}
@@ -5122,11 +5146,10 @@ function construirArticulosEdicion(clavesFiltro){
     if(!itemsRed.length) return null;
     const nombre = itemsRed[0].nombre.replace(" (SIM)","");
     const costo = itemsRed[0].costo;
-    const mapa = calcularNecesidadPorBarra(edicionDias, itemsRed);
-    // mapaReal/mapaHistorico: mismo reparto de deposito/OC que el conservador, pero con la
-    // velocidad de cada escenario del popover -- ver vdDiasReales/vdHistoricoSiempre.
-    const mapaReal = calcularNecesidadPorBarra(edicionDias, itemsConVdDiasReales(itemsRed));
-    const mapaHistorico = calcularNecesidadPorBarra(edicionDias, itemsConVdHistoricoSiempre(itemsRed));
+    // mapa: "a comprar" OFICIAL (2026-09-04 -- menor entre Evidencia histórica y Real, ver
+    // calcularNecesidadOficial). mapaReal/mapaHistorico: mismo reparto de depósito/OC, con la
+    // velocidad de cada escenario del popover -- los sigue necesitando el desglose por escenario.
+    const { mapa, mapaReal, mapaHistorico } = calcularNecesidadOficial(edicionDias, itemsRed);
     const empresasArt = [...new Set(itemsRed.map(x=>x.empresa))].sort(); // TESI, PUEBLO — las que correspondan
     const coloresArt = [...new Set(itemsRed.map(x=>x.color))].sort();
     // Talles por color: la curva COMPLETA del artículo para ese color, calculada UNA sola vez
@@ -5620,7 +5643,7 @@ function renderRepoFavoritos(){
   const cont = document.getElementById('repo-favoritos');
   if(!cont) return;
   const diasObjetivo = Math.max(1, Math.min(365, Number(document.getElementById('repo-dias')?.value)||15));
-  const mapa = calcularNecesidadPorBarra(diasObjetivo);
+  const { mapa } = calcularNecesidadOficial(diasObjetivo);
   const b = base().filter(esFavorito);
   if(!b.length){ cont.innerHTML = ''; return; }
   const porModelo = {};

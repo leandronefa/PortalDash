@@ -113,16 +113,35 @@ a pedido explícito: "es muy confuso que esos valores no coincidan con el de la 
 directo al detalle por sucursal, en una ventana más grande y con un total bien visible arriba**
 (`bindEdicionDetalleEvents`, llama a `abrirDetalleCajita(d, 'sugerido', el, true)` — el 4º
 parámetro `grande` — sin pasar por `pintarFormulaDesglose`/`abrirDesgloseSugerido`). Con
-`grande=true`, `abrirDetalleCajita` (mismo pedido, "ventana más grande y de forma más vistosa que
-además tenga el total"): sube el ancho máximo de 980px a 1180px, el alto de la tabla de 340px a
-520px, agranda un poco la tipografía, y agrega un bloque destacado (mismo estilo verde que tenía la
-"Propuesta oficial" quitada del popover) con el total arriba de la tabla — ADEMÁS de la fila TOTAL
-que ya traía la tabla al pie, no en su reemplazo. **Este 4º parámetro es opcional y por defecto
+`grande=true`, `abrirDetalleCajita` (pedido original: "ventana más grande y de forma más vistosa
+que además tenga el total"): agranda un poco la tipografía, sube el alto máximo de la tabla a
+`62vh`, agrega un bloque destacado (fondo verde con degradé, borde superior del encabezado en el
+mismo verde) con el total arriba de la tabla — ADEMÁS de la fila TOTAL que ya traía la tabla al
+pie, no en su reemplazo — y **centra la ventana en la pantalla** en vez de pegarla a la celda
+clickeada (con un tamaño tan distinto al resto de las cajitas, pegarla a un botón chico la dejaba
+mal encuadrada/cortada contra un borde). **Este 4º parámetro es opcional y por defecto
 `false`/`undefined` en TODOS los demás usos de `abrirDetalleCajita`** (las cajitas de cada
 escenario dentro de "A comprar", ver el loop `.desglose-caja-click` en `pintarFormulaDesglose`) —
-esas siguen exactamente con el tamaño chico original; el agrandado es exclusivo de este flujo. **"A
-comprar" (`repoDetalleHtml`) sigue mostrando el popover completo de 2 escenarios sin cambios** —
-solo se simplificó Edición de recompra. **Ojo si se toca este flujo de nuevo:** al abrir el detalle
+esas siguen exactamente con el tamaño chico original y pegadas a la celda clickeada; el agrandado y
+centrado son exclusivos de este flujo. **"A comprar" (`repoDetalleHtml`) sigue mostrando el
+popover completo de 2 escenarios sin cambios** — solo se simplificó Edición de recompra.
+
+**Ancho sin techo fijo, acotado solo por la pantalla (2026-09-04, misma queja repetida — "evitar
+scroll o desplazamiento a la derecha, se debe ver todo"):** el primer intento de `grande` fijaba un
+techo de 1180px, que seguía sin alcanzar para "sugerido" (6 columnas, la más ancha de las cajitas)
+con nombres de sucursal largos — la tabla quedaba con scroll horizontal adentro de todos modos.
+Se sacó ese techo fijo: con `grande=true`, el ancho del popover crece hasta `window.innerWidth - 40`
+(el único límite real ya lo pone `.desglose-popover` vía `max-width:calc(100vw - 24px)`, así que
+nunca se sale de la pantalla igual).
+
+**Bug de TOTAL corregido de paso (existía desde antes de `grande`, quedó expuesto al hacerlo más
+visible): la fila/bloque TOTAL de la cajita "sugerido" sumaba la columna "OC pendiente
+(informativo)" en vez de "A comprar"** — la lógica totalizaba siempre la ÚLTIMA columna de
+`cfg.cols`, que para todos los demás campos SÍ es la columna correcta, pero en "sugerido" la
+última es "OC pendiente" (agregada después, como dato aparte, sin correr el resto del orden). Fix:
+`CAMPO_DETALLE.sugerido` suma un `totalCol:'comprar'` explícito — si está presente, `abrirDetalleCajita`
+totaliza esa columna en vez de la última; los demás campos (que no lo tienen) siguen igual que
+antes. **Ojo si se toca este flujo de nuevo:** al abrir el detalle
 directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar
 con click afuera / Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de
 cerrar la ventanita es su propia "✕", porque esos listeners globales antes solo se registraban al

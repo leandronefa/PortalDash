@@ -4811,7 +4811,13 @@ const CAMPO_DETALLE = {
   // cargarOrdenesPendientes/desglose-oc-lista, que reemplaza esa asignación por sucursal (un
   // artefacto del reparto de calcularNecesidadPorBarra) por la lista real de OC pendientes,
   // compartida para todo el grupo (no por sucursal, la OC pendiente es a nivel empresa).
-  sugerido:  { titulo:'Necesidad de compra — por sucursal', cols:[['GAP bruto','gapBruto'],['Depósito','deposito'],['Tránsito','transito'],['A comprar','comprar'],['OC pendiente (informativo)','oc']] },
+  // totalCol (2026-09-04, a pedido explicito -- bug encontrado al agregar el total grande de
+  // abrirDetalleCajita): la fila/bloque de TOTAL sumaba por defecto la ULTIMA columna de cfg.cols,
+  // pero para "sugerido" la ultima es "OC pendiente (informativo)", NO "A comprar" -- se agrego
+  // despues como dato informativo aparte, sin correr el orden de las demas. Sin este campo, el
+  // total mostrado era el de OC pendiente (casi siempre 0), no el de A comprar. Los demas campos
+  // de este objeto no lo necesitan: su ultima columna YA es la que corresponde totalizar.
+  sugerido:  { titulo:'Necesidad de compra — por sucursal', cols:[['GAP bruto','gapBruto'],['Depósito','deposito'],['Tránsito','transito'],['A comprar','comprar'],['OC pendiente (informativo)','oc']], totalCol:'comprar' },
 };
 function fmtCelda(v, decimales){
   if(v===null || v===undefined) return 'sin evidencia';
@@ -4847,28 +4853,29 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // popover (donde esa celda SI podia envolverse si faltaban unos pocos pixeles). Sin ninguna
   // celda que pueda ceder envolviendose, las dos mediciones coinciden siempre.
   const filas = d.porSucursal.map(f => `<tr style="border-top:1px solid #eef2f4"><td style="padding:5px 6px;white-space:nowrap">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:5px 6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
-  // Fila de TOTAL al pie -- solo en la ULTIMA columna (la que da el numero de la cajita clickeada,
-  // siempre la ultima de cfg.cols): sumar esa columna reproduce EXACTO el numero de la cajita, asi
-  // que sirve para verificar. Las demas columnas quedan en "—" a proposito -- sumarlas tambien
-  // invitaria al mismo error que ya se corrigio en la nota de velocidad (ej. sumar "dias con
-  // stock" de todas las sucursales no es un total que se pueda usar para nada).
-  const ultimoIdx = cfg.cols.length - 1;
-  const totalUltima = d.porSucursal.reduce((a,f)=>a+(f[cfg.cols[ultimoIdx][1]]||0), 0);
+  // Columna a totalizar -- por defecto la ULTIMA de cfg.cols (la que da el numero de la cajita
+  // clickeada), salvo que cfg.totalCol diga otra cosa (ver el comentario en CAMPO_DETALLE.sugerido
+  // -- ahi la ultima columna es "OC pendiente", informativa, no "A comprar"). Sumar esa columna
+  // reproduce EXACTO el numero de la cajita, asi que sirve para verificar. Las demas columnas
+  // quedan en "—" a proposito en la fila TOTAL -- sumarlas tambien invitaria al mismo error que ya
+  // se corrigio en la nota de velocidad (ej. sumar "dias con stock" de todas las sucursales no es
+  // un total que se pueda usar para nada).
+  const totalIdx = cfg.totalCol ? cfg.cols.findIndex(c=>c[1]===cfg.totalCol) : cfg.cols.length - 1;
+  const totalValor = d.porSucursal.reduce((a,f)=>a+(f[cfg.cols[totalIdx][1]]||0), 0);
   const filaTotal = `<tr style="border-top:2px solid #d7dfe3;font-weight:700"><td style="padding:6px;white-space:nowrap">TOTAL</td>${cfg.cols.map(([,,dec],i)=>
-    i===ultimoIdx
-      ? `<td style="text-align:right;padding:6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalUltima,dec)}</td>`
+    i===totalIdx
+      ? `<td style="text-align:right;padding:6px;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalValor,dec)}</td>`
       : `<td style="text-align:right;padding:6px;color:#c2ccd1;white-space:nowrap">—</td>`
   ).join('')}</tr>`;
-  // Total bien visible arriba (solo `grande`) -- mismo estilo que el bloque "Propuesta oficial"
-  // (fondo verde, numero grande), para que quede claro de un vistazo sin tener que bajar hasta la
-  // fila TOTAL de la tabla. Usa la MISMA columna/valor que esa fila (totalUltima), nunca un
-  // calculo aparte.
-  const totalGrandeHtml = grande ? `<div style="background:#eef7f0;border:1px solid #cfe8d6;border-radius:10px;padding:12px 16px;margin:12px 0;display:flex;justify-content:space-between;align-items:center">
-    <span style="font-weight:800;font-size:13.5px;color:#1a2730">Total — ${cfg.cols[ultimoIdx][0]}</span>
-    <span style="font-size:26px;font-weight:800;color:#1e7d4f">${fmtCelda(totalUltima, cfg.cols[ultimoIdx][2])} unidades</span>
+  // Total bien visible arriba (solo `grande`) -- fondo verde, numero grande, para que quede claro
+  // de un vistazo sin tener que bajar hasta la fila TOTAL de la tabla. Usa la MISMA columna/valor
+  // que esa fila (totalValor), nunca un calculo aparte.
+  const totalGrandeHtml = grande ? `<div style="background:linear-gradient(135deg,#eef7f0,#e3f3e8);border:1px solid #b9dfc6;border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <span style="font-weight:800;font-size:13.5px;color:#1a2730">Total — ${cfg.cols[totalIdx][0]}</span>
+    <span style="font-size:28px;font-weight:800;color:#1e7d4f;white-space:nowrap">${fmtCelda(totalValor, cfg.cols[totalIdx][2])} unidades</span>
   </div>` : '';
   popDet.innerHTML = `
-    <div class="desglose-popover-hd">
+    <div class="desglose-popover-hd"${grande?' style="border-bottom:2px solid #1e7d4f"':''}>
       <div>
         <div class="desglose-popover-title" style="font-size:${grande?'16px':'14px'}">${cfg.titulo}</div>
         <div class="desglose-popover-sub">${d.modelo} · ${d.color==='—'?'Color único':d.color} · Talle ${d.talle==='U'?'Único':d.talle} · ${d.empresa} SA</div>
@@ -4876,7 +4883,7 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
       <button class="desglose-popover-close" id="desglose-detalle-popover-x" title="Cerrar">✕</button>
     </div>
     ${totalGrandeHtml}
-    <div style="max-height:${grande?'520px':'340px'};overflow:auto;margin-top:10px">
+    <div style="max-height:${grande?'62vh':'340px'};overflow:auto;margin-top:10px">
       <table style="width:100%;border-collapse:collapse;font-size:${fuenteTabla}">
         <thead><tr style="text-align:right"><th style="text-align:left;padding:4px 6px;white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:4px 6px;white-space:nowrap">${lbl}</th>`).join('')}</tr></thead>
         <tbody>${filas}${filaTotal}</tbody>
@@ -4894,16 +4901,30 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // Margen ensanchado (2026-09-08, a pedido explícito -- "ensanchar para no requerir
   // desplazarse a la derecha"): el buffer de 64px (padding propio + scrollbar) resultó justo en
   // casos reales con nombres de sucursal más largos que los usados al medir originalmente -- se
-  // sube a 110px de margen y el techo de 900 a 980px (mismo ancho máximo que ya usa el popover
+  // sube a 110px de margen y el techo a 980px (mismo ancho máximo que ya usa el popover
   // principal, .desglose-popover) para dar más aire sin volverse desproporcionado. Con `grande`
-  // (2026-09-05), el techo sube a 1180px -- ventana mas grande a pedido explicito.
+  // (2026-09-04, misma queja de nuevo -- "evitar scroll o desplazamiento a la derecha, se debe
+  // ver todo"): el techo fijo de 1180px seguia sin alcanzar para "sugerido" (6 columnas, la mas
+  // ancha de todas) con nombres de sucursal largos -- se saca el techo fijo y se deja crecer hasta
+  // el ancho de pantalla disponible (mismo limite que ya impone .desglose-popover via
+  // max-width:calc(100vw - 24px), asi que nunca se sale de la pantalla).
   const tabla = popDet.querySelector('table');
   tabla.style.width = 'auto';
   const anchoNatural = tabla.scrollWidth;
   tabla.style.width = '100%';
-  popDet.style.width = Math.max(480, Math.min(grande?1180:980, anchoNatural + 110)) + 'px';
+  const anchoTope = grande ? (window.innerWidth - 40) : 980;
+  popDet.style.width = Math.max(480, Math.min(anchoTope, anchoNatural + 110)) + 'px';
   popDet.style.display = 'block';
-  posicionarJuntoA(popDet, elCaja);
+  // Centrada en pantalla (2026-09-04, a pedido explicito) en vez de pegada a la celda clickeada --
+  // al ser mucho mas grande que el resto de las cajitas, pegarla a un botón chico (el "Sugerido" de
+  // Edición de recompra) la dejaba mal encuadrada / cortada contra un borde. Las demas cajitas
+  // (grande=false) siguen con el posicionado pegado de siempre.
+  if(grande){
+    popDet.style.left = Math.max(12, (window.innerWidth - popDet.offsetWidth) / 2) + 'px';
+    popDet.style.top = Math.max(12, (window.innerHeight - popDet.offsetHeight) / 2) + 'px';
+  } else {
+    posicionarJuntoA(popDet, elCaja);
+  }
   document.getElementById('desglose-detalle-popover-x').onclick = cerrarDetalleCajitaPopover;
 }
 // Muestra de donde sale el numero "Sugerido" de una celda (talle x color x empresa), en una

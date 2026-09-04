@@ -225,6 +225,22 @@ dejó de ser relevante desde que las columnas usan `colgroup` + `table-layout:fi
 con columnas a porcentaje fijo, cualquier ancho de ventana se reparte proporcional y sin scroll
 horizontal — el contenido nunca desborda, sin importar qué tan angosta quede la ventana.
 
+**Scroll doble (vertical Y horizontal) corregido, mismo día ("no se ve todo, es necesario
+desplazarse vertical y horizontalmente"):**
+- **Horizontal:** aunque las columnas ya usaban `colgroup` + porcentaje fijo, la palabra
+  "(INFORMATIVO)" del encabezado de la columna OC es un solo token sin espacios — sin
+  `overflow-wrap:break-word`, ningún navegador la corta a la mitad, así que esa columna (y con ella
+  la tabla entera) se veía forzada a crecer más allá de su porcentaje asignado pese a
+  `table-layout:fixed`. Fix: `overflow-wrap:break-word` en los `<th>` de `grande` (y también en la
+  celda de Sucursal, por si algún nombre de sucursal fuera igual de largo) — ahora si un texto no
+  entra, corta la palabra en vez de forzar ancho extra.
+- **Vertical:** el alto fijo `62vh` no se adaptaba a la cantidad real de sucursales — con pocas
+  sobraba espacio vacío pero con scroll de más, con muchas no alcanzaba. Fix: se estima el alto
+  real que necesita la tabla (`46 + nº sucursales×34 + 36 + 4`, encabezado + una fila por sucursal
+  + fila TOTAL, con el alto de fila que dan `padCelda`/`fuenteTabla`) y se usa ESE alto si entra en
+  pantalla (`window.innerHeight - 260`, reservando lugar para título/bloque verde/bordes) — recién
+  si no entra aparece scroll, nunca antes de que haga falta.
+
 **Ojo si se toca este flujo de nuevo:** al abrir el detalle
 directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar
 con click afuera / Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de

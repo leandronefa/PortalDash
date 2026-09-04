@@ -4881,7 +4881,7 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // notorio (#e8f3ee, antes #f3f8f7 -- casi indistinguible del blanco) -- en las cajitas chicas no
   // se toca, siguen con fondo blanco y el borde suave original en el <tr>.
   const bordeCelda = grande ? 'border-bottom:1px solid #c9d4d6;' : '';
-  const filas = d.porSucursal.map((f,i) => `<tr${grande?`` : ` style="border-top:1px solid #eef2f4"`}><td style="padding:${padCelda};white-space:${grande?'normal':'nowrap'};${bordeCelda}${grande?`background:${i%2?'#e8f3ee':'#ffffff'}`:''}">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap;${bordeCelda}${grande?`background:${i%2?'#e8f3ee':'#ffffff'}`:''}">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
+  const filas = d.porSucursal.map((f,i) => `<tr${grande?`` : ` style="border-top:1px solid #eef2f4"`}><td style="padding:${padCelda};white-space:${grande?'normal':'nowrap'};${grande?'overflow-wrap:break-word;':''}${bordeCelda}${grande?`background:${i%2?'#e8f3ee':'#ffffff'}`:''}">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap;${bordeCelda}${grande?`background:${i%2?'#e8f3ee':'#ffffff'}`:''}">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
   // Columna "oficial" a totalizar en el bloque grande de arriba -- por defecto la ULTIMA de
   // cfg.cols (la que da el numero de la cajita clickeada), salvo que cfg.totalCol diga otra cosa
   // (ver el comentario en CAMPO_DETALLE.sugerido -- ahi la ultima columna es "OC pendiente",
@@ -4911,6 +4911,17 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
     <span style="font-weight:800;font-size:13.5px;color:#1a2730">Total — ${cfg.cols[totalIdx][0]}</span>
     <span style="font-size:28px;font-weight:800;color:#1e7d4f;white-space:nowrap">${fmtCelda(totalValor, cfg.cols[totalIdx][2])} unidades</span>
   </div>` : '';
+  // Alto dinamico segun cantidad real de sucursales, solo en `grande` (2026-09-04, a pedido
+  // explicito -- "no se ve todo, es necesario desplazarse vertical y horizontalmente"): un `62vh`
+  // fijo no se adaptaba -- con pocas sucursales sobraba scroll de mas, con muchas sobraba de
+  // menos. Se estima el alto real que necesita la tabla (encabezado + 1 fila por sucursal + fila
+  // TOTAL, con el alto de fila que dan `padCelda`/`fuenteTabla`) y se usa ESE alto si entra en
+  // pantalla -- solo si no entra, se acota a lo que deja la ventana (reservando lugar para el
+  // titulo, el bloque verde de arriba y los bordes/paddings propios) y ahi si aparece scroll,
+  // pero nunca antes de que haga falta.
+  const altoNaturalTabla = grande ? (46 + d.porSucursal.length*34 + 36 + 4) : null;
+  const altoTopeTabla = grande ? Math.max(200, window.innerHeight - 260) : null;
+  const alturaTabla = grande ? Math.min(altoNaturalTabla, altoTopeTabla) : null;
   popDet.innerHTML = `
     <div class="desglose-popover-hd"${grande?' style="border-bottom:2px solid #1e7d4f"':''}>
       <div>
@@ -4920,11 +4931,11 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
       <button class="desglose-popover-close" id="desglose-detalle-popover-x" title="Cerrar">✕</button>
     </div>
     ${totalGrandeHtml}
-    <div style="max-height:${grande?'62vh':'340px'};overflow:auto;margin-top:10px${grande?';border:1px solid #dfe7e8;border-radius:10px':''}">
+    <div style="max-height:${grande?alturaTabla+'px':'340px'};overflow:auto;margin-top:10px${grande?';border:1px solid #dfe7e8;border-radius:10px':''}">
       <table style="width:100%;border-collapse:collapse;font-size:${fuenteTabla}${grande?';table-layout:fixed':''}">
         ${colgroupHtml}
         <thead><tr style="text-align:right">${grande
-          ? `<th style="text-align:left;padding:${padCelda};white-space:normal;position:sticky;top:0;background:#1e7d4f;color:#fff;font-weight:800;font-size:11.5px">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:${padCelda};white-space:normal;position:sticky;top:0;background:#1e7d4f;color:#fff;font-weight:800;font-size:11.5px;line-height:1.25">${lbl}</th>`).join('')}`
+          ? `<th style="text-align:left;padding:${padCelda};white-space:normal;overflow-wrap:break-word;position:sticky;top:0;background:#1e7d4f;color:#fff;font-weight:800;font-size:11.5px">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:${padCelda};white-space:normal;overflow-wrap:break-word;position:sticky;top:0;background:#1e7d4f;color:#fff;font-weight:800;font-size:11.5px;line-height:1.25">${lbl}</th>`).join('')}`
           : `<th style="text-align:left;padding:${padCelda};white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl,,,anchoPx])=>anchoPx
               ? `<th style="padding:${padCelda};width:${anchoPx}px;max-width:${anchoPx}px;white-space:normal;line-height:1.25">${lbl}</th>`
               : `<th style="padding:${padCelda};white-space:nowrap">${lbl}</th>`

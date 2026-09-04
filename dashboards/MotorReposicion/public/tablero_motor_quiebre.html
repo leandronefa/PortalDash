@@ -4476,20 +4476,45 @@ function calcularNecesidadPorBarra(diasObjetivo, itemsBase){
 // Necesidad de compra OFICIAL (2026-09-04, a pedido explicito -- reemplaza confiar en un solo
 // escenario elegido por el backend via usoEvidenciaHistorica): se calculan los 2 escenarios del
 // popover -- "Evidencia histórica" (siempre, ver itemsConVdHistoricoSiempre) y "Real" (días
-// reales, ver itemsConVdDiasReales, sin cambios en su cálculo) -- y se toma, SUCURSAL POR
-// SUCURSAL, el MENOR resultado de compra entre los dos (más conservador que confiar en uno solo).
-// Reemplaza calcularNecesidadPorBarra(diasObjetivo, items) en TODO lugar que calcule el número
-// real de "a comprar" (celdas, totales, favoritos, Edición de recompra) -- no solo el popover.
-// Devuelve también mapaHistorico/mapaReal (el popover los sigue necesitando para el desglose por
-// escenario, ver pintarFormulaDesglose).
+// reales, ver itemsConVdDiasReales, sin cambios en su cálculo) -- y se toma el MENOR entre los
+// dos. Reemplaza calcularNecesidadPorBarra(diasObjetivo, items) en TODO lugar que calcule el
+// número real de "a comprar" (celdas, totales, favoritos, Edición de recompra) -- no solo el
+// popover. Devuelve también mapaHistorico/mapaReal (el popover los sigue necesitando para el
+// desglose por escenario, ver pintarFormulaDesglose).
+// CORREGIDO (2026-09-05, a pedido explicito, caso real KJ1736-1074/talle 5/Sucursal
+// consolidado PUEBLO: Edición de recompra mostraba "Sugerido"=32, que no coincidía ni con
+// Evidencia histórica=53 ni con Real=44 -- la primera version comparaba el minimo SUCURSAL POR
+// SUCURSAL, pero el deposito/OC se reparte en conjunto entre TODAS las sucursales del mismo
+// grupo articulo+color+talle+empresa (ver el agrupamiento "sku|empresa" dentro de
+// calcularNecesidadPorBarra) -- mezclar "gana historico en esta sucursal, gana real en aquella"
+// parte el pool de deposito entre 2 corridas independientes y da un total que no es ninguno de
+// los dos escenarios reales. Ahora se comparan los TOTALES de cada escenario para el grupo
+// COMPLETO (misma agrupacion que ya usa el reparto de deposito) y se aplican TODOS los numeros
+// de UN SOLO escenario -- el de menor total -- a cada sucursal del grupo, sin mezclar.
 function calcularNecesidadOficial(diasObjetivo, itemsBase){
   const items = itemsBase || base();
   const mapaHistorico = calcularNecesidadPorBarra(diasObjetivo, itemsConVdHistoricoSiempre(items));
   const mapaReal = calcularNecesidadPorBarra(diasObjetivo, itemsConVdDiasReales(items));
+  const totalPorGrupo = {}; // "sku|empresa" -> {hist, real} (mismo agrupamiento que el reparto de deposito)
+  items.forEach(x=>{
+    const grupoKey = x.sku+"|"+x.empresa;
+    const skuSuc = x.sku+"|"+x.suc;
+    if(!totalPorGrupo[grupoKey]) totalPorGrupo[grupoKey] = {hist:0, real:0, vistos:new Set()};
+    const g = totalPorGrupo[grupoKey];
+    if(g.vistos.has(skuSuc)) return; // por si itemsBase repite la misma barra mas de una vez
+    g.vistos.add(skuSuc);
+    g.hist += mapaHistorico.get(skuSuc)?.comprar || 0;
+    g.real += mapaReal.get(skuSuc)?.comprar || 0;
+  });
   const mapa = new Map();
-  new Set([...mapaHistorico.keys(), ...mapaReal.keys()]).forEach(key=>{
-    const h = mapaHistorico.get(key), r = mapaReal.get(key);
-    mapa.set(key, (h && r) ? (h.comprar <= r.comprar ? h : r) : (h || r));
+  items.forEach(x=>{
+    const grupoKey = x.sku+"|"+x.empresa;
+    const skuSuc = x.sku+"|"+x.suc;
+    if(mapa.has(skuSuc)) return;
+    const g = totalPorGrupo[grupoKey];
+    const usarHistorico = g.hist <= g.real;
+    const info = (usarHistorico ? mapaHistorico : mapaReal).get(skuSuc);
+    if(info) mapa.set(skuSuc, info);
   });
   return { mapa, mapaHistorico, mapaReal };
 }

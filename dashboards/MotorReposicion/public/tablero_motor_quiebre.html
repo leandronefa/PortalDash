@@ -4874,10 +4874,14 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   const colgroupHtml = grande ? `<colgroup><col style="width:${pctIgual}%">${cfg.cols.map(c=>`<col style="width:${c[3]?pctAngosta:pctIgual}%">`).join('')}</colgroup>` : '';
   // Color de fondo alternado por fila (zebra) + separador entre filas mas visible, solo en
   // `grande` (2026-09-04, a pedido explicito -- "color linea por cada sucursal" / "las lineas de
-  // separacion... no se ven"; el borde `#eef2f4` original era casi invisible, mas aun sobre la
-  // fila zebra) -- en las cajitas chicas no se toca, siguen con fondo blanco y ese mismo borde
-  // suave de siempre.
-  const filas = d.porSucursal.map((f,i) => `<tr style="border-bottom:1px solid ${grande?'#dde6e6':'#eef2f4'}${grande?`;background:${i%2?'#f3f8f7':'#ffffff'}`:''}"><td style="padding:${padCelda};white-space:${grande?'normal':'nowrap'}">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
+  // separacion... no se ven" -- 2 vueltas, la primera (borde en el <tr>, zebra muy tenue) seguia
+  // sin verse: el borde puesto en el <tr> no se renderiza de forma confiable en todos los
+  // navegadores bajo border-collapse -- solo los bordes puestos en cada <td> son fiables. Fix:
+  // borde-bottom por CELDA (no por fila) en un gris mas oscuro (#c9d4d6), y zebra con un verde mas
+  // notorio (#e8f3ee, antes #f3f8f7 -- casi indistinguible del blanco) -- en las cajitas chicas no
+  // se toca, siguen con fondo blanco y el borde suave original en el <tr>.
+  const bordeCelda = grande ? 'border-bottom:1px solid #c9d4d6;' : '';
+  const filas = d.porSucursal.map((f,i) => `<tr${grande?`` : ` style="border-top:1px solid #eef2f4"`}><td style="padding:${padCelda};white-space:${grande?'normal':'nowrap'};${bordeCelda}${grande?`background:${i%2?'#e8f3ee':'#ffffff'}`:''}">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap;${bordeCelda}${grande?`background:${i%2?'#e8f3ee':'#ffffff'}`:''}">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
   // Columna "oficial" a totalizar en el bloque grande de arriba -- por defecto la ULTIMA de
   // cfg.cols (la que da el numero de la cajita clickeada), salvo que cfg.totalCol diga otra cosa
   // (ver el comentario en CAMPO_DETALLE.sugerido -- ahi la ultima columna es "OC pendiente",
@@ -4920,7 +4924,7 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
       <table style="width:100%;border-collapse:collapse;font-size:${fuenteTabla}${grande?';table-layout:fixed':''}">
         ${colgroupHtml}
         <thead><tr style="text-align:right">${grande
-          ? `<th style="text-align:left;padding:${padCelda};white-space:normal;position:sticky;top:0;background:#eef3f1;box-shadow:inset 0 -2px 0 #cfe0da">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:${padCelda};white-space:normal;position:sticky;top:0;background:#eef3f1;box-shadow:inset 0 -2px 0 #cfe0da;line-height:1.25">${lbl}</th>`).join('')}`
+          ? `<th style="text-align:left;padding:${padCelda};white-space:normal;position:sticky;top:0;background:#1e7d4f;color:#fff;font-weight:800;font-size:11.5px">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:${padCelda};white-space:normal;position:sticky;top:0;background:#1e7d4f;color:#fff;font-weight:800;font-size:11.5px;line-height:1.25">${lbl}</th>`).join('')}`
           : `<th style="text-align:left;padding:${padCelda};white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl,,,anchoPx])=>anchoPx
               ? `<th style="padding:${padCelda};width:${anchoPx}px;max-width:${anchoPx}px;white-space:normal;line-height:1.25">${lbl}</th>`
               : `<th style="padding:${padCelda};white-space:nowrap">${lbl}</th>`

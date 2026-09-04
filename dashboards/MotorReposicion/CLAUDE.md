@@ -202,6 +202,22 @@ color de fondo discreto... mejora el diseño"):**
   del popover general). Padding de celda también sube un poco (`7px 8px` en vez de `5px 6px`) para
   que no se sienta apretado en una ventana más grande.
 
+**2ª vuelta del rediseño, mismo día (el primer intento seguía sin verse bien — "sigue fea... lineas
+de separacion... no se ven"):**
+- **Causa real de que las líneas de separación no se vieran: el borde estaba puesto en el `<tr>`,
+  no en cada `<td>`.** Bajo `border-collapse:collapse`, un borde declarado directo en la fila no se
+  renderiza de forma confiable en todos los navegadores — solo los bordes puestos en cada celda lo
+  hacen. Fix: `border-bottom` se mueve a cada `<td>` (color `#c9d4d6`, más oscuro que el intento
+  anterior `#dde6e6`), y el fondo zebra pasa de `#f3f8f7` (casi indistinguible del blanco) a
+  `#e8f3ee`, notoriamente más visible.
+- **Causa real de que el encabezado "no se distinguiera": un estilo global preexistente,
+  `th { color:#dfe6ea; ... }` (gris muy claro, pensado para fondos oscuros en otras partes de la
+  app), se aplicaba también a esta tabla — con el fondo verde clarito `#eef3f1` del primer intento,
+  el texto del encabezado quedaba casi ilegible.** Fix: encabezado con fondo sólido `#1e7d4f` (el
+  mismo verde de marca) y texto blanco bold explícito (gana por especificidad al estilo global) —
+  mismo patrón ya usado en otras tablas de la app (`.doc-tbl th`), no un diseño nuevo inventado.
+  Las cajitas chicas no se tocaron — su encabezado sigue con el estilo global tal cual estaba.
+
 **Ojo si se toca este flujo de nuevo:** al abrir el detalle
 directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar
 con click afuera / Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de

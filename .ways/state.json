@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "flow": "feature",
+  "way": "fmway/dev",
+  "discipline": "development",
+  "slug": "001-analisis-sonarqube",
+  "branch": "feat/sonarqube-tableros",
+  "isolationType": "branch",
+  "phase": "implementation",
+  "lastPhase": "plan",
+  "documents": {
+    "prd": "docs/prds/001-analisis-sonarqube/PRD.md",
+    "plan": "docs/prds/001-analisis-sonarqube/PLAN.md",
+    "testing": "docs/prds/001-analisis-sonarqube/TESTING.md"
+  },
+  "gates": [
+    { "id": "prd", "status": "passed" },
+    { "id": "plan", "status": "passed" },
+    { "id": "testing", "status": "pending" },
+    { "id": "pr", "status": "pending", "target": "master" }
+  ],
+  "steps": [
+    { "id": "A1", "label": "sonar-project.properties", "status": "done" },
+    { "id": "B1", "label": "Workflow .github/workflows/sonarcloud.yml", "status": "done" },
+    { "id": "B2", "label": "Confirmar que el workflow no ejecuta scripts prohibidos (generar, etc.)", "status": "done" },
+    { "id": "C1", "label": "Documentar en docs/architecture/overview.md", "status": "done" },
+    { "id": "C2", "label": "PRD.md -> Estado Terminado (tras validar)", "status": "todo" },
+    { "id": "D1", "label": "Validar workflow de punta a punta en un PR", "status": "todo" },
+    { "id": "D2", "label": "Confirmar cobertura real en SonarCloud", "status": "todo" },
+    { "id": "D3", "label": "Confirmar reemplazo de Automatic Analysis (acción manual del usuario)", "status": "todo" },
+    { "id": "D4", "label": "Revisión de seguridad manual", "status": "todo" }
+  ]
+}

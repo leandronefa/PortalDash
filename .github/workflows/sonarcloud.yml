@@ -1,0 +1,104 @@
+name: SonarCloud Code Analysis
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java (requerido por sonar-scanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # --- Análisis .NET (portal + APCWeb) vía dotnet-sonarscanner ---
+      - name: Cache herramientas dotnet-sonarscanner
+        uses: actions/cache@v4
+        with:
+          path: ~/.dotnet/tools
+          key: dotnet-sonarscanner-${{ runner.os }}
+
+      - name: Instalar dotnet-sonarscanner
+        run: dotnet tool install --global dotnet-sonarscanner || true
+
+      - name: Iniciar análisis (propiedades explícitas, dotnet-sonarscanner no lee sonar-project.properties)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet-sonarscanner begin \
+            /k:"vallejo-sanjuan_PortalDash" \
+            /o:"vallejo-sanjuan" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.sourceEncoding="UTF-8" \
+            /d:sonar.sources="portal-src,dashboards" \
+            /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/dist-server/**,**/bin/**,**/obj/**,**/App_Data/**,**/daemon/**,**/*.min.js,dashboards/EstadoResultado/sap-inbox/**,dashboards/EstadoResultado/data-store/**,dashboards/EstadoResultado/SAPResultProcesado/**,dashboards/EstadoResultado/data-cache/**,dashboards/ConciliacionPunitorios/archivos/**,dashboards/ConciliacionPunitorios/public/data*.js,dashboards/ValidacionCobranzas/archivos/**,dashboards/sucursal-user-visualizer/layout-state.json,dashboards/MotorReposicion/public/~\$*"
+
+      - name: Build portal-src
+        run: dotnet build portal-src/DashboardPortal.sln --configuration Release
+
+      - name: Build APCWeb
+        run: dotnet build dashboards/APCWeb/src/APCWeb/APCWeb.csproj --configuration Release
+
+      # --- Build de los dashboards Node con frontend Vite (necesario para que Sonar analice el bundle real) ---
+      - name: Cache node_modules por dashboard
+        uses: actions/cache@v4
+        with:
+          path: |
+            dashboards/*/node_modules
+            dashboards/*/server/node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('dashboards/**/package-lock.json') }}
+
+      - name: Build dashboards con Vite
+        run: |
+          set -e
+          for d in ComisionesINDO EstadoResultado PassReset ControlCaja MovimientosCaja DashPromocionesMP; do
+            echo "== $d =="
+            (cd "dashboards/$d" && npm install --no-audit --no-fund && npm run build)
+          done
+          for d in comisiones-app sucursal-user-visualizer; do
+            echo "== $d (build:prod) =="
+            (cd "dashboards/$d" && npm install --no-audit --no-fund && npm run build:prod)
+          done
+
+      # --- Install (sin build) de los dashboards server-only, para que Sonar tenga el árbol de deps resuelto ---
+      - name: Install dashboards sin frontend Vite
+        run: |
+          set -e
+          for d in MotorReposicion DashMeLi ConciliacionPunitorios ValidacionCobranzas; do
+            echo "== $d =="
+            (cd "dashboards/$d" && npm install --no-audit --no-fund)
+          done
+          for d in VentaObjetivo StockProveedorMarca VentaObjetivoSucursal tablero-objetivos-web; do
+            echo "== $d/server =="
+            (cd "dashboards/$d/server" && npm install --no-audit --no-fund)
+          done
+
+      - name: Finalizar análisis (envía TODO: C# + JS/TS de los dashboards)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"

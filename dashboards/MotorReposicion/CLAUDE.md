@@ -101,7 +101,10 @@ introdujo este cambio, solo lo hizo más visible al mostrar los 2 totales uno al
 de las 2 tarjetas de escenario, ver `propuestaOficialHtml` en `pintarFormulaDesglose`) — antes solo
 se veían los 2 escenarios y nunca el número que realmente se usa para comprar, lo que hacía parecer
 un error que la celda de la grilla no coincidiera con ninguno de los 2. Con más de 1 sucursal, este
-bloque incluye la nota explicando por qué el total puede ser menor a los 2 de arriba.
+bloque incluye la nota explicando por qué el total puede ser menor a los 2 de arriba, y es
+clickeable (`abrirDetalleCajita(d, 'sugerido', ...)`, mismo mecanismo que ya usan las cajitas de
+cada escenario, reusando `d.porSucursal` — que ya trae el resultado oficial, no el viejo `it.vd`,
+así que no hace falta ningún cálculo nuevo) para ver cómo se compone el total por sucursal.
 
 ## Popover "Cálculo de la necesidad de compra" (Reposición/Edición de recompra)
 

@@ -5051,7 +5051,14 @@ function pintarFormulaDesglose(pop, d){
         Cada una de las ${d.nSucursales} sucursales usa su propio menor entre Evidencia histórica y Real, y el depósito/tránsito se reparte una sola vez sobre esa decisión ya tomada — por eso el total puede quedar por debajo de los 2 totales de arriba. No es un error: es más conservador que aplicar un solo escenario a todo el grupo.
       </div>`
     : '';
-  const propuestaOficialHtml = `<div style="background:#eef7f0;border:1px solid #cfe8d6;border-radius:10px;padding:12px 14px;margin:10px 0">
+  // Clickeable = ver el desglose por sucursal (2026-09-05, a pedido explicito) -- mismo mecanismo
+  // que ya usan las cajitas de cada escenario (ver CAMPO_DETALLE.sugerido/abrirDetalleCajita), y
+  // los MISMOS datos de d.porSucursal (ya son el resultado oficial -- info=mapa.get(...) en
+  // construirArticulosEdicion ya sale de calcularNecesidadOficial, no del viejo it.vd) -- no hace
+  // falta ningun calculo nuevo. Solo con mas de 1 sucursal, igual que el resto de las cajitas (con
+  // 1 sola sucursal el numero ya es una cuenta directa, no hay nada nuevo que desglosar).
+  const propuestaEsClickeable = d.nSucursales>1 && d.porSucursal;
+  const propuestaOficialHtml = `<div style="background:#eef7f0;border:1px solid #cfe8d6;border-radius:10px;padding:12px 14px;margin:10px 0${propuestaEsClickeable?';cursor:pointer':''}" id="desglose-propuesta-oficial"${propuestaEsClickeable?' title="Ver detalle por sucursal"':''}>
     <div style="font-weight:800;font-size:12.5px;color:#1a2730;margin-bottom:4px">✅ Propuesta oficial (la que se usa para comprar)</div>
     <div style="font-size:23px;font-weight:800;color:#1e7d4f">${fmt(d.sugerido)} unidades</div>
     ${notaPropuestaOficial}
@@ -5081,6 +5088,12 @@ function pintarFormulaDesglose(pop, d){
     const datosClick = el.dataset.escenario === 'real' ? d.escenarioReal : d.escenarioHistorico;
     el.onclick = ()=>abrirDetalleCajita(datosClick, el.dataset.campo, el);
   });
+  // Propuesta oficial clickeable (2026-09-05): binding aparte del loop de arriba porque este usa
+  // `d` directo (no un escenario) -- d.porSucursal ya trae el resultado oficial por sucursal.
+  if(propuestaEsClickeable){
+    const elProp = document.getElementById('desglose-propuesta-oficial');
+    if(elProp) elProp.onclick = ()=>abrirDetalleCajita(d, 'sugerido', elProp);
+  }
   // Ordenes de compra pendientes REALES (2026-09-05, a pedido explicito -- reemplaza la vieja
   // cajita "Pendiente en OC (sin restar)", que mostraba un numero fruto del reparto de
   // calcularNecesidadPorBarra entre sucursales, no un dato real). La OC pendiente es a nivel

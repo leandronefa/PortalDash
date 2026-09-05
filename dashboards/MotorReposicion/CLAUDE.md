@@ -241,6 +241,14 @@ desplazarse vertical y horizontalmente"):**
   pantalla (`window.innerHeight - 260`, reservando lugar para título/bloque verde/bordes) — recién
   si no entra aparece scroll, nunca antes de que haga falta.
 
+**Columna OC más angosta pero legible en 1 línea (mismo día, "hacer poco mas ancha columna OC
+pendiente para que el titulo se vea en una linea, dejar OC Pend. Informativo"):** la etiqueta se
+acortó de "OC pendiente (informativo)" a **"OC Pend. Informativo"** (único lugar donde se define,
+`CAMPO_DETALLE.sugerido`), y `pctAngosta` (el % que le toca a esta columna en `grande`) subió de 10
+a 20 — suficiente para la etiqueta corta en una sola línea sin volver a ser la columna más ancha de
+la tabla. El `anchoPx` que sigue usando la variante NO-`grande` (nunca ejercitada hoy en la práctica,
+pero se mantiene por si se usa a futuro) también subió de 90 a 110px a tono con el texto más corto.
+
 **Ojo si se toca este flujo de nuevo:** al abrir el detalle
 directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar
 con click afuera / Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de

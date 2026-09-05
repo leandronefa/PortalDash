@@ -4817,10 +4817,11 @@ const CAMPO_DETALLE = {
   // despues como dato informativo aparte, sin correr el orden de las demas. Sin este campo, el
   // total mostrado era el de OC pendiente (casi siempre 0), no el de A comprar. Los demas campos
   // de este objeto no lo necesitan: su ultima columna YA es la que corresponde totalizar.
-  // anchoPx en la columna "oc" (2026-09-04, a pedido explicito -- "hacer menos ancha" esa columna):
-  // es la unica etiqueta larga de esta tabla ("OC pendiente (informativo)") -- con un ancho fijo
-  // angosto + wrap de 2 lineas en el encabezado, ocupa mucho menos que dejarla en una sola linea.
-  sugerido:  { titulo:'Necesidad de compra — por sucursal', cols:[['GAP bruto','gapBruto'],['Depósito','deposito'],['Tránsito','transito'],['A comprar','comprar'],['OC pendiente (informativo)','oc',undefined,90]], totalCol:'comprar' },
+  // anchoPx en la columna "oc" (2026-09-04, a pedido explicito -- "hacer menos ancha" esa columna,
+  // despues "un poco mas ancha... para que el titulo se vea en una linea"): la etiqueta se acorto a
+  // "OC Pend. Informativo" (antes "OC pendiente (informativo)") y el ancho subio lo justo para que
+  // entre en una sola linea sin volver a ser la columna mas ancha de la tabla.
+  sugerido:  { titulo:'Necesidad de compra — por sucursal', cols:[['GAP bruto','gapBruto'],['Depósito','deposito'],['Tránsito','transito'],['A comprar','comprar'],['OC Pend. Informativo','oc',undefined,110]], totalCol:'comprar' },
 };
 function fmtCelda(v, decimales){
   if(v===null || v===undefined) return 'sin evidencia';
@@ -4865,9 +4866,11 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // de repartirse. Fix: `colgroup` + `table-layout:fixed` con porcentajes -- Sucursal y cada
   // columna de datos "normal" (sin su propio `anchoPx`) comparten el MISMO porcentaje, calculado
   // dinamicamente segun cuantas columnas haya (no un numero fijo a mano); las columnas marcadas con
-  // `anchoPx` (ej. "OC pendiente", ver CAMPO_DETALLE.sugerido) se quedan mas angostas a proposito,
-  // como ya se habia pedido antes -- este reparto no las toca.
-  const pctAngosta = 10;
+  // `anchoPx` (ej. "OC Pend. Informativo", ver CAMPO_DETALLE.sugerido) se quedan mas angostas a
+  // proposito, como ya se habia pedido antes -- este reparto no las toca. pctAngosta subio de 10 a
+  // 20 (2026-09-04, a pedido explicito -- "un poco mas ancha... para que el titulo se vea en una
+  // linea") para que la etiqueta acortada entre sin envolver, sin volver a ser la mas ancha.
+  const pctAngosta = 20;
   const numAngostas = cfg.cols.filter(c=>c[3]).length;
   const numIguales = 1 + cfg.cols.length - numAngostas; // Sucursal + columnas "normales"
   const pctIgual = (100 - pctAngosta * numAngostas) / numIguales;

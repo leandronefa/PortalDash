@@ -4881,10 +4881,11 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // sin verse: el borde puesto en el <tr> no se renderiza de forma confiable en todos los
   // navegadores bajo border-collapse -- solo los bordes puestos en cada <td> son fiables. Fix:
   // borde-bottom por CELDA (no por fila) en un gris mas oscuro (#c9d4d6), y zebra con un verde mas
-  // notorio (#e8f3ee, antes #f3f8f7 -- casi indistinguible del blanco) -- en las cajitas chicas no
-  // se toca, siguen con fondo blanco y el borde suave original en el <tr>.
+  // notorio -- en teal clarito (#eaf4f5, antes verde #e8f3ee, ver el comentario junto a
+  // totalGrandeHtml sobre el cambio de paleta a teal 2026-09-05) -- en las cajitas chicas no se
+  // toca, siguen con fondo blanco y el borde suave original en el <tr>.
   const bordeCelda = grande ? 'border-bottom:1px solid #c9d4d6;' : '';
-  const filas = d.porSucursal.map((f,i) => `<tr${grande?`` : ` style="border-top:1px solid #eef2f4"`}><td style="padding:${padCelda};white-space:${grande?'normal':'nowrap'};${grande?'overflow-wrap:break-word;':''}${bordeCelda}${grande?`background:${i%2?'#e8f3ee':'#ffffff'}`:''}">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap;${bordeCelda}${grande?`background:${i%2?'#e8f3ee':'#ffffff'}`:''}">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
+  const filas = d.porSucursal.map((f,i) => `<tr${grande?`` : ` style="border-top:1px solid #eef2f4"`}><td style="padding:${padCelda};white-space:${grande?'normal':'nowrap'};${grande?'overflow-wrap:break-word;':''}${bordeCelda}${grande?`background:${i%2?'#eaf4f5':'#ffffff'}`:''}">${f.suc}</td>${cfg.cols.map(([,c,dec])=>`<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap;${bordeCelda}${grande?`background:${i%2?'#eaf4f5':'#ffffff'}`:''}">${fmtCelda(f[c],dec)}</td>`).join('')}</tr>`).join('');
   // Columna "oficial" a totalizar en el bloque grande de arriba -- por defecto la ULTIMA de
   // cfg.cols (la que da el numero de la cajita clickeada), salvo que cfg.totalCol diga otra cosa
   // (ver el comentario en CAMPO_DETALLE.sugerido -- ahi la ultima columna es "OC pendiente",
@@ -4898,7 +4899,7 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // como "Velocidad (u/día)" o "Días con stock" (tasas, no sumables -- mismo motivo por el que la
   // nota de velocidad nunca sumó esas). Las cajitas chicas (`grande` false) siguen mostrando "—"
   // en las columnas que no son la totalizada, sin cambios.
-  const filaTotal = `<tr style="border-top:2px solid ${grande?'#1e7d4f':'#d7dfe3'};font-weight:700${grande?';background:#e3f2e9':''}"><td style="padding:${padCelda};white-space:nowrap">TOTAL</td>${cfg.cols.map(([,c,dec],i)=>{
+  const filaTotal = `<tr style="border-top:2px solid ${grande?'#0e5a6b':'#d7dfe3'};font-weight:700${grande?';background:#d7e9eb':''}"><td style="padding:${padCelda};white-space:nowrap">TOTAL</td>${cfg.cols.map(([,c,dec],i)=>{
     if(grande){
       const totalCol = d.porSucursal.reduce((a,f)=>a+(f[c]||0), 0);
       return `<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalCol,dec)}</td>`;
@@ -4907,12 +4908,16 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
       ? `<td style="text-align:right;padding:${padCelda};font-variant-numeric:tabular-nums;white-space:nowrap">${fmtCelda(totalValor,dec)}</td>`
       : `<td style="text-align:right;padding:${padCelda};color:#c2ccd1;white-space:nowrap">—</td>`;
   }).join('')}</tr>`;
-  // Total bien visible arriba (solo `grande`) -- fondo verde, numero grande, para que quede claro
-  // de un vistazo sin tener que bajar hasta la fila TOTAL de la tabla. Usa la MISMA columna/valor
-  // que esa fila (totalValor), nunca un calculo aparte.
-  const totalGrandeHtml = grande ? `<div style="background:linear-gradient(135deg,#eef7f0,#e3f3e8);border:1px solid #b9dfc6;border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;gap:12px">
+  // Total bien visible arriba (solo `grande`) -- numero grande, para que quede claro de un vistazo
+  // sin tener que bajar hasta la fila TOTAL de la tabla. Usa la MISMA columna/valor que esa fila
+  // (totalValor), nunca un calculo aparte. Paleta teal (2026-09-05, a pedido explicito -- "usa
+  // colores y estilo de ventana [Edición de recompra]"): en vez del verde inventado para esta
+  // ventana, se reusa la paleta YA EXISTENTE de esa pantalla (`.tpv-hdrow`/`.tpv-total-th`,
+  // `#0e5a6b` teal oscuro / `#d7e9eb` teal clarito) -- misma app, mismo acento, no dos estilos
+  // distintos conviviendo para lo mismo.
+  const totalGrandeHtml = grande ? `<div style="background:linear-gradient(135deg,#eaf4f5,#d7e9eb);border:1px solid #b7d9dc;border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;gap:12px">
     <span style="font-weight:800;font-size:13.5px;color:#1a2730">Total — ${cfg.cols[totalIdx][0]}</span>
-    <span style="font-size:28px;font-weight:800;color:#1e7d4f;white-space:nowrap">${fmtCelda(totalValor, cfg.cols[totalIdx][2])} unidades</span>
+    <span style="font-size:28px;font-weight:800;color:#0e5a6b;white-space:nowrap">${fmtCelda(totalValor, cfg.cols[totalIdx][2])} unidades</span>
   </div>` : '';
   // Alto dinamico segun cantidad real de sucursales, solo en `grande` (2026-09-04, a pedido
   // explicito -- "no se ve todo, es necesario desplazarse vertical y horizontalmente"): un `62vh`
@@ -4920,13 +4925,18 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
   // menos. Se estima el alto real que necesita la tabla (encabezado + 1 fila por sucursal + fila
   // TOTAL, con el alto de fila que dan `padCelda`/`fuenteTabla`) y se usa ESE alto si entra en
   // pantalla -- solo si no entra, se acota a lo que deja la ventana (reservando lugar para el
-  // titulo, el bloque verde de arriba y los bordes/paddings propios) y ahi si aparece scroll,
+  // titulo, el bloque de total de arriba y los bordes/paddings propios) y ahi si aparece scroll,
   // pero nunca antes de que haga falta.
   const altoNaturalTabla = grande ? (46 + d.porSucursal.length*34 + 36 + 4) : null;
   const altoTopeTabla = grande ? Math.max(200, window.innerHeight - 260) : null;
   const alturaTabla = grande ? Math.min(altoNaturalTabla, altoTopeTabla) : null;
+  // Encabezado con la MISMA distincion que ya usa `.tpv-hdrow`/`.tpv-total-th` en Edición de
+  // recompra (2026-09-05, a pedido explicito): columnas "normales" con teal clarito de fondo y
+  // texto teal oscuro, y la columna totalizada (`totalIdx`, "A comprar") con teal oscuro solido +
+  // texto blanco -- mismo acento que esa pantalla le da a su columna "Total".
+  const thGrande = (lbl, esTotal, esSucursal) => `<th style="text-align:${esSucursal?'left':'center'};padding:${padCelda};white-space:normal;overflow-wrap:break-word;position:sticky;top:0;background:${esTotal?'#0e5a6b':'#d7e9eb'};color:${esTotal?'#fff':'#0e5a6b'};font-weight:800;font-size:11.5px;line-height:1.25">${lbl}</th>`;
   popDet.innerHTML = `
-    <div class="desglose-popover-hd"${grande?' style="border-bottom:2px solid #1e7d4f"':''}>
+    <div class="desglose-popover-hd"${grande?' style="border-bottom:2px solid #0e5a6b"':''}>
       <div>
         <div class="desglose-popover-title" style="font-size:${grande?'16px':'14px'}">${cfg.titulo}</div>
         <div class="desglose-popover-sub">${d.modelo} · ${d.color==='—'?'Color único':d.color} · Talle ${d.talle==='U'?'Único':d.talle} · ${d.empresa} SA</div>
@@ -4938,7 +4948,7 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
       <table style="width:100%;border-collapse:collapse;font-size:${fuenteTabla}${grande?';table-layout:fixed':''}">
         ${colgroupHtml}
         <thead><tr style="text-align:right">${grande
-          ? `<th style="text-align:left;padding:${padCelda};white-space:normal;overflow-wrap:break-word;position:sticky;top:0;background:#1e7d4f;color:#fff;font-weight:800;font-size:11.5px">Sucursal</th>${cfg.cols.map(([lbl])=>`<th style="padding:${padCelda};white-space:normal;overflow-wrap:break-word;position:sticky;top:0;background:#1e7d4f;color:#fff;font-weight:800;font-size:11.5px;line-height:1.25">${lbl}</th>`).join('')}`
+          ? `${thGrande('Sucursal', false, true)}${cfg.cols.map(([lbl],i)=>thGrande(lbl, i===totalIdx, false)).join('')}`
           : `<th style="text-align:left;padding:${padCelda};white-space:nowrap">Sucursal</th>${cfg.cols.map(([lbl,,,anchoPx])=>anchoPx
               ? `<th style="padding:${padCelda};width:${anchoPx}px;max-width:${anchoPx}px;white-space:normal;line-height:1.25">${lbl}</th>`
               : `<th style="padding:${padCelda};white-space:nowrap">${lbl}</th>`
@@ -4986,11 +4996,13 @@ function abrirDetalleCajita(d, campo, elCaja, grande){
     popDet.style.width = Math.max(480, Math.min(980, anchoNatural + 110)) + 'px';
   }
   // Recuadro con color propio (2026-09-04, a pedido explicito -- "dar a recuadro de ventana un
-  // color"): borde y sombra en el mismo verde del total/encabezado, en vez del gris genérico que
-  // ya usa .desglose-popover para todas las demás cajitas (esas NO se tocan).
+  // color"; 2026-09-05, a pedido explicito, se pasa de verde a la paleta teal de Edición de
+  // recompra -- ver el comentario junto a totalGrandeHtml): borde y sombra en el mismo teal del
+  // total/encabezado, en vez del gris genérico que ya usa .desglose-popover para todas las demás
+  // cajitas (esas NO se tocan).
   if(grande){
-    popDet.style.border = '2px solid #1e7d4f';
-    popDet.style.boxShadow = '0 10px 36px rgba(30,125,79,.25)';
+    popDet.style.border = '2px solid #0e5a6b';
+    popDet.style.boxShadow = '0 10px 36px rgba(14,90,107,.25)';
   } else {
     popDet.style.border = '';
     popDet.style.boxShadow = '';

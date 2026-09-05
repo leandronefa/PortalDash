@@ -249,6 +249,18 @@ a 20 — suficiente para la etiqueta corta en una sola línea sin volver a ser l
 la tabla. El `anchoPx` que sigue usando la variante NO-`grande` (nunca ejercitada hoy en la práctica,
 pero se mantiene por si se usa a futuro) también subió de 90 a 110px a tono con el texto más corto.
 
+**Cambio de paleta: verde inventado → teal ya existente en Edición de recompra (2026-09-05, a
+pedido explícito — "usa colores y estilo de ventana [Edición de recompra]"):** todos los acentos de
+`grande` (borde/sombra del popover, encabezado, fila TOTAL, bloque de total arriba, zebra) pasan
+del verde `#1e7d4f` inventado para esta ventana a la paleta TEAL que la propia pantalla de Edición
+de recompra ya usa en su grilla de talles (`.tpv-hdrow`/`.tpv-total-th`, ver el CSS): `#0e5a6b` teal
+oscuro (antes verde) y `#d7e9eb`/`#eaf4f5` teal clarito (antes tonos de verde). De paso, el
+encabezado deja de ser un único color parejo: ahora reproduce la MISMA distinción que ya usa esa
+grilla entre columnas "normales" (fondo teal clarito, texto teal oscuro) y su columna destacada —
+acá "A comprar" (`totalIdx`) — con fondo teal oscuro sólido y texto blanco, igual que `.tpv-total-th`
+resalta su columna "Total". Ningún color de las cajitas chicas se tocó — el verde/gris que ya
+tenían sigue igual.
+
 **Ojo si se toca este flujo de nuevo:** al abrir el detalle
 directo (sin pasar por `abrirDesgloseSugerido`), hay que registrar a mano los listeners de "cerrar
 con click afuera / Escape" (`onClickAfueraDesglose`/`onEscapeDesglose`) — si no, la única forma de

@@ -452,7 +452,16 @@ OPTION (FORCE ORDER);
 ;WITH Calc AS (
     SELECT *,
         ISNULL(VdRaw, 0) AS Vd,
-        (Pvp - Costo) AS MargenU,
+        -- MargenU en $ SIN IVA (2026-09-07, a pedido explicito -- bug real: "Pvp - Costo" restaba
+        -- el costo de un PVP que todavia incluye IVA, sobreestimando el margen -- ej. PVP
+        -- $49.908,27/Costo real con IVA 21%: "Pvp-Costo" da un margen mayor al correcto). "Sacar el
+        -- IVA" de un PVP que ya lo incluye es DIVIDIR por (1+iva/100), no restar ese % del PVP --
+        -- mismo criterio ya usado y verificado en el frontend (margenPorcentaje/margenPctTxt en
+        -- tablero_motor_quiebre.html, la ficha de articulo con foto -- esa SI ya calculaba bien).
+        -- ISNULL(Iva,21) de respaldo (nunca deberia dispararse -- confirmado con datos reales que
+        -- Iva solo toma 21 o 10.5, nunca NULL en articulos reales del catalogo) para no perder la
+        -- fila entera si algun caso de borde llegara sin Iva.
+        (Pvp / (1 + ISNULL(Iva, 21) / 100.0) - Costo) AS MargenU,
         CASE WHEN ISNULL(VdRaw,0) > 0 THEN ROUND(StockTienda / VdRaw, 0) ELSE 999 END AS Cob,
         CASE WHEN ISNULL(VdRaw,0) > 0 THEN ROUND((StockTienda + StockDeposito) / VdRaw, 0) ELSE 999 END AS CobConDeposito,
         -- Cobertura SIN redondear, usada solo para decidir el Estado: redondear ANTES de comparar
@@ -929,7 +938,9 @@ CROSS APPLY (
 ;WITH Calc AS (
     SELECT *,
         ISNULL(VdRaw, 0) AS Vd,
-        (Pvp - Costo) AS MargenU,
+        -- MargenU en $ SIN IVA (2026-09-07): ver el comentario completo junto al mismo calculo en
+        -- QUERY_QUIEBRE_DETALLE, mas arriba en este archivo -- mismo fix, mismo motivo.
+        (Pvp / (1 + ISNULL(Iva, 21) / 100.0) - Costo) AS MargenU,
         CASE WHEN ISNULL(VdRaw,0) > 0 THEN ROUND(StockTienda / VdRaw, 0) ELSE 999 END AS Cob,
         CASE WHEN ISNULL(VdRaw,0) > 0 THEN ROUND((StockTienda + StockDeposito) / VdRaw, 0) ELSE 999 END AS CobConDeposito,
         CASE WHEN ISNULL(VdRaw,0) > 0 THEN StockTienda / VdRaw ELSE 999 END AS CobExacto,

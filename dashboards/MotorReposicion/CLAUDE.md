@@ -523,6 +523,50 @@ igualdad primero y FECHA al final (patrón de "muchos grupos chicos, cada uno co
 por noche en `Vta_detalle` paga el costo de mantenimiento del índice), no para una consulta en
 vivo — el usuario confirmó explícitamente agregar el índice sabiendo este trade-off.
 
+## Fix bug real: margen calculado con PVP CON IVA en vez de SIN IVA (2026-09-07)
+
+Reportado por la usuaria: "Margen de facturación perdida" (orden de Atención Prioritaria y columna
+"Margen/día" de "Ver en detalle") y el "▲ $X/día" de la ventana de Stock por artículo mostraban un
+número inflado — mientras que la ficha de artículo (recuadro con foto, en Stock/A comprar) ya
+mostraba el margen correcto.
+
+**Causa raíz:** `server.js`, `QUERY_QUIEBRE_DETALLE` y `QUERY_ARTICULO_COMPLETO` (2 lugares, misma
+lógica duplicada), CTE `Calc`: `(Pvp - Costo) AS MargenU` restaba el costo directo del PVP **con
+IVA incluido** (`cv.PVP_VIGENTE`, tal cual lo trae el ERP) — nunca le sacaba el IVA antes de restar
+el costo, sobreestimando el margen. La ficha de artículo (`margenPorcentaje`/`margenPctTxt` en
+`tablero_motor_quiebre.html`, agregada el 2026-08-31) ya hacía esto bien: `pvpSinIva = pvp /
+(1+iva/100)`, `margen = pvpSinIva - costo` — pero esa función vive solo en 2 lugares del frontend
+(la ficha de artículo con foto y el `art-card` de Stock/A comprar), nunca se replicó al cálculo
+`MargenU`/`Impacto` que hace el BACKEND, que es lo que de verdad alimenta todo lo demás.
+
+**Fix:** `(Pvp / (1 + ISNULL(Iva, 21) / 100.0) - Costo) AS MargenU` en los 2 lugares — mismo
+criterio de "sacar IVA" que ya usaba la ficha de artículo, ahora aplicado donde realmente se
+origina el dato (`Iva` ya estaba disponible en `#Resultado`, vía `catm.Iva`/`cgd_ARTICULOS`, no
+hizo falta ningún JOIN nuevo). `ISNULL(Iva,21)` es un respaldo defensivo que en la práctica nunca
+se dispara — confirmado con datos reales que `Iva` no es NULL en ninguna de las 286.843 filas del
+catálogo válido (286.743 con 21%, 100 con 10,5%).
+
+**Verificado con datos reales, contra el caso ya documentado en este archivo** (KJ1736-1074, PVP
+$99.999, Costo $49.908,27, IVA 21%): el nuevo `MargenU` da $32.735,53 (=39,61% de margen sobre PVP
+sin IVA — coincide EXACTO con el 39,61% que la ficha de artículo ya venía mostrando bien desde
+2026-08-31). Contra una muestra aleatoria de 20 artículos reales, el `MargenU` viejo sobreestimaba
+el margen en **48,68%** respecto al corregido — confirma que el bug no era un caso aislado, afectaba
+a todo el catálogo. Verificado también end-to-end pegándole a `/api/tablero/articulo` con el
+servidor local reiniciado (cache limpia): `impacto` devuelto = `vd × margenU` corregido, exacto.
+
+**Alcance del fix — un solo `MargenU`/`Impacto` en el backend alimenta TODO lo demás** (no hicieron
+falta cambios en el frontend): orden de "Atención Prioritaria" por margen, columna "Margen/día" de
+"Ver en detalle" y su export CSV (`Margen_dia`), el "▲ $/día" de la ventana de Stock por artículo,
+"Margen en juego por quiebre/riesgo" del resumen ejecutivo (y su proyección mensual), y el ranking
+de sucursales por margen. Se actualizó también la nota técnica del modal de ayuda (`doc-tech`, "🛠
+Nota técnica para Sistemas") que documentaba la fórmula vieja.
+
+**No se tocó** `margenPorcentaje`/`margenPctTxt` (ya estaba bien) ni la función `build()` del
+simulador viejo (línea ~1583, `const margenU=r.pvp-r.costo`) — `build()` es código MUERTO, no la
+llama nadie (`ALL` se puebla solo vía `cargarAllReal()`/`itemDesdeFilaReal`, ver el bug de
+"simulador viejo visible" del 2026-09-03) — corregirla sería tocar algo fuera de alcance sin ningún
+efecto visible.
+
 ## Reglas de trabajo (seguir siempre)
 
 - **Los cambios son siempre quirúrgicos: tocar solo la sección que se pide, sin refactorizar el resto.** No reordenar, renombrar ni "mejorar de paso" código que no forma parte del pedido puntual, aunque se vea una oportunidad de limpieza — proponerla aparte, no mezclarla en el mismo cambio.

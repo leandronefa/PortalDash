@@ -66,13 +66,10 @@ jobs:
             ${BRANCH_ARG} \
             /d:sonar.sourceEncoding="UTF-8" \
             /d:sonar.sources="portal-src,dashboards" \
-            /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/dist-server/**,**/bin/**,**/obj/**,**/App_Data/**,**/daemon/**,**/*.min.js,dashboards/EstadoResultado/sap-inbox/**,dashboards/EstadoResultado/data-store/**,dashboards/EstadoResultado/SAPResultProcesado/**,dashboards/EstadoResultado/data-cache/**,dashboards/ConciliacionPunitorios/archivos/**,dashboards/ConciliacionPunitorios/public/data*.js,dashboards/ValidacionCobranzas/archivos/**,dashboards/sucursal-user-visualizer/layout-state.json,dashboards/MotorReposicion/public/~\$*"
+            /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/dist-server/**,**/bin/**,**/obj/**,**/App_Data/**,**/daemon/**,**/*.min.js,dashboards/EstadoResultado/sap-inbox/**,dashboards/EstadoResultado/data-store/**,dashboards/EstadoResultado/SAPResultProcesado/**,dashboards/EstadoResultado/data-cache/**,dashboards/sucursal-user-visualizer/layout-state.json,dashboards/MotorReposicion/public/~\$*,dashboards/APCWeb/**,dashboards/comisiones-app/**,dashboards/ValidacionCobranzas/**,dashboards/ConciliacionPunitorios/**"
 
       - name: Build portal-src
         run: dotnet build portal-src/DashboardPortal.sln --configuration Release
-
-      - name: Build APCWeb
-        run: dotnet build dashboards/APCWeb/src/APCWeb/APCWeb.csproj --configuration Release
 
       # --- Build de los dashboards Node con frontend Vite (necesario para que Sonar analice el bundle real) ---
       - name: Cache node_modules por dashboard
@@ -90,7 +87,7 @@ jobs:
             echo "== $d =="
             (cd "dashboards/$d" && npm install --no-audit --no-fund && npm run build)
           done
-          for d in comisiones-app sucursal-user-visualizer; do
+          for d in sucursal-user-visualizer; do
             echo "== $d (build:prod) =="
             (cd "dashboards/$d" && npm install --no-audit --no-fund && npm run build:prod)
           done
@@ -99,7 +96,7 @@ jobs:
       - name: Install dashboards sin frontend Vite
         run: |
           set -e
-          for d in MotorReposicion DashMeLi ConciliacionPunitorios ValidacionCobranzas; do
+          for d in MotorReposicion DashMeLi; do
             echo "== $d =="
             (cd "dashboards/$d" && npm install --no-audit --no-fund)
           done

@@ -49,12 +49,18 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'vallejo-sanjuan_PortalDash' }}
           SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'vallejo-sanjuan' }}
+          SONAR_BRANCH_NAME: ${{ vars.SONAR_BRANCH_NAME }}
         run: |
+          BRANCH_ARG=""
+          if [ -n "${SONAR_BRANCH_NAME}" ]; then
+            BRANCH_ARG="/d:sonar.branch.name=${SONAR_BRANCH_NAME}"
+          fi
           dotnet-sonarscanner begin \
             /k:"${SONAR_PROJECT_KEY}" \
             /o:"${SONAR_ORGANIZATION}" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io" \
+            ${BRANCH_ARG} \
             /d:sonar.sourceEncoding="UTF-8" \
             /d:sonar.sources="portal-src,dashboards" \
             /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/dist-server/**,**/bin/**,**/obj/**,**/App_Data/**,**/daemon/**,**/*.min.js,dashboards/EstadoResultado/sap-inbox/**,dashboards/EstadoResultado/data-store/**,dashboards/EstadoResultado/SAPResultProcesado/**,dashboards/EstadoResultado/data-cache/**,dashboards/ConciliacionPunitorios/archivos/**,dashboards/ConciliacionPunitorios/public/data*.js,dashboards/ValidacionCobranzas/archivos/**,dashboards/sucursal-user-visualizer/layout-state.json,dashboards/MotorReposicion/public/~\$*"

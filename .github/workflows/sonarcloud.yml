@@ -66,7 +66,7 @@ jobs:
             ${BRANCH_ARG} \
             /d:sonar.sourceEncoding="UTF-8" \
             /d:sonar.sources="portal-src,dashboards" \
-            /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/dist-server/**,**/bin/**,**/obj/**,**/App_Data/**,**/daemon/**,**/*.min.js,dashboards/EstadoResultado/sap-inbox/**,dashboards/EstadoResultado/data-store/**,dashboards/EstadoResultado/SAPResultProcesado/**,dashboards/EstadoResultado/data-cache/**,dashboards/sucursal-user-visualizer/layout-state.json,dashboards/MotorReposicion/public/~\$*,dashboards/APCWeb/**,dashboards/comisiones-app/**,dashboards/ValidacionCobranzas/**,dashboards/ConciliacionPunitorios/**"
+            /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/dist-server/**,**/bin/**,**/obj/**,**/App_Data/**,**/daemon/**,**/*.min.js,dashboards/EstadoResultado/sap-inbox/**,dashboards/EstadoResultado/data-store/**,dashboards/EstadoResultado/SAPResultProcesado/**,dashboards/EstadoResultado/data-cache/**,dashboards/sucursal-user-visualizer/layout-state.json,dashboards/APCWeb/**,dashboards/comisiones-app/**,dashboards/ValidacionCobranzas/**,dashboards/ConciliacionPunitorios/**,dashboards/MotorReposicion/**,dashboards/DashMeLi/**,dashboards/StockProveedorMarca/**"
 
       - name: Build portal-src
         run: dotnet build portal-src/DashboardPortal.sln --configuration Release
@@ -96,11 +96,7 @@ jobs:
       - name: Install dashboards sin frontend Vite
         run: |
           set -e
-          for d in MotorReposicion DashMeLi; do
-            echo "== $d =="
-            (cd "dashboards/$d" && npm install --no-audit --no-fund)
-          done
-          for d in VentaObjetivo StockProveedorMarca VentaObjetivoSucursal tablero-objetivos-web; do
+          for d in VentaObjetivo VentaObjetivoSucursal tablero-objetivos-web; do
             echo "== $d/server =="
             (cd "dashboards/$d/server" && npm install --no-audit --no-fund)
           done

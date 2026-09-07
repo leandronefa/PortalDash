@@ -47,10 +47,12 @@ jobs:
       - name: Iniciar análisis (propiedades explícitas, dotnet-sonarscanner no lee sonar-project.properties)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'vallejo-sanjuan_PortalDash' }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'vallejo-sanjuan' }}
         run: |
           dotnet-sonarscanner begin \
-            /k:"vallejo-sanjuan_PortalDash" \
-            /o:"vallejo-sanjuan" \
+            /k:"${SONAR_PROJECT_KEY}" \
+            /o:"${SONAR_ORGANIZATION}" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.sourceEncoding="UTF-8" \

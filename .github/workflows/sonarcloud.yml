@@ -11,6 +11,9 @@ permissions:
 
 jobs:
   sonar:
+    # vallejo-sanjuan/PortalDash usa Automatic Analysis (GitHub App de SonarCloud) en vez de CI —
+    # correr este job ahí choca con eso (además de un SONAR_TOKEN sin permisos en ese proyecto).
+    if: github.repository == 'leandronefa/PortalDash'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

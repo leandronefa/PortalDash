@@ -99,7 +99,7 @@ jobs:
             (cd "dashboards/$d/server" && npm install --no-audit --no-fund)
           done
 
-      - name: Finalizar análisis (envía TODO: C# + JS/TS de los dashboards)
+      - name: "Finalizar análisis (envía TODO: C# + JS/TS de los dashboards)"
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

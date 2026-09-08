@@ -10,7 +10,7 @@ public class EditModel(IDashboardService dashboards) : PageModel
     [BindProperty]
     public Dashboard Input { get; set; } = new();
 
-    public IReadOnlyList<(string Key, string Label)> Icons => IconLibrary.Options;
+    public static IReadOnlyList<(string Key, string Label)> Icons => IconLibrary.Options;
 
     public async Task<IActionResult> OnGetAsync(int id)
     {

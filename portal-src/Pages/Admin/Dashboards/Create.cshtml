@@ -50,7 +50,7 @@
         <div class="form-group">
             <label class="label">Icono</label>
             <div class="icon-picker">
-                @foreach (var opt in Model.Icons)
+                @foreach (var opt in CreateModel.Icons)
                 {
                     <label class="icon-option">
                         <input type="radio" asp-for="Input.Icon" value="@opt.Key" />

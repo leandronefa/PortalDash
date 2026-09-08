@@ -10,7 +10,7 @@ public class CreateModel(IDashboardService dashboards) : PageModel
     [BindProperty]
     public Dashboard Input { get; set; } = new() { Icon = "chart", IsActive = true, Port = 8501 };
 
-    public IReadOnlyList<(string Key, string Label)> Icons => IconLibrary.Options;
+    public static IReadOnlyList<(string Key, string Label)> Icons => IconLibrary.Options;
 
     public void OnGet() { }
 

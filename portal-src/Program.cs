@@ -107,7 +107,7 @@ using (var scope = app.Services.CreateScope())
 {
     var sp = scope.ServiceProvider;
     var db = sp.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    await db.Database.EnsureCreatedAsync();
     await DbSeeder.SeedAsync(sp);
 }
 
@@ -139,4 +139,4 @@ app.MapRazorPages();
 // Rutas del proxy: /d/{id}/... + fallback por cookie de dashboard activo.
 DashboardProxy.Map(app);
 
-app.Run();
+await app.RunAsync();

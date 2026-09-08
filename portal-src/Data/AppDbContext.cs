@@ -16,23 +16,23 @@ public class AppDbContext : DbContext
     public DbSet<AppSetting> Settings => Set<AppSetting>();
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
 
-    protected override void OnModelCreating(ModelBuilder b)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(b);
+        base.OnModelCreating(modelBuilder);
 
-        b.Entity<AppUser>(e =>
+        modelBuilder.Entity<AppUser>(e =>
         {
             e.HasIndex(u => u.Username).IsUnique();
             e.Property(u => u.Username).IsRequired();
         });
 
-        b.Entity<Dashboard>(e =>
+        modelBuilder.Entity<Dashboard>(e =>
         {
             e.Property(d => d.Name).IsRequired();
             e.HasIndex(d => d.Port);
         });
 
-        b.Entity<DashboardPermission>(e =>
+        modelBuilder.Entity<DashboardPermission>(e =>
         {
             e.HasIndex(p => new { p.AppUserId, p.DashboardId }).IsUnique();
 
@@ -47,9 +47,9 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        b.Entity<AppSetting>().HasKey(s => s.Key);
+        modelBuilder.Entity<AppSetting>().HasKey(s => s.Key);
 
-        b.Entity<AccessLog>(e =>
+        modelBuilder.Entity<AccessLog>(e =>
         {
             e.HasIndex(l => l.Timestamp);
             e.HasIndex(l => l.Username);
